@@ -10,6 +10,31 @@ CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 ```
 
 ```python
+// File: backend/app/__init__.py
+
+```
+
+```python
+// File: backend/app/api/__init__.py
+
+```
+
+```python
+// File: backend/app/api/v1/__init__.py
+from fastapi import APIRouter
+from app.api.v1 import auth, company, units, items, parties, invoices, master
+
+api_router = APIRouter(prefix="/v1")
+api_router.include_router(auth.router)
+api_router.include_router(company.router)
+api_router.include_router(units.router)
+api_router.include_router(items.router)
+api_router.include_router(parties.router)
+api_router.include_router(invoices.router)
+api_router.include_router(master.router)
+```
+
+```python
 // File: backend/app/api/v1/auth.py
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
@@ -143,6 +168,263 @@ def get_company(company = Depends(get_current_company), db: Session = Depends(ge
 ```
 
 ```python
+// File: backend/app/api/v1/invoices.py
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
+from typing import List
+from app.core.database import get_db
+from app.dependencies.auth import get_current_company
+from app.schemas.common import ApiResponse
+from app.schemas.invoice import InvoiceCreate, InvoiceResponse, InvoiceListResponse, InvoiceFinalizeRequest, InvoiceCancelRequest
+from app.services.invoice_service import InvoiceService
+
+router = APIRouter(prefix="/invoices", tags=["Invoices"])
+
+@router.post("/", response_model=ApiResponse[InvoiceResponse])
+def create_invoice(request: InvoiceCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    invoice = InvoiceService.create_invoice(db, str(company.id), company, request.model_dump())
+    return ApiResponse(success=True, data=_invoice_to_response(invoice))
+
+@router.get("/", response_model=ApiResponse[InvoiceListResponse])
+def list_invoices(status: str = Query(None), company = Depends(get_current_company), db: Session = Depends(get_db)):
+    invoices = InvoiceService.list_invoices(db, str(company.id), status)
+    return ApiResponse(success=True, data=InvoiceListResponse(
+        items=[_invoice_to_response(i) for i in invoices],
+        total=len(invoices)
+    ))
+
+@router.get("/{invoice_id}", response_model=ApiResponse[InvoiceResponse])
+def get_invoice(invoice_id: str, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    invoice = InvoiceService.get_invoice(db, str(company.id), invoice_id)
+    return ApiResponse(success=True, data=_invoice_to_response(invoice))
+
+@router.post("/{invoice_id}/finalize", response_model=ApiResponse[InvoiceResponse])
+def finalize_invoice(invoice_id: str, request: InvoiceFinalizeRequest, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    invoice = InvoiceService.finalize_invoice(db, str(company.id), invoice_id)
+    return ApiResponse(success=True, data=_invoice_to_response(invoice))
+
+@router.post("/{invoice_id}/cancel", response_model=ApiResponse[InvoiceResponse])
+def cancel_invoice(invoice_id: str, request: InvoiceCancelRequest, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    invoice = InvoiceService.cancel_invoice(db, str(company.id), invoice_id, request.reason)
+    return ApiResponse(success=True, data=_invoice_to_response(invoice))
+
+def _invoice_to_response(invoice) -> InvoiceResponse:
+    return InvoiceResponse(
+        id=invoice.id,
+        invoice_number=invoice.invoice_number,
+        invoice_type=invoice.invoice_type,
+        invoice_date=invoice.invoice_date.date(),
+        customer_name_snapshot=invoice.customer_name_snapshot,
+        customer_gstin_snapshot=invoice.customer_gstin_snapshot,
+        place_of_supply=invoice.place_of_supply,
+        subtotal=float(invoice.subtotal),
+        discount_total=float(invoice.discount_total),
+        taxable_total=float(invoice.taxable_total),
+        cgst_total=float(invoice.cgst_total),
+        sgst_total=float(invoice.sgst_total),
+        igst_total=float(invoice.igst_total),
+        grand_total=float(invoice.grand_total),
+        amount_in_words=invoice.amount_in_words,
+        invoice_status=invoice.invoice_status,
+        payment_status=invoice.payment_status,
+        notes=invoice.notes,
+        lines=[{
+            "id": l.id,
+            "item_name": l.item_name_snapshot,
+            "description": l.description_snapshot,
+            "hsn_sac_snapshot": l.hsn_sac_snapshot,
+            "quantity": float(l.quantity),
+            "unit_name_snapshot": l.unit_name_snapshot,
+            "unit_symbol_snapshot": l.unit_symbol_snapshot,
+            "rate": float(l.rate),
+            "discount_amount": float(l.discount_amount),
+            "taxable_value": float(l.taxable_value),
+            "gst_rate": float(l.gst_rate),
+            "cgst_amount": float(l.cgst_amount),
+            "sgst_amount": float(l.sgst_amount),
+            "igst_amount": float(l.igst_amount),
+            "line_total": float(l.line_total),
+        } for l in invoice.lines],
+        created_at=invoice.created_at,
+    )
+```
+
+```python
+// File: backend/app/api/v1/items.py
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
+from app.core.database import get_db
+from app.dependencies.auth import get_current_company
+from app.schemas.common import ApiResponse
+from app.schemas.item import ItemCreate, ItemUpdate, ItemResponse, ItemListResponse
+from app.services.item_service import ItemService
+
+router = APIRouter(prefix="/items", tags=["Items"])
+
+@router.post("/", response_model=ApiResponse[ItemResponse])
+def create_item(request: ItemCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    item = ItemService.create_item(db, str(company.id), request.model_dump())
+    return ApiResponse(success=True, data=ItemResponse(**item))
+
+@router.get("/", response_model=ApiResponse[ItemListResponse])
+def list_items(search: str = Query(None), company = Depends(get_current_company), db: Session = Depends(get_db)):
+    items = ItemService.list_items(db, str(company.id), search)
+    return ApiResponse(success=True, data=ItemListResponse(items=[ItemResponse(**i) for i in items]))
+
+@router.get("/{item_id}", response_model=ApiResponse[ItemResponse])
+def get_item(item_id: str, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    item = ItemService.get_item(db, str(company.id), item_id)
+    return ApiResponse(success=True, data=ItemResponse(**item))
+
+@router.put("/{item_id}", response_model=ApiResponse[ItemResponse])
+def update_item(item_id: str, request: ItemUpdate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    item = ItemService.update_item(db, str(company.id), item_id, request.model_dump(exclude_unset=True))
+    return ApiResponse(success=True, data=ItemResponse(
+        id=item.id,
+        company_id=item.company_id,
+        item_type=item.item_type,
+        item_name=item.item_name,
+        sku_code=item.sku_code,
+        unit_id=item.unit_id,
+        unit_name=None,
+        unit_symbol=None,
+        hsn_sac_code=item.hsn_sac_code,
+        gst_applicable=item.gst_applicable,
+        gst_rate_id=item.default_gst_rate_id,
+        gst_rate=None,
+        description=item.description,
+        status=item.status,
+        created_at=item.created_at,
+        updated_at=item.updated_at,
+    ))
+
+@router.delete("/{item_id}", response_model=ApiResponse[dict])
+def delete_item(item_id: str, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    ItemService.delete_item(db, str(company.id), item_id)
+    return ApiResponse(success=True, data={"message": "Item archived"})
+```
+
+```python
+// File: backend/app/api/v1/master.py
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from app.core.database import get_db
+from app.dependencies.auth import get_current_company
+from app.schemas.common import ApiResponse
+from app.models.master import GSTStateCode, GSTRate
+
+router = APIRouter(prefix="/master", tags=["Master Data"])
+
+@router.get("/gst-states", response_model=ApiResponse[list[dict]])
+def get_gst_states(db: Session = Depends(get_db)):
+    states = db.query(GSTStateCode).order_by(GSTStateCode.code).all()
+    return ApiResponse(success=True, data=[{
+        "id": s.id,
+        "code": s.code,
+        "state_name": s.state_name,
+        "union_territory": s.union_territory,
+    } for s in states])
+
+@router.get("/gst-rates", response_model=ApiResponse[list[dict]])
+def get_gst_rates(db: Session = Depends(get_db)):
+    rates = db.query(GSTRate).filter(GSTRate.status == "ACTIVE").order_by(GSTRate.rate).all()
+    return ApiResponse(success=True, data=[{
+        "id": r.id,
+        "rate": float(r.rate),
+        "display_name": r.display_name,
+        "description": r.description,
+    } for r in rates])
+```
+
+```python
+// File: backend/app/api/v1/parties.py
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
+from app.core.database import get_db
+from app.dependencies.auth import get_current_company
+from app.schemas.common import ApiResponse
+from app.schemas.party import PartyCreate, PartyUpdate, PartyResponse, PartyListResponse
+from app.services.party_service import PartyService
+
+router = APIRouter(prefix="/parties", tags=["Parties"])
+
+@router.post("/", response_model=ApiResponse[PartyResponse])
+def create_party(request: PartyCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    party = PartyService.create_party(db, str(company.id), request.model_dump())
+    return ApiResponse(success=True, data=_party_to_response(party))
+
+@router.get("/", response_model=ApiResponse[PartyListResponse])
+def list_parties(
+    account_type: str = Query(None),
+    search: str = Query(None),
+    company = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    parties = PartyService.list_parties(db, str(company.id), account_type, search)
+    return ApiResponse(success=True, data=PartyListResponse(items=[_party_to_response(p) for p in parties]))
+
+@router.get("/{party_id}", response_model=ApiResponse[PartyResponse])
+def get_party(party_id: str, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    party = PartyService.get_party(db, str(company.id), party_id)
+    return ApiResponse(success=True, data=_party_to_response(party))
+
+@router.put("/{party_id}", response_model=ApiResponse[PartyResponse])
+def update_party(party_id: str, request: PartyUpdate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    party = PartyService.update_party(db, str(company.id), party_id, request.model_dump(exclude_unset=True))
+    return ApiResponse(success=True, data=_party_to_response(party))
+
+def _party_to_response(party) -> PartyResponse:
+    return PartyResponse(
+        id=party.id,
+        company_id=party.company_id,
+        party_code=party.party_code,
+        legal_name=party.legal_name,
+        trade_name=party.trade_name,
+        party_type=party.party_type,
+        account_type=party.account_type,
+        contact_person=party.contact_person,
+        mobile=party.mobile,
+        email=party.email,
+        gstin=party.gstin,
+        gst_registration_type=party.gst_registration_type,
+        pan=party.pan,
+        state=party.state,
+        state_code=party.state_code,
+        place_of_supply=party.place_of_supply,
+        credit_limit=float(party.credit_limit) if party.credit_limit else None,
+        credit_days=party.credit_days,
+        payment_terms=party.payment_terms,
+        notes=party.notes,
+        status=party.status,
+        created_at=party.created_at,
+        updated_at=party.updated_at,
+        addresses=[{
+            "id": a.id,
+            "address_type": a.address_type,
+            "address_line_1": a.address_line_1,
+            "address_line_2": a.address_line_2,
+            "city": a.city,
+            "district": a.district,
+            "state": a.state,
+            "state_code": a.state_code,
+            "pincode": a.pincode,
+            "country": a.country,
+            "is_default": a.is_default,
+        } for a in party.addresses],
+        bank_accounts=[{
+            "id": b.id,
+            "account_holder_name": b.account_holder_name,
+            "bank_name": b.bank_name,
+            "branch_name": b.branch_name,
+            "account_number": b.account_number,
+            "ifsc": b.ifsc,
+            "upi_id": b.upi_id,
+            "is_primary": b.is_primary,
+        } for b in party.bank_accounts],
+    )
+```
+
+```python
 // File: backend/app/api/v1/units.py
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
@@ -150,6 +432,83 @@ from typing import List
 from app.core.database import get_db
 from app.dependencies.auth import get_current_company
 from app.schemas.common import ApiResponse
+from app.schemas.unit import UnitCreate, UnitUpdate, UnitResponse, UnitListResponse, UnitCategoryResponse
+from app.services.unit_service import UnitService
+
+router = APIRouter(prefix="/units", tags=["Units"])
+
+@router.post("/", response_model=ApiResponse[UnitResponse])
+def create_unit(request: UnitCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    unit = UnitService.create_unit(db, str(company.id), request.model_dump())
+    return ApiResponse(success=True, data=UnitResponse(
+        id=unit.id,
+        company_id=unit.company_id,
+        unit_name=unit.unit_name,
+        symbol=unit.symbol,
+        internal_code=unit.internal_code,
+        gst_unit_code=unit.gst_unit_code,
+        unit_type=unit.unit_type,
+        base_unit_id=unit.base_unit_id,
+        conversion_factor=float(unit.conversion_factor) if unit.conversion_factor else None,
+        conversion_formula=unit.conversion_formula,
+        precision=unit.precision,
+        is_predefined=unit.is_predefined,
+        is_active=unit.is_active,
+        created_at=unit.created_at,
+    ))
+
+@router.get("/", response_model=ApiResponse[UnitListResponse])
+def list_units(search: str = Query(None), company = Depends(get_current_company), db: Session = Depends(get_db)):
+    units = UnitService.list_units(db, str(company.id), search)
+    items = [UnitResponse(
+        id=u.id,
+        company_id=u.company_id,
+        unit_name=u.unit_name,
+        symbol=u.symbol,
+        internal_code=u.internal_code,
+        gst_unit_code=u.gst_unit_code,
+        unit_type=u.unit_type,
+        base_unit_id=u.base_unit_id,
+        conversion_factor=float(u.conversion_factor) if u.conversion_factor else None,
+        conversion_formula=u.conversion_formula,
+        precision=u.precision,
+        is_predefined=u.is_predefined,
+        is_active=u.is_active,
+        created_at=u.created_at,
+    ) for u in units]
+    return ApiResponse(success=True, data=UnitListResponse(items=items))
+
+@router.get("/categories", response_model=ApiResponse[list[UnitCategoryResponse]])
+def list_categories(db: Session = Depends(get_db)):
+    cats = UnitService.list_categories(db)
+    return ApiResponse(success=True, data=[UnitCategoryResponse(
+        id=c.id, name=c.name, code=c.code, dimension=c.dimension, status=c.status
+    ) for c in cats])
+
+@router.put("/{unit_id}", response_model=ApiResponse[UnitResponse])
+def update_unit(unit_id: str, request: UnitUpdate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    unit = UnitService.update_unit(db, str(company.id), unit_id, request.model_dump(exclude_unset=True))
+    return ApiResponse(success=True, data=UnitResponse(
+        id=unit.id,
+        company_id=unit.company_id,
+        unit_name=unit.unit_name,
+        symbol=unit.symbol,
+        internal_code=unit.internal_code,
+        gst_unit_code=unit.gst_unit_code,
+        unit_type=unit.unit_type,
+        base_unit_id=unit.base_unit_id,
+        conversion_factor=float(unit.conversion_factor) if unit.conversion_factor else None,
+        conversion_formula=unit.conversion_formula,
+        precision=unit.precision,
+        is_predefined=unit.is_predefined,
+        is_active=unit.is_active,
+        created_at=unit.created_at,
+    ))
+
+@router.delete("/{unit_id}", response_model=ApiResponse[dict])
+def delete_unit(unit_id: str, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    UnitService.delete_unit(db, str(company.id), unit_id)
+    return ApiResponse(success=True, data={"message": "Unit deactivated"})
 ```
 
 ```python
@@ -325,6 +684,51 @@ async def get_current_company(request: Request, db: Session = Depends(get_db)) -
         raise AuthenticationException("Company not found")
     
     return company
+```
+
+```python
+// File: backend/app/main.py
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from app.core.config import settings
+from app.core.database import engine, Base
+from app.core.exceptions import AppException
+from app.api.v1 import api_router
+from app.seed_data import seed_all
+
+# Create tables
+Base.metadata.create_all(bind=engine)
+
+# Seed data
+seed_all()
+
+app = FastAPI(
+    title="GST Billing API",
+    version="1.0.0",
+    description="GST Billing Web Application",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origin_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.exception_handler(AppException)
+async def app_exception_handler(request: Request, exc: AppException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"success": False, "error": {"code": exc.code, "message": exc.message, "fields": getattr(exc, "fields", None)}}
+    )
+
+app.include_router(api_router, prefix="/api")
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
 ```
 
 ```python
@@ -992,6 +1396,11 @@ class UnitVersion(Base):
     effective_to = Column(DateTime, nullable=True)
     
     unit = relationship("Unit", back_populates="versions")
+```
+
+```
+// File: backend/app/repositories/.gitkeep
+
 ```
 
 ```python
@@ -2209,6 +2618,11 @@ def extract_pan_from_gstin(gstin: str) -> str:
     return ""
 ```
 
+```
+// File: backend/migrations/.gitkeep
+
+```
+
 ```toml
 // File: backend/pyproject.toml
 [build-system]
@@ -2240,4 +2654,116 @@ dependencies = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["app*"]
+```
+
+```python
+// File: backend/seed_data.py
+from sqlalchemy.orm import Session
+from app.core.database import SessionLocal
+from app.models.master import GSTStateCode, GSTRate
+
+def seed_gst_states(db: Session):
+    if db.query(GSTStateCode).first():
+        return
+    states = [
+        ("01", "Jammu and Kashmir", False),
+        ("02", "Himachal Pradesh", False),
+        ("03", "Punjab", False),
+        ("04", "Chandigarh", True),
+        ("05", "Uttarakhand", False),
+```
+
+```
+// File: backend/tests/.gitkeep
+
+```
+
+```
+// File: docs/.gitkeep
+
+```
+
+```
+// File: frontend/public/.gitkeep
+
+```
+
+```
+// File: frontend/src/api/.gitkeep
+
+```
+
+```
+// File: frontend/src/app/.gitkeep
+
+```
+
+```
+// File: frontend/src/components/common/.gitkeep
+
+```
+
+```
+// File: frontend/src/components/forms/.gitkeep
+
+```
+
+```
+// File: frontend/src/components/modals/.gitkeep
+
+```
+
+```
+// File: frontend/src/components/tables/.gitkeep
+
+```
+
+```
+// File: frontend/src/features/auth/.gitkeep
+
+```
+
+```
+// File: frontend/src/features/company/.gitkeep
+
+```
+
+```
+// File: frontend/src/features/customers/.gitkeep
+
+```
+
+```
+// File: frontend/src/features/invoices/.gitkeep
+
+```
+
+```
+// File: frontend/src/features/items/.gitkeep
+
+```
+
+```
+// File: frontend/src/features/units/.gitkeep
+
+```
+
+```
+// File: frontend/src/hooks/.gitkeep
+
+```
+
+```
+// File: frontend/src/stores/.gitkeep
+
+```
+
+```
+// File: frontend/src/types/.gitkeep
+
+```
+
+```
+// File: frontend/src/utils/.gitkeep
+
 ```
