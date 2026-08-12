@@ -1984,6 +1984,186 @@ class CompanyService:
 ```
 
 ```python
+// File: backend/app/services/file_storage_service.py
+"""Secure file storage service for logos, PDFs, and attachments.
+"""
+import os
+import shutil
+import hashlib
+import mimetypes
+from pathlib import Path
+from datetime import datetime
+from typing import BinaryIO, Tuple
+from fastapi import UploadFile
+from app.core.config import settings
+from app.core.exceptions import ValidationException
+
+# Allowed MIME types for uploads
+ALLOWED_LOGO_TYPES = {"image/png", "image/jpeg", "image/webp"}
+MAX_LOGO_SIZE = 5 * 1024 * 1024  # 5 MB
+
+class FileStorageService:
+    """Handles safe file storage outside the web root."""
+    
+    @staticmethod
+    def _get_storage_path() -> Path:
+        path = Path(settings.storage_path)
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+    
+    @staticmethod
+    def _safe_filename(filename: str) -> str:
+        """Sanitize filename to prevent path traversal."""
+        name = os.path.basename(filename)
+        name = "".join(c for c in name if c.isalnum() or c in "._-")
+        if not name:
+            name = "file"
+        return name
+    
+    @staticmethod
+    def _validate_image(upload: UploadFile) -> Tuple[str, int]:
+        """Validate uploaded image. Returns (mime_type, size)."""
+        content_type = upload.content_type or ""
+        if content_type not in ALLOWED_LOGO_TYPES:
+            raise ValidationException(
+                f"Invalid file type: {content_type}. Allowed: PNG, JPEG, WEBP"
+            )
+        
+        # Read first chunk to verify it is actually an image
+        header = upload.file.read(8192)
+        upload.file.seek(0)
+        
+        # Basic magic number checks
+        if content_type == "image/png" and not header.startswith(b"\\x89PNG"):
+            raise ValidationException("File does not appear to be a valid PNG")
+        if content_type == "image/jpeg" and not header.startswith(b"\\xff\\xd8"):
+            raise ValidationException("File does not appear to be a valid JPEG")
+        if content_type == "image/webp" and not header.startswith(b"RIFF"):
+            raise ValidationException("File does not appear to be a valid WEBP")
+        
+        # Check size
+        upload.file.seek(0, os.SEEK_END)
+        size = upload.file.tell()
+        upload.file.seek(0)
+        if size > MAX_LOGO_SIZE:
+            raise ValidationException(f"File too large. Max size: {MAX_LOGO_SIZE // 1024 // 1024}MB")
+        
+        return content_type, size
+    
+    @classmethod
+    def save_company_logo(cls, company_id: str, upload: UploadFile) -> dict:
+        """Save company logo to storage.
+        
+        Returns metadata dict with path, mime_type, size.
+        """
+        mime_type, size = cls._validate_image(upload)
+        
+        storage = cls._get_storage_path()
+        logo_dir = storage / "company-logos" / company_id
+        logo_dir.mkdir(parents=True, exist_ok=True)
+        
+        ext = mimetypes.guess_extension(mime_type) or ".png"
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        filename = f"logo_{timestamp}{ext}"
+        safe_name = cls._safe_filename(filename)
+        
+        file_path = logo_dir / safe_name
+        
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(upload.file, buffer)
+        
+        return {
+            "file_path": str(file_path.relative_to(storage)),
+            "mime_type": mime_type,
+            "file_size": size,
+            "filename": safe_name,
+        }
+    
+    @classmethod
+    def save_invoice_pdf(cls, company_id: str, invoice_id: str, pdf_bytes: bytes) -> Path:
+        """Save generated invoice PDF."""
+        storage = cls._get_storage_path()
+        pdf_dir = storage / "invoices" / company_id
+        pdf_dir.mkdir(parents=True, exist_ok=True)
+        
+        file_path = pdf_dir / f"{invoice_id}.pdf"
+        with open(file_path, "wb") as f:
+            f.write(pdf_bytes)
+        return file_path
+    
+    @classmethod
+    def get_file_path(cls, relative_path: str) -> Path:
+        """Resolve a stored relative path to absolute path."""
+        storage = cls._get_storage_path()
+        target = storage / relative_path
+        # Security: ensure resolved path is within storage
+        try:
+            target.resolve().relative_to(storage.resolve())
+        except ValueError:
+            raise ValidationException("Invalid file path")
+        return target
+```
+
+```python
+// File: backend/app/services/invoice_number_service.py
+"""Atomic invoice numbering service.
+Ensures unique, sequential invoice numbers within a series.
+"""
+from sqlalchemy.orm import Session
+from app.models.invoice import InvoiceSeries
+from app.core.exceptions import ValidationException
+
+class InvoiceNumberService:
+    """Handles atomic invoice number assignment using row-level locking."""
+    
+    @staticmethod
+    def get_or_create_series(
+        db: Session,
+        company_id: str,
+        document_type: str = "TAX_INVOICE",
+        prefix: str = "INV-",
+        fiscal_year: str | None = None,
+    ) -> InvoiceSeries:
+        series = db.query(InvoiceSeries).filter(
+            InvoiceSeries.company_id == company_id,
+            InvoiceSeries.document_type == document_type,
+            InvoiceSeries.prefix == prefix,
+            InvoiceSeries.status == "ACTIVE",
+        ).first()
+        
+        if not series:
+            series = InvoiceSeries(
+                company_id=company_id,
+                document_type=document_type,
+                prefix=prefix,
+                starting_number=1,
+                current_number=1,
+                fiscal_year=fiscal_year,
+            )
+            db.add(series)
+            db.flush()
+        return series
+    
+    @staticmethod
+    def assign_number(db: Session, series: InvoiceSeries) -> str:
+        """Atomically assign next invoice number.
+        
+        Uses SELECT FOR UPDATE to prevent duplicate numbers under concurrency.
+        """
+        # Re-fetch with lock
+        locked_series = db.query(InvoiceSeries).filter(
+            InvoiceSeries.id == series.id
+        ).with_for_update().first()
+        
+        if not locked_series:
+            raise ValidationException("Invoice series not found")
+        
+        number = f"{locked_series.prefix}{locked_series.current_number:06d}"
+        locked_series.current_number += 1
+        return number
+```
+
+```python
 // File: backend/app/services/invoice_service.py
 from decimal import Decimal, ROUND_HALF_UP
 from sqlalchemy.orm import Session
@@ -2420,6 +2600,142 @@ class PartyService:
 ```
 
 ```python
+// File: backend/app/services/tax_service.py
+"""GST Tax Calculation Engine.
+Determines applicable tax treatment based on transaction rules.
+"""
+from decimal import Decimal, ROUND_HALF_UP
+from typing import Dict, Any
+from app.models.company import CompanyGSTDetail
+from app.models.party import Party
+
+class TaxService:
+    """Authoritative tax calculation service.
+    
+    Rules applied:
+    - Intra-state (seller state == place of supply): CGST + SGST/UTGST
+    - Inter-state (seller state != place of supply): IGST
+    - GST rate is snapshotted from item master at transaction time
+    """
+    
+    @staticmethod
+    def determine_tax_treatment(
+        seller_state_code: str,
+        customer_state_code: str,
+        place_of_supply_state_code: str,
+        customer_gstin: str | None = None,
+    ) -> Dict[str, Any]:
+        """Determine tax treatment for a transaction.
+        
+        Returns dict with:
+            - is_interstate: bool
+            - cgst_applicable: bool
+            - sgst_applicable: bool
+            - igst_applicable: bool
+            - tax_split_ratio: dict (for dividing tax into components)
+        """
+        # Use place of supply as the determining factor for destination-based GST
+        pos_code = place_of_supply_state_code or customer_state_code
+        seller = seller_state_code or ""
+        
+        is_interstate = seller != pos_code
+        
+        # Unregistered customers may still attract IGST if inter-state
+        # SEZ, Export, Composition etc. would extend here in future
+        
+        return {
+            "is_interstate": is_interstate,
+            "cgst_applicable": not is_interstate,
+            "sgst_applicable": not is_interstate,
+            "igst_applicable": is_interstate,
+            "tax_split_ratio": {
+                "cgst": Decimal("0.5"),
+                "sgst": Decimal("0.5"),
+                "igst": Decimal("1.0"),
+            } if not is_interstate else {
+                "cgst": Decimal("0"),
+                "sgst": Decimal("0"),
+                "igst": Decimal("1.0"),
+            }
+        }
+    
+    @staticmethod
+    def calculate_line_tax(
+        taxable_value: Decimal,
+        gst_rate: Decimal,
+        treatment: Dict[str, Any],
+        precision: int = 2
+    ) -> Dict[str, Decimal]:
+        """Calculate tax components for a single line.
+        
+        Returns:
+            {
+                "cgst_rate": Decimal,
+                "sgst_rate": Decimal,
+                "igst_rate": Decimal,
+                "cgst_amount": Decimal,
+                "sgst_amount": Decimal,
+                "igst_amount": Decimal,
+                "total_tax": Decimal,
+            }
+        """
+        quantize = Decimal("0.01")
+        
+        if treatment["is_interstate"]:
+            cgst_rate = Decimal("0")
+            sgst_rate = Decimal("0")
+            igst_rate = gst_rate
+            igst_amount = (taxable_value * igst_rate / 100).quantize(quantize, rounding=ROUND_HALF_UP)
+            cgst_amount = Decimal("0")
+            sgst_amount = Decimal("0")
+        else:
+            half_rate = (gst_rate / 2).quantize(quantize, rounding=ROUND_HALF_UP)
+            cgst_rate = half_rate
+            sgst_rate = half_rate
+            igst_rate = Decimal("0")
+            cgst_amount = (taxable_value * cgst_rate / 100).quantize(quantize, rounding=ROUND_HALF_UP)
+            sgst_amount = (taxable_value * sgst_rate / 100).quantize(quantize, rounding=ROUND_HALF_UP)
+            igst_amount = Decimal("0")
+        
+        return {
+            "cgst_rate": cgst_rate,
+            "sgst_rate": sgst_rate,
+            "igst_rate": igst_rate,
+            "cgst_amount": cgst_amount,
+            "sgst_amount": sgst_amount,
+            "igst_amount": igst_amount,
+            "total_tax": cgst_amount + sgst_amount + igst_amount,
+        }
+    
+    @staticmethod
+    def calculate_invoice_totals(lines: list[Dict[str, Any]]) -> Dict[str, Decimal]:
+        """Aggregate totals from calculated lines.
+        
+        Input lines should have: taxable_value, cgst_amount, sgst_amount, igst_amount, line_total
+        """
+        quantize = Decimal("0.01")
+        totals = {
+            "subtotal": Decimal("0"),
+            "discount_total": Decimal("0"),
+            "taxable_total": Decimal("0"),
+            "cgst_total": Decimal("0"),
+            "sgst_total": Decimal("0"),
+            "igst_total": Decimal("0"),
+            "grand_total": Decimal("0"),
+        }
+        for line in lines:
+            totals["subtotal"] += Decimal(str(line.get("gross", 0)))
+            totals["discount_total"] += Decimal(str(line.get("discount_amount", 0)))
+            totals["taxable_total"] += Decimal(str(line.get("taxable_value", 0)))
+            totals["cgst_total"] += Decimal(str(line.get("cgst_amount", 0)))
+            totals["sgst_total"] += Decimal(str(line.get("sgst_amount", 0)))
+            totals["igst_total"] += Decimal(str(line.get("igst_amount", 0)))
+            totals["grand_total"] += Decimal(str(line.get("line_total", 0)))
+        
+        return {k: v.quantize(quantize, rounding=ROUND_HALF_UP) for k, v in totals.items()}
+```
+
+```python
 // File: backend/app/services/unit_service.py
 import re
 from sqlalchemy.orm import Session
@@ -2552,6 +2868,183 @@ def now_utc() -> datetime:
 def format_ist(dt: datetime) -> str:
     from zoneinfo import ZoneInfo
     return dt.astimezone(ZoneInfo("Asia/Kolkata")).strftime("%d-%m-%Y %H:%M")
+```
+
+```python
+// File: backend/app/utils/formula_engine.py
+"""Safe formula evaluation engine for unit conversions.
+Supports Excel-style formulas without arbitrary code execution.
+"""
+import re
+import operator
+import math
+from decimal import Decimal, InvalidOperation
+from typing import Dict, Any
+
+class FormulaError(Exception):
+    pass
+
+class FormulaEngine:
+    """Safe formula parser and evaluator for unit conversions.
+    
+    Supported syntax:
+    - Numbers: 12, 0.5, 2.5
+    - Operators: +, -, *, /, ^
+    - Parentheses: ( )
+    - Unit references: PCS, KG, BOX (resolved via context)
+    - Functions: ROUND, SQRT
+    """
+    
+    TOKEN_SPEC = [
+        ("NUMBER", r"\d+(?:\.\d+)?"),
+        ("NAME", r"[A-Za-z_][A-Za-z0-9_]*"),
+        ("OP", r"[+\-*/^()]"),
+        ("SKIP", r"[ \t]+"),
+        ("MISMATCH", r"."),
+    ]
+    
+    TOKEN_RE = re.compile("|".join(f"(?P<{name}>{pattern})" for name, pattern in TOKEN_SPEC))
+    
+    @classmethod
+    def tokenize(cls, formula: str):
+        text = formula.strip().lstrip("=").strip()
+        tokens = []
+        for mo in cls.TOKEN_RE.finditer(text):
+            kind = mo.lastgroup
+            value = mo.group()
+            if kind == "SKIP":
+                continue
+            elif kind == "MISMATCH":
+                raise FormulaError(f"Unexpected character: {value}")
+            tokens.append((kind, value))
+        return tokens
+    
+    @classmethod
+    def validate_syntax(cls, formula: str):
+        tokens = cls.tokenize(formula)
+        # Check parentheses balance
+        parens = sum(1 for t in tokens if t[1] == "(") - sum(1 for t in tokens if t[1] == ")")
+        if parens != 0:
+            raise FormulaError("Unbalanced parentheses")
+        # Check no consecutive operators (basic)
+        ops = {"+", "-", "*", "/", "^"}
+        for i in range(len(tokens) - 1):
+            if tokens[i][1] in ops and tokens[i+1][1] in ops:
+                if tokens[i+1][1] not in {"+", "-"}:  # unary allowed after operator
+                    raise FormulaError(f"Consecutive operators: {tokens[i][1]} {tokens[i+1][1]}")
+        return True
+    
+    @classmethod
+    def evaluate(cls, formula: str, unit_values: Dict[str, Decimal]) -> Decimal:
+        """Evaluate formula with given unit values.
+        
+        Example:
+            formula = "=12*PCS"
+            unit_values = {"PCS": Decimal("1")}
+            result = Decimal("12")
+        """
+        cls.validate_syntax(formula)
+        tokens = cls.tokenize(formula)
+        
+        # Convert to postfix (RPN) using shunting yard
+        output = []
+        stack = []
+        precedence = {"+": 1, "-": 1, "*": 2, "/": 2, "^": 3}
+        
+        i = 0
+        while i < len(tokens):
+            kind, value = tokens[i]
+            if kind == "NUMBER":
+                output.append(Decimal(value))
+            elif kind == "NAME":
+                upper_val = value.upper()
+                if upper_val in unit_values:
+                    output.append(unit_values[upper_val])
+                elif upper_val == "ROUND":
+                    stack.append("ROUND")
+                elif upper_val == "SQRT":
+                    stack.append("SQRT")
+                else:
+                    raise FormulaError(f"Unknown reference: {value}")
+            elif value == ",":
+                while stack and stack[-1] != "(":
+                    output.append(stack.pop())
+            elif value == "(":
+                stack.append(value)
+            elif value == ")":
+                while stack and stack[-1] != "(":
+                    output.append(stack.pop())
+                if not stack:
+                    raise FormulaError("Mismatched parentheses")
+                stack.pop()  # pop "("
+                if stack and stack[-1] in {"ROUND", "SQRT"}:
+                    output.append(stack.pop())
+            elif kind == "OP":
+                while (stack and stack[-1] != "(" and
+                       stack[-1] in precedence and
+                       precedence[stack[-1]] >= precedence.get(value, 0)):
+                    output.append(stack.pop())
+                stack.append(value)
+            i += 1
+        
+        while stack:
+            op = stack.pop()
+            if op in {"(", ")"}:
+                raise FormulaError("Mismatched parentheses")
+            output.append(op)
+        
+        # Evaluate RPN
+        eval_stack = []
+        for token in output:
+            if isinstance(token, Decimal):
+                eval_stack.append(token)
+            elif token == "+":
+                b, a = eval_stack.pop(), eval_stack.pop()
+                eval_stack.append(a + b)
+            elif token == "-":
+                b, a = eval_stack.pop(), eval_stack.pop()
+                eval_stack.append(a - b)
+            elif token == "*":
+                b, a = eval_stack.pop(), eval_stack.pop()
+                eval_stack.append(a * b)
+            elif token == "/":
+                b, a = eval_stack.pop(), eval_stack.pop()
+                if b == 0:
+                    raise FormulaError("Division by zero")
+                eval_stack.append(a / b)
+            elif token == "^":
+                b, a = eval_stack.pop(), eval_stack.pop()
+                eval_stack.append(a ** b)
+            elif token == "ROUND":
+                a = eval_stack.pop()
+                eval_stack.append(a.quantize(Decimal("0.01")))
+            elif token == "SQRT":
+                a = eval_stack.pop()
+                eval_stack.append(Decimal(str(math.sqrt(float(a)))))
+        
+        if len(eval_stack) != 1:
+            raise FormulaError("Invalid formula expression")
+        return eval_stack[0]
+
+
+def validate_conversion_formula(formula: str, available_units: list[str]) -> dict:
+    """Validate a unit conversion formula.
+    
+    Returns:
+        {"valid": bool, "error": str|None, "normalized": str}
+    """
+    try:
+        FormulaEngine.validate_syntax(formula)
+        tokens = FormulaEngine.tokenize(formula)
+        refs = {t[1].upper() for t in tokens if t[0] == "NAME"}
+        funcs = {"ROUND", "SQRT"}
+        unknown = refs - set(u.upper() for u in available_units) - funcs
+        if unknown:
+            return {"valid": False, "error": f"Unknown unit reference: {', '.join(unknown)}", "normalized": None}
+        normalized = formula.strip().lstrip("=").strip().upper()
+        return {"valid": True, "error": None, "normalized": normalized}
+    except FormulaError as e:
+        return {"valid": False, "error": str(e), "normalized": None}
 ```
 
 ```python
