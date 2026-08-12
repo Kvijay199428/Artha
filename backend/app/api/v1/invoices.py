@@ -1,13 +1,19 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 from typing import List
 from app.core.database import get_db
 from app.dependencies.auth import get_current_company
 from app.schemas.common import ApiResponse
-from app.schemas.invoice import InvoiceCreate, InvoiceResponse, InvoiceListResponse, InvoiceFinalizeRequest, InvoiceCancelRequest
+from app.schemas.invoice import InvoiceCreate, InvoiceResponse, InvoiceListResponse, InvoiceFinalizeRequest, InvoiceCancelRequest, InvoiceCalculateRequest, InvoiceCalculateResponse
 from app.services.invoice_service import InvoiceService
+from app.services.pdf_service import PdfService
 
 router = APIRouter(prefix="/invoices", tags=["Invoices"])
+
+@router.post("/calculate", response_model=ApiResponse[InvoiceCalculateResponse])
+def calculate_invoice(request: InvoiceCalculateRequest, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    result = InvoiceService.calculate_invoice(db, str(company.id), company, request.model_dump())
+    return ApiResponse(success=True, data=InvoiceCalculateResponse(**result))
 
 @router.post("/", response_model=ApiResponse[InvoiceResponse])
 def create_invoice(request: InvoiceCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
@@ -26,6 +32,18 @@ def list_invoices(status: str = Query(None), company = Depends(get_current_compa
 def get_invoice(invoice_id: str, company = Depends(get_current_company), db: Session = Depends(get_db)):
     invoice = InvoiceService.get_invoice(db, str(company.id), invoice_id)
     return ApiResponse(success=True, data=_invoice_to_response(invoice))
+
+@router.get("/{invoice_id}/pdf")
+def get_invoice_pdf(invoice_id: str, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    invoice = InvoiceService.get_invoice(db, str(company.id), invoice_id)
+    pdf_bytes = PdfService.generate_invoice_pdf(invoice)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename=invoice_{invoice.invoice_number}.pdf"
+        }
+    )
 
 @router.post("/{invoice_id}/finalize", response_model=ApiResponse[InvoiceResponse])
 def finalize_invoice(invoice_id: str, request: InvoiceFinalizeRequest, company = Depends(get_current_company), db: Session = Depends(get_db)):

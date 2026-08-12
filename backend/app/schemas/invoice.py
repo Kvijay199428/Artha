@@ -25,6 +25,22 @@ class InvoiceCreate(BaseModel):
     notes: Optional[str] = None
     terms: Optional[str] = None
 
+class InvoiceCalculateRequest(BaseModel):
+    customer_id: Optional[str] = None
+    place_of_supply: str = Field(...)
+    lines: list[InvoiceLineCreate] = Field(..., min_length=1)
+
+class InvoiceCalculateResponse(BaseModel):
+    subtotal: float
+    discount_total: float
+    taxable_total: float
+    cgst_total: float
+    sgst_total: float
+    igst_total: float
+    grand_total: float
+    amount_in_words: Optional[str]
+    lines: list[dict] # We can just return lines as dictionaries
+
 class InvoiceLineResponse(BaseModel):
     id: str
     item_name: str

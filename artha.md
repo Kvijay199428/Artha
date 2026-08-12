@@ -1,12 +1,17 @@
 ```
-// File: backend/.env.example
-APP_ENV=development
-DATABASE_URL=sqlite:///data/gst_billing.db
-SECRET_KEY=change-this-to-a-secure-random-key-min-32-chars
-SESSION_SECRET=another-secure-random-key
-STORAGE_PATH=storage
-LOG_LEVEL=INFO
-CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+// File: backend/Dockerfile
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install dependencies using pip and pyproject.toml
+COPY pyproject.toml ./
+RUN pip install --no-cache-dir .
+
+COPY . .
+
+# Run the application
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
 ```python
@@ -221,16 +226,22 @@ def delete_company_logo(
 
 ```python
 // File: backend/app/api/v1/invoices.py
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 from typing import List
 from app.core.database import get_db
 from app.dependencies.auth import get_current_company
 from app.schemas.common import ApiResponse
-from app.schemas.invoice import InvoiceCreate, InvoiceResponse, InvoiceListResponse, InvoiceFinalizeRequest, InvoiceCancelRequest
+from app.schemas.invoice import InvoiceCreate, InvoiceResponse, InvoiceListResponse, InvoiceFinalizeRequest, InvoiceCancelRequest, InvoiceCalculateRequest, InvoiceCalculateResponse
 from app.services.invoice_service import InvoiceService
+from app.services.pdf_service import PdfService
 
 router = APIRouter(prefix="/invoices", tags=["Invoices"])
+
+@router.post("/calculate", response_model=ApiResponse[InvoiceCalculateResponse])
+def calculate_invoice(request: InvoiceCalculateRequest, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    result = InvoiceService.calculate_invoice(db, str(company.id), company, request.model_dump())
+    return ApiResponse(success=True, data=InvoiceCalculateResponse(**result))
 
 @router.post("/", response_model=ApiResponse[InvoiceResponse])
 def create_invoice(request: InvoiceCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
@@ -249,6 +260,18 @@ def list_invoices(status: str = Query(None), company = Depends(get_current_compa
 def get_invoice(invoice_id: str, company = Depends(get_current_company), db: Session = Depends(get_db)):
     invoice = InvoiceService.get_invoice(db, str(company.id), invoice_id)
     return ApiResponse(success=True, data=_invoice_to_response(invoice))
+
+@router.get("/{invoice_id}/pdf")
+def get_invoice_pdf(invoice_id: str, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    invoice = InvoiceService.get_invoice(db, str(company.id), invoice_id)
+    pdf_bytes = PdfService.generate_invoice_pdf(invoice)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename=invoice_{invoice.invoice_number}.pdf"
+        }
+    )
 
 @router.post("/{invoice_id}/finalize", response_model=ApiResponse[InvoiceResponse])
 def finalize_invoice(invoice_id: str, request: InvoiceFinalizeRequest, company = Depends(get_current_company), db: Session = Depends(get_db)):
@@ -1449,11 +1472,6 @@ class UnitVersion(Base):
     unit = relationship("Unit", back_populates="versions")
 ```
 
-```
-// File: backend/app/repositories/.gitkeep
-
-```
-
 ```python
 // File: backend/app/schemas/auth.py
 from pydantic import BaseModel, Field
@@ -1621,6 +1639,22 @@ class InvoiceCreate(BaseModel):
     lines: list[InvoiceLineCreate] = Field(..., min_length=1)
     notes: Optional[str] = None
     terms: Optional[str] = None
+
+class InvoiceCalculateRequest(BaseModel):
+    customer_id: Optional[str] = None
+    place_of_supply: str = Field(...)
+    lines: list[InvoiceLineCreate] = Field(..., min_length=1)
+
+class InvoiceCalculateResponse(BaseModel):
+    subtotal: float
+    discount_total: float
+    taxable_total: float
+    cgst_total: float
+    sgst_total: float
+    igst_total: float
+    grand_total: float
+    amount_in_words: Optional[str]
+    lines: list[dict] # We can just return lines as dictionaries
 
 class InvoiceLineResponse(BaseModel):
     id: str
@@ -2471,7 +2505,66 @@ class InvoiceService:
         db.add(invoice)
         db.flush()
         
+        calculated = InvoiceService.calculate_invoice(db, company_id, company, data)
+        
         # Process lines
+        for line_data in calculated["lines"]:
+            line = InvoiceLine(
+                invoice_id=invoice.id,
+                item_id=line_data.get("item_id"),
+                item_name_snapshot=line_data["item_name"],
+                sku_snapshot=line_data.get("sku"),
+                description_snapshot=line_data.get("description"),
+                hsn_sac_snapshot=line_data.get("hsn_sac_snapshot"),
+                quantity=Decimal(str(line_data["quantity"])),
+                unit_id=line_data.get("unit_id"),
+                unit_name_snapshot=line_data.get("unit_name_snapshot"),
+                unit_symbol_snapshot=line_data.get("unit_symbol_snapshot"),
+                rate=Decimal(str(line_data["rate"])),
+                discount_type=line_data.get("discount_type", "NONE"),
+                discount_value=Decimal(str(line_data.get("discount_value", 0))),
+                discount_amount=Decimal(str(line_data["discount_amount"])),
+                taxable_value=Decimal(str(line_data["taxable_value"])),
+                gst_rate=Decimal(str(line_data["gst_rate"])),
+                cgst_rate=Decimal(str(line_data["cgst_rate"])),
+                sgst_rate=Decimal(str(line_data["sgst_rate"])),
+                igst_rate=Decimal(str(line_data["igst_rate"])),
+                cgst_amount=Decimal(str(line_data["cgst_amount"])),
+                sgst_amount=Decimal(str(line_data["sgst_amount"])),
+                igst_amount=Decimal(str(line_data["igst_amount"])),
+                line_total=Decimal(str(line_data["line_total"])),
+            )
+            db.add(line)
+        
+        invoice.subtotal = Decimal(str(calculated["subtotal"]))
+        invoice.discount_total = Decimal(str(calculated["discount_total"]))
+        invoice.taxable_total = Decimal(str(calculated["taxable_total"]))
+        invoice.cgst_total = Decimal(str(calculated["cgst_total"]))
+        invoice.sgst_total = Decimal(str(calculated["sgst_total"]))
+        invoice.igst_total = Decimal(str(calculated["igst_total"]))
+        invoice.grand_total = Decimal(str(calculated["grand_total"]))
+        invoice.amount_in_words = calculated["amount_in_words"]
+        
+        db.commit()
+        db.refresh(invoice)
+        AuditService.log(db, company_id, "INVOICE", invoice.id, "CREATED")
+        return invoice
+    
+    @staticmethod
+    def calculate_invoice(db: Session, company_id: str, company, data: dict):
+        # Determine interstate by checking company vs customer (if provided)
+        seller_state = company.addresses[0].state_code if company.addresses else None
+        customer_state = None
+        if data.get("customer_id"):
+            customer = db.query(Party).filter(
+                Party.id == data["customer_id"],
+                Party.company_id == company_id
+            ).first()
+            if customer:
+                customer_state = customer.state_code
+        
+        is_interstate = (seller_state or "") != (customer_state or "")
+        
         subtotal = Decimal("0")
         discount_total = Decimal("0")
         taxable_total = Decimal("0")
@@ -2479,7 +2572,7 @@ class InvoiceService:
         sgst_total = Decimal("0")
         igst_total = Decimal("0")
         
-        is_interstate = (invoice.seller_state_code_snapshot or "") != (invoice.customer_state_code_snapshot or "")
+        calculated_lines = []
         
         for line_data in data["lines"]:
             rate = Decimal(str(line_data["rate"]))
@@ -2512,32 +2605,30 @@ class InvoiceService:
             
             line_total = (taxable + cgst_amount + sgst_amount + igst_amount).quantize(Decimal("0.01"))
             
-            line = InvoiceLine(
-                invoice_id=invoice.id,
-                item_id=line_data.get("item_id"),
-                item_name_snapshot=line_data["item_name"],
-                sku_snapshot=line_data.get("sku"),
-                description_snapshot=line_data.get("description"),
-                hsn_sac_snapshot=line_data.get("hsn_sac"),
-                quantity=qty,
-                unit_id=line_data.get("unit_id"),
-                unit_name_snapshot=line_data.get("unit_name"),
-                unit_symbol_snapshot=line_data.get("unit_symbol"),
-                rate=rate,
-                discount_type=discount_type,
-                discount_value=discount_value,
-                discount_amount=discount_amount,
-                taxable_value=taxable,
-                gst_rate=gst_rate,
-                cgst_rate=gst_rate / 2 if not is_interstate else Decimal("0"),
-                sgst_rate=gst_rate / 2 if not is_interstate else Decimal("0"),
-                igst_rate=gst_rate if is_interstate else Decimal("0"),
-                cgst_amount=cgst_amount,
-                sgst_amount=sgst_amount,
-                igst_amount=igst_amount,
-                line_total=line_total,
-            )
-            db.add(line)
+            calculated_lines.append({
+                "item_id": line_data.get("item_id"),
+                "item_name": line_data["item_name"],
+                "sku": line_data.get("sku"),
+                "description": line_data.get("description"),
+                "hsn_sac_snapshot": line_data.get("hsn_sac"),
+                "quantity": float(qty),
+                "unit_id": line_data.get("unit_id"),
+                "unit_name_snapshot": line_data.get("unit_name"),
+                "unit_symbol_snapshot": line_data.get("unit_symbol"),
+                "rate": float(rate),
+                "discount_type": discount_type,
+                "discount_value": float(discount_value),
+                "discount_amount": float(discount_amount),
+                "taxable_value": float(taxable),
+                "gst_rate": float(gst_rate),
+                "cgst_rate": float(gst_rate / 2 if not is_interstate else 0),
+                "sgst_rate": float(gst_rate / 2 if not is_interstate else 0),
+                "igst_rate": float(gst_rate if is_interstate else 0),
+                "cgst_amount": float(cgst_amount),
+                "sgst_amount": float(sgst_amount),
+                "igst_amount": float(igst_amount),
+                "line_total": float(line_total),
+            })
             
             subtotal += gross
             discount_total += discount_amount
@@ -2546,22 +2637,19 @@ class InvoiceService:
             sgst_total += sgst_amount
             igst_total += igst_amount
         
-        round_off = Decimal("0")
         grand_total = (taxable_total + cgst_total + sgst_total + igst_total).quantize(Decimal("0.01"))
         
-        invoice.subtotal = subtotal
-        invoice.discount_total = discount_total
-        invoice.taxable_total = taxable_total
-        invoice.cgst_total = cgst_total
-        invoice.sgst_total = sgst_total
-        invoice.igst_total = igst_total
-        invoice.grand_total = grand_total
-        invoice.amount_in_words = amount_in_words(float(grand_total))
-        
-        db.commit()
-        db.refresh(invoice)
-        AuditService.log(db, company_id, "INVOICE", invoice.id, "CREATED")
-        return invoice
+        return {
+            "subtotal": float(subtotal),
+            "discount_total": float(discount_total),
+            "taxable_total": float(taxable_total),
+            "cgst_total": float(cgst_total),
+            "sgst_total": float(sgst_total),
+            "igst_total": float(igst_total),
+            "grand_total": float(grand_total),
+            "amount_in_words": amount_in_words(float(grand_total)),
+            "lines": calculated_lines,
+        }
     
     @staticmethod
     def finalize_invoice(db: Session, company_id: str, invoice_id: str) -> Invoice:
@@ -2878,6 +2966,165 @@ class PartyService:
         if not party:
             raise NotFoundException("Party not found")
         return party
+```
+
+```python
+// File: backend/app/services/pdf_service.py
+import io
+from datetime import datetime
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from app.models.invoice import Invoice
+
+class PdfService:
+    @staticmethod
+    def generate_invoice_pdf(invoice: Invoice) -> bytes:
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=A4,
+            rightMargin=30,
+            leftMargin=30,
+            topMargin=30,
+            bottomMargin=30,
+        )
+
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        # Header
+        title_style = ParagraphStyle(
+            'TitleStyle',
+            parent=styles['Heading1'],
+            fontSize=16,
+            alignment=1, # Center
+            spaceAfter=20
+        )
+        
+        doc_title = "TAX INVOICE"
+        if invoice.invoice_status == "DRAFT":
+            doc_title = "PROFORMA INVOICE / DRAFT"
+        elif invoice.invoice_status == "CANCELLED":
+            doc_title = "CANCELLED INVOICE"
+            
+        elements.append(Paragraph(doc_title, title_style))
+        
+        # Company & Customer Details
+        header_data = [
+            [
+                Paragraph(f"<b>{invoice.seller_name_snapshot}</b><br/>"
+                         f"{invoice.seller_address_snapshot}<br/>"
+                         f"GSTIN: {invoice.seller_gstin_snapshot or 'N/A'}<br/>"
+                         f"State: {invoice.seller_state_snapshot} ({invoice.seller_state_code_snapshot})", styles['Normal']),
+                Paragraph(f"<b>Billed To:</b><br/>"
+                         f"<b>{invoice.customer_name_snapshot}</b><br/>"
+                         f"{invoice.customer_address_snapshot or ''}<br/>"
+                         f"GSTIN: {invoice.customer_gstin_snapshot or 'N/A'}<br/>"
+                         f"State: {invoice.customer_state_snapshot} ({invoice.customer_state_code_snapshot})<br/>"
+                         f"Place of Supply: {invoice.place_of_supply}", styles['Normal'])
+            ],
+            [
+                Paragraph(f"<b>Invoice Number:</b> {invoice.invoice_number}<br/>"
+                         f"<b>Invoice Date:</b> {invoice.invoice_date.strftime('%d-%b-%Y')}", styles['Normal']),
+                ""
+            ]
+        ]
+        
+        header_table = Table(header_data, colWidths=[270, 270])
+        header_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('SPAN', (0, 1), (1, 1)),
+            ('PADDING', (0, 0), (-1, -1), 6)
+        ]))
+        elements.append(header_table)
+        elements.append(Spacer(1, 20))
+        
+        # Items Table
+        items_data = [
+            ['S.No', 'Description', 'HSN/SAC', 'Qty', 'Unit', 'Rate', 'GST %', 'Amount']
+        ]
+        
+        for idx, line in enumerate(invoice.lines, 1):
+            items_data.append([
+                str(idx),
+                Paragraph(line.item_name_snapshot, styles['Normal']),
+                line.hsn_sac_snapshot or '-',
+                str(line.quantity.normalize()),
+                line.unit_symbol_snapshot or '-',
+                f"{line.rate:.2f}",
+                f"{line.gst_rate}%",
+                f"{line.line_total:.2f}"
+            ])
+            
+        items_table = Table(items_data, colWidths=[30, 150, 60, 50, 40, 60, 50, 90])
+        items_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f3f4f6')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#374151')),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+            ('TOPPADDING', (0, 0), (-1, 0), 8),
+            
+            ('ALIGN', (3, 1), (-1, -1), 'RIGHT'),
+            ('ALIGN', (0, 1), (0, -1), 'CENTER'),
+            ('ALIGN', (2, 1), (2, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 9),
+        ]))
+        
+        elements.append(items_table)
+        
+        # Totals
+        totals_data = [
+            ['Subtotal:', f"{invoice.subtotal:.2f}"],
+            ['Discount:', f"{invoice.discount_total:.2f}"],
+            ['Taxable Value:', f"{invoice.taxable_total:.2f}"],
+        ]
+        
+        if invoice.igst_total > 0:
+            totals_data.append(['IGST:', f"{invoice.igst_total:.2f}"])
+        else:
+            totals_data.append(['CGST:', f"{invoice.cgst_total:.2f}"])
+            totals_data.append(['SGST:', f"{invoice.sgst_total:.2f}"])
+            
+        totals_data.append(['Grand Total:', f"{invoice.grand_total:.2f}"])
+        
+        totals_table = Table(totals_data, colWidths=[400, 130])
+        totals_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, -1), (-1, -1), 11),
+            ('LINEBELOW', (0, -2), (-1, -2), 0.5, colors.grey),
+            ('LINEABOVE', (0, -1), (-1, -1), 0.5, colors.grey),
+            ('LINEBELOW', (0, -1), (-1, -1), 1, colors.black),
+            ('PADDING', (0, 0), (-1, -1), 4)
+        ]))
+        
+        elements.append(totals_table)
+        elements.append(Spacer(1, 20))
+        
+        # Amount in Words
+        if invoice.amount_in_words:
+            elements.append(Paragraph(f"<b>Amount in Words:</b> Rupees {invoice.amount_in_words}", styles['Normal']))
+            
+        if invoice.notes or invoice.terms:
+            elements.append(Spacer(1, 20))
+            if invoice.notes:
+                elements.append(Paragraph(f"<b>Notes:</b><br/>{invoice.notes}", styles['Normal']))
+                elements.append(Spacer(1, 10))
+            if invoice.terms:
+                elements.append(Paragraph(f"<b>Terms & Conditions:</b><br/>{invoice.terms}", styles['Normal']))
+
+        doc.build(elements)
+        buffer.seek(0)
+        return buffer.getvalue()
 ```
 
 ```python
@@ -3436,11 +3683,6 @@ def extract_pan_from_gstin(gstin: str) -> str:
     return ""
 ```
 
-```
-// File: backend/migrations/.gitkeep
-
-```
-
 ```toml
 // File: backend/pyproject.toml
 [build-system]
@@ -3467,6 +3709,7 @@ dependencies = [
     "pytest-asyncio>=0.23.0",
     "aiofiles>=23.2.0",
     "email-validator>=2.1.0",
+    "reportlab>=4.0.0",
 ]
 
 [tool.setuptools.packages.find]
@@ -3474,97 +3717,2856 @@ where = ["."]
 include = ["app*"]
 ```
 
-```
-// File: backend/tests/.gitkeep
-
-```
-
-```
-// File: docs/.gitkeep
-
-```
-
-```
-// File: frontend/public/.gitkeep
-
+```json
+// File: frontend/.oxlintrc.json
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript", "oxc"],
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/only-export-components": ["warn", { "allowConstantExport": true }]
+  }
+}
 ```
 
 ```
-// File: frontend/src/api/.gitkeep
+// File: frontend/Dockerfile
+FROM node:22-alpine as build
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
 
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+# SPA routing setup
+RUN echo "server { \
+    listen 80; \
+    location / { \
+        root /usr/share/nginx/html; \
+        index index.html index.htm; \
+        try_files \$uri \$uri/ /index.html; \
+    } \
+}" > /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
 ```
 
-```
-// File: frontend/src/app/.gitkeep
+```markdown
+// File: frontend/README.md
+# React + TypeScript + Vite
 
-```
+This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
-```
-// File: frontend/src/components/common/.gitkeep
+Currently, two official plugins are available:
 
-```
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-```
-// File: frontend/src/components/forms/.gitkeep
+## React Compiler
 
-```
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-```
-// File: frontend/src/components/modals/.gitkeep
+## Expanding the Oxlint configuration
 
-```
+If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
 
-```
-// File: frontend/src/components/tables/.gitkeep
-
-```
-
-```
-// File: frontend/src/features/auth/.gitkeep
-
-```
-
-```
-// File: frontend/src/features/company/.gitkeep
-
+```json
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript", "oxc"],
+  "options": {
+    "typeAware": true
+  },
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/only-export-components": ["warn", { "allowConstantExport": true }]
+  }
+}
 ```
 
-```
-// File: frontend/src/features/customers/.gitkeep
-
+See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
 ```
 
-```
-// File: frontend/src/features/invoices/.gitkeep
-
-```
-
-```
-// File: frontend/src/features/items/.gitkeep
-
-```
-
-```
-// File: frontend/src/features/units/.gitkeep
-
-```
-
-```
-// File: frontend/src/hooks/.gitkeep
-
+```html
+// File: frontend/index.html
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>frontend</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
 ```
 
+```json
+// File: frontend/package.json
+{
+  "name": "frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.7.1",
+    "@tanstack/react-query": "^5.101.4",
+    "axios": "^1.19.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-hook-form": "^7.85.0",
+    "react-router-dom": "^7.18.2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.4",
+    "autoprefixer": "^10.5.4",
+    "oxlint": "^1.75.0",
+    "postcss": "^8.5.26",
+    "prettier": "^3.9.6",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.0"
+  }
+}
 ```
-// File: frontend/src/stores/.gitkeep
 
+```javascript
+// File: frontend/postcss.config.js
+export default {
+  plugins: {
+    '@tailwindcss/postcss': {},
+    autoprefixer: {},
+  },
+}
 ```
 
+```xml
+// File: frontend/public/favicon.svg
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="46" fill="none" viewBox="0 0 48 46"><path fill="#863bff" d="M25.946 44.938c-.664.845-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.287c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.497 0-3.578-1.842-3.578H1.237c-.92 0-1.456-1.04-.92-1.788L10.013.474c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.579 1.842 3.579h11.377c.943 0 1.473 1.088.89 1.83L25.947 44.94z" style="fill:#863bff;fill:color(display-p3 .5252 .23 1);fill-opacity:1"/><mask id="a" width="48" height="46" x="0" y="0" maskUnits="userSpaceOnUse" style="mask-type:alpha"><path fill="#000" d="M25.842 44.938c-.664.844-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.183c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.498 0-3.579-1.842-3.579H1.133c-.92 0-1.456-1.04-.92-1.787L9.91.473c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.578 1.842 3.578h11.377c.943 0 1.473 1.088.89 1.832L25.843 44.94z" style="fill:#000;fill-opacity:1"/></mask><g mask="url(#a)"><g filter="url(#b)"><ellipse cx="5.508" cy="14.704" fill="#ede6ff" rx="5.508" ry="14.704" style="fill:#ede6ff;fill:color(display-p3 .9275 .9033 1);fill-opacity:1" transform="matrix(.00324 1 1 -.00324 -4.47 31.516)"/></g><g filter="url(#c)"><ellipse cx="10.399" cy="29.851" fill="#ede6ff" rx="10.399" ry="29.851" style="fill:#ede6ff;fill:color(display-p3 .9275 .9033 1);fill-opacity:1" transform="matrix(.00324 1 1 -.00324 -39.328 7.883)"/></g><g filter="url(#d)"><ellipse cx="5.508" cy="30.487" fill="#7e14ff" rx="5.508" ry="30.487" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(89.814 -25.913 -14.639)scale(1 -1)"/></g><g filter="url(#e)"><ellipse cx="5.508" cy="30.599" fill="#7e14ff" rx="5.508" ry="30.599" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(89.814 -32.644 -3.334)scale(1 -1)"/></g><g filter="url(#f)"><ellipse cx="5.508" cy="30.599" fill="#7e14ff" rx="5.508" ry="30.599" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="matrix(.00324 1 1 -.00324 -34.34 30.47)"/></g><g filter="url(#g)"><ellipse cx="14.072" cy="22.078" fill="#ede6ff" rx="14.072" ry="22.078" style="fill:#ede6ff;fill:color(display-p3 .9275 .9033 1);fill-opacity:1" transform="rotate(93.35 24.506 48.493)scale(-1 1)"/></g><g filter="url(#h)"><ellipse cx="3.47" cy="21.501" fill="#7e14ff" rx="3.47" ry="21.501" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(89.009 28.708 47.59)scale(-1 1)"/></g><g filter="url(#i)"><ellipse cx="3.47" cy="21.501" fill="#7e14ff" rx="3.47" ry="21.501" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(89.009 28.708 47.59)scale(-1 1)"/></g><g filter="url(#j)"><ellipse cx=".387" cy="8.972" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(39.51 .387 8.972)"/></g><g filter="url(#k)"><ellipse cx="47.523" cy="-6.092" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(37.892 47.523 -6.092)"/></g><g filter="url(#l)"><ellipse cx="41.412" cy="6.333" fill="#47bfff" rx="5.971" ry="9.665" style="fill:#47bfff;fill:color(display-p3 .2799 .748 1);fill-opacity:1" transform="rotate(37.892 41.412 6.333)"/></g><g filter="url(#m)"><ellipse cx="-1.879" cy="38.332" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(37.892 -1.88 38.332)"/></g><g filter="url(#n)"><ellipse cx="-1.879" cy="38.332" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(37.892 -1.88 38.332)"/></g><g filter="url(#o)"><ellipse cx="35.651" cy="29.907" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(37.892 35.651 29.907)"/></g><g filter="url(#p)"><ellipse cx="38.418" cy="32.4" fill="#47bfff" rx="5.971" ry="15.297" style="fill:#47bfff;fill:color(display-p3 .2799 .748 1);fill-opacity:1" transform="rotate(37.892 38.418 32.4)"/></g></g><defs><filter id="b" width="60.045" height="41.654" x="-19.77" y="16.149" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="7.659"/></filter><filter id="c" width="90.34" height="51.437" x="-54.613" y="-7.533" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="7.659"/></filter><filter id="d" width="79.355" height="29.4" x="-49.64" y="2.03" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="e" width="79.579" height="29.4" x="-45.045" y="20.029" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="f" width="79.579" height="29.4" x="-43.513" y="21.178" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="g" width="74.749" height="58.852" x="15.756" y="-17.901" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="7.659"/></filter><filter id="h" width="61.377" height="25.362" x="23.548" y="2.284" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="i" width="61.377" height="25.362" x="23.548" y="2.284" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="j" width="56.045" height="63.649" x="-27.636" y="-22.853" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="k" width="54.814" height="64.646" x="20.116" y="-38.415" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="l" width="33.541" height="35.313" x="24.641" y="-11.323" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="m" width="54.814" height="64.646" x="-29.286" y="6.009" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="n" width="54.814" height="64.646" x="-29.286" y="6.009" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="o" width="54.814" height="64.646" x="8.244" y="-2.416" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="p" width="39.409" height="43.623" x="18.713" y="10.588" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter></defs></svg>
 ```
-// File: frontend/src/types/.gitkeep
 
+```xml
+// File: frontend/public/icons.svg
+<svg xmlns="http://www.w3.org/2000/svg">
+  <symbol id="bluesky-icon" viewBox="0 0 16 17">
+    <g clip-path="url(#bluesky-clip)"><path fill="#08060d" d="M7.75 7.735c-.693-1.348-2.58-3.86-4.334-5.097-1.68-1.187-2.32-.981-2.74-.79C.188 2.065.1 2.812.1 3.251s.241 3.602.398 4.13c.52 1.744 2.367 2.333 4.07 2.145-2.495.37-4.71 1.278-1.805 4.512 3.196 3.309 4.38-.71 4.987-2.746.608 2.036 1.307 5.91 4.93 2.746 2.72-2.746.747-4.143-1.747-4.512 1.702.189 3.55-.4 4.07-2.145.156-.528.397-3.691.397-4.13s-.088-1.186-.575-1.406c-.42-.19-1.06-.395-2.741.79-1.755 1.24-3.64 3.752-4.334 5.099"/></g>
+    <defs><clipPath id="bluesky-clip"><path fill="#fff" d="M.1.85h15.3v15.3H.1z"/></clipPath></defs>
+  </symbol>
+  <symbol id="discord-icon" viewBox="0 0 20 19">
+    <path fill="#08060d" d="M16.224 3.768a14.5 14.5 0 0 0-3.67-1.153c-.158.286-.343.67-.47.976a13.5 13.5 0 0 0-4.067 0c-.128-.306-.317-.69-.476-.976A14.4 14.4 0 0 0 3.868 3.77C1.546 7.28.916 10.703 1.231 14.077a14.7 14.7 0 0 0 4.5 2.306q.545-.748.965-1.587a9.5 9.5 0 0 1-1.518-.74q.191-.14.372-.293c2.927 1.369 6.107 1.369 8.999 0q.183.152.372.294-.723.437-1.52.74.418.838.963 1.588a14.6 14.6 0 0 0 4.504-2.308c.37-3.911-.63-7.302-2.644-10.309m-9.13 8.234c-.878 0-1.599-.82-1.599-1.82 0-.998.705-1.82 1.6-1.82.894 0 1.614.82 1.599 1.82.001 1-.705 1.82-1.6 1.82m5.91 0c-.878 0-1.599-.82-1.599-1.82 0-.998.705-1.82 1.6-1.82.893 0 1.614.82 1.599 1.82 0 1-.706 1.82-1.6 1.82"/>
+  </symbol>
+  <symbol id="documentation-icon" viewBox="0 0 21 20">
+    <path fill="none" stroke="#aa3bff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.35" d="m15.5 13.333 1.533 1.322c.645.555.967.833.967 1.178s-.322.623-.967 1.179L15.5 18.333m-3.333-5-1.534 1.322c-.644.555-.966.833-.966 1.178s.322.623.966 1.179l1.534 1.321"/>
+    <path fill="none" stroke="#aa3bff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.35" d="M17.167 10.836v-4.32c0-1.41 0-2.117-.224-2.68-.359-.906-1.118-1.621-2.08-1.96-.599-.21-1.349-.21-2.848-.21-2.623 0-3.935 0-4.983.369-1.684.591-3.013 1.842-3.641 3.428C3 6.449 3 7.684 3 10.154v2.122c0 2.558 0 3.838.706 4.726q.306.383.713.671c.76.536 1.79.64 3.581.66"/>
+    <path fill="none" stroke="#aa3bff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.35" d="M3 10a2.78 2.78 0 0 1 2.778-2.778c.555 0 1.209.097 1.748-.047.48-.129.854-.503.982-.982.145-.54.048-1.194.048-1.749a2.78 2.78 0 0 1 2.777-2.777"/>
+  </symbol>
+  <symbol id="github-icon" viewBox="0 0 19 19">
+    <path fill="#08060d" fill-rule="evenodd" d="M9.356 1.85C5.05 1.85 1.57 5.356 1.57 9.694a7.84 7.84 0 0 0 5.324 7.44c.387.079.528-.168.528-.376 0-.182-.013-.805-.013-1.454-2.165.467-2.616-.935-2.616-.935-.349-.91-.864-1.143-.864-1.143-.71-.48.051-.48.051-.48.787.051 1.2.805 1.2.805.695 1.194 1.817.857 2.268.649.064-.507.27-.857.49-1.052-1.728-.182-3.545-.857-3.545-3.87 0-.857.31-1.558.8-2.104-.078-.195-.349-1 .077-2.078 0 0 .657-.208 2.14.805a7.5 7.5 0 0 1 1.946-.26c.657 0 1.328.092 1.946.26 1.483-1.013 2.14-.805 2.14-.805.426 1.078.155 1.883.078 2.078.502.546.799 1.247.799 2.104 0 3.013-1.818 3.675-3.558 3.87.284.247.528.714.528 1.454 0 1.052-.012 1.896-.012 2.156 0 .208.142.455.528.377a7.84 7.84 0 0 0 5.324-7.441c.013-4.338-3.48-7.844-7.773-7.844" clip-rule="evenodd"/>
+  </symbol>
+  <symbol id="social-icon" viewBox="0 0 20 20">
+    <path fill="none" stroke="#aa3bff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.35" d="M12.5 6.667a4.167 4.167 0 1 0-8.334 0 4.167 4.167 0 0 0 8.334 0"/>
+    <path fill="none" stroke="#aa3bff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.35" d="M2.5 16.667a5.833 5.833 0 0 1 8.75-5.053m3.837.474.513 1.035c.07.144.257.282.414.309l.93.155c.596.1.736.536.307.965l-.723.73a.64.64 0 0 0-.152.531l.207.903c.164.715-.213.991-.84.618l-.872-.52a.63.63 0 0 0-.577 0l-.872.52c-.624.373-1.003.094-.84-.618l.207-.903a.64.64 0 0 0-.152-.532l-.723-.729c-.426-.43-.289-.864.306-.964l.93-.156a.64.64 0 0 0 .412-.31l.513-1.034c.28-.562.735-.562 1.012 0"/>
+  </symbol>
+  <symbol id="x-icon" viewBox="0 0 19 19">
+    <path fill="#08060d" fill-rule="evenodd" d="M1.893 1.98c.052.072 1.245 1.769 2.653 3.77l2.892 4.114c.183.261.333.48.333.486s-.068.089-.152.183l-.522.593-.765.867-3.597 4.087c-.375.426-.734.834-.798.905a1 1 0 0 0-.118.148c0 .01.236.017.664.017h.663l.729-.83c.4-.457.796-.906.879-.999a692 692 0 0 0 1.794-2.038c.034-.037.301-.34.594-.675l.551-.624.345-.392a7 7 0 0 1 .34-.374c.006 0 .93 1.306 2.052 2.903l2.084 2.965.045.063h2.275c1.87 0 2.273-.003 2.266-.021-.008-.02-1.098-1.572-3.894-5.547-2.013-2.862-2.28-3.246-2.273-3.266.008-.019.282-.332 2.085-2.38l2-2.274 1.567-1.782c.022-.028-.016-.03-.65-.03h-.674l-.3.342a871 871 0 0 1-1.782 2.025c-.067.075-.405.458-.75.852a100 100 0 0 1-.803.91c-.148.172-.299.344-.99 1.127-.304.343-.32.358-.345.327-.015-.019-.904-1.282-1.976-2.808L6.365 1.85H1.8zm1.782.91 8.078 11.294c.772 1.08 1.413 1.973 1.425 1.984.016.017.241.02 1.05.017l1.03-.004-2.694-3.766L7.796 5.75 5.722 2.852l-1.039-.004-1.039-.004z" clip-rule="evenodd"/>
+  </symbol>
+</svg>
 ```
 
-```
-// File: frontend/src/utils/.gitkeep
+```css
+// File: frontend/src/App.css
+.counter {
+  font-size: 16px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 2px solid transparent;
+  transition: border-color 0.3s;
+  margin-bottom: 24px;
 
+  &:hover {
+    border-color: var(--accent-border);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+.hero {
+  position: relative;
+
+  .base,
+  .framework,
+  .vite {
+    inset-inline: 0;
+    margin: 0 auto;
+  }
+
+  .base {
+    width: 170px;
+    position: relative;
+    z-index: 0;
+  }
+
+  .framework,
+  .vite {
+    position: absolute;
+  }
+
+  .framework {
+    z-index: 1;
+    top: 34px;
+    height: 28px;
+    transform: perspective(2000px) rotateZ(300deg) rotateX(44deg) rotateY(39deg)
+      scale(1.4);
+  }
+
+  .vite {
+    z-index: 0;
+    top: 107px;
+    height: 26px;
+    width: auto;
+    transform: perspective(2000px) rotateZ(300deg) rotateX(40deg) rotateY(39deg)
+      scale(0.8);
+  }
+}
+
+#center {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  place-content: center;
+  place-items: center;
+  flex-grow: 1;
+
+  @media (max-width: 1024px) {
+    padding: 32px 20px 24px;
+    gap: 18px;
+  }
+}
+
+#next-steps {
+  display: flex;
+  border-top: 1px solid var(--border);
+  text-align: left;
+
+  & > div {
+    flex: 1 1 0;
+    padding: 32px;
+    @media (max-width: 1024px) {
+      padding: 24px 20px;
+    }
+  }
+
+  .icon {
+    margin-bottom: 16px;
+    width: 22px;
+    height: 22px;
+  }
+
+  @media (max-width: 1024px) {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+#docs {
+  border-right: 1px solid var(--border);
+
+  @media (max-width: 1024px) {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+}
+
+#next-steps ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  gap: 8px;
+  margin: 32px 0 0;
+
+  .logo {
+    height: 18px;
+  }
+
+  a {
+    color: var(--text-h);
+    font-size: 16px;
+    border-radius: 6px;
+    background: var(--social-bg);
+    display: flex;
+    padding: 6px 12px;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    transition: box-shadow 0.3s;
+
+    &:hover {
+      box-shadow: var(--shadow);
+    }
+    .button-icon {
+      height: 18px;
+      width: 18px;
+    }
+  }
+
+  @media (max-width: 1024px) {
+    margin-top: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+
+    li {
+      flex: 1 1 calc(50% - 8px);
+    }
+
+    a {
+      width: 100%;
+      justify-content: center;
+      box-sizing: border-box;
+    }
+  }
+}
+
+#spacer {
+  height: 88px;
+  border-top: 1px solid var(--border);
+  @media (max-width: 1024px) {
+    height: 48px;
+  }
+}
+
+.ticks {
+  position: relative;
+  width: 100%;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    top: -4.5px;
+    border: 5px solid transparent;
+  }
+
+  &::before {
+    left: 0;
+    border-left-color: var(--border);
+  }
+  &::after {
+    right: 0;
+    border-right-color: var(--border);
+  }
+}
+```
+
+```tsx
+// File: frontend/src/App.tsx
+import { Outlet } from 'react-router-dom';
+
+function App() {
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <main className="flex-grow">
+        <Outlet />
+      </main>
+    </div>
+  );
+}
+
+export default App;
+```
+
+```typescript
+// File: frontend/src/api/auth.ts
+import { apiClient } from './client';
+
+export interface SetupRequest {
+  company_name: string;
+  ownership_type: string;
+  mobile: string;
+  office_phone?: string;
+  email: string;
+  authorized_person_name: string;
+  authorized_person_designation?: string;
+  gst_registered: boolean;
+  gstin?: string;
+  address_line_1: string;
+  address_line_2?: string;
+  city: string;
+  district: string;
+  state: string;
+  state_code: string;
+  pincode: string;
+  country: string;
+  bank_account_holder_name: string;
+  bank_account_number: string;
+  bank_ifsc: string;
+  bank_name: string;
+  bank_branch: string;
+  bank_account_type: string;
+  pin: string;
+  confirm_pin: string;
+}
+
+export interface LoginRequest {
+  pin: string;
+}
+
+export interface PinChangeRequest {
+  old_pin: string;
+  new_pin: string;
+  confirm_pin: string;
+}
+
+export const authApi = {
+  setup: async (data: SetupRequest) => {
+    const response = await apiClient.post('/auth/setup', data);
+    return response.data;
+  },
+  login: async (data: LoginRequest) => {
+    const response = await apiClient.post('/auth/login', data);
+    return response.data;
+  },
+  changePin: async (data: PinChangeRequest) => {
+    const response = await apiClient.post('/auth/pin-change', data);
+    return response.data;
+  },
+  logout: async () => {
+    const response = await apiClient.post('/auth/logout');
+    return response.data;
+  },
+  getMe: async () => {
+    const response = await apiClient.get('/auth/me');
+    return response.data;
+  }
+};
+```
+
+```typescript
+// File: frontend/src/api/client.ts
+import axios, { AxiosError } from 'axios';
+
+const API_BASE_URL = 'http://localhost:8000/api/v1';
+
+export const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      // Redirect to login handled by router/auth hook
+      window.dispatchEvent(new Event('unauthorized'));
+    }
+    
+    const customError = {
+      message: 'An unexpected error occurred',
+      code: 'UNKNOWN_ERROR',
+      fields: {} as Record<string, string>,
+      status: error.response?.status || 500
+    };
+    
+    if (error.response?.data) {
+      const data = error.response.data as any;
+      if (data.detail && Array.isArray(data.detail)) {
+        // Validation errors
+        customError.message = 'Validation failed';
+        customError.code = 'VALIDATION_ERROR';
+        data.detail.forEach((err: any) => {
+          customError.fields[err.loc.join('.')] = err.msg;
+        });
+      } else if (data.message) {
+        customError.message = data.message;
+        customError.code = data.code || 'API_ERROR';
+      }
+    }
+    
+    return Promise.reject(customError);
+  }
+);
+```
+
+```typescript
+// File: frontend/src/api/invoices.ts
+import { apiClient } from './client';
+
+export interface InvoiceLineCreate {
+  item_id?: string | null;
+  item_name: string;
+  description?: string | null;
+  hsn_sac?: string | null;
+  quantity: number;
+  unit_id: string;
+  unit_name: string;
+  unit_symbol: string;
+  rate: number;
+  discount_type?: string;
+  discount_value?: number;
+  gst_rate?: number;
+}
+
+export interface InvoiceCreateRequest {
+  invoice_type?: string;
+  invoice_date: string;
+  customer_id: string;
+  place_of_supply: string;
+  lines: InvoiceLineCreate[];
+  notes?: string | null;
+  terms?: string | null;
+}
+
+export interface InvoiceCalculateRequest {
+  customer_id?: string | null;
+  place_of_supply: string;
+  lines: InvoiceLineCreate[];
+}
+
+export interface InvoiceCalculateResponse {
+  subtotal: number;
+  discount_total: number;
+  taxable_total: number;
+  cgst_total: number;
+  sgst_total: number;
+  igst_total: number;
+  grand_total: number;
+  amount_in_words?: string | null;
+  lines: any[];
+}
+
+export interface InvoiceResponse {
+  id: string;
+  invoice_number: string;
+  invoice_type: string;
+  invoice_date: string;
+  customer_name_snapshot: string;
+  place_of_supply: string;
+  subtotal: number;
+  discount_total: number;
+  taxable_total: number;
+  cgst_total: number;
+  sgst_total: number;
+  igst_total: number;
+  grand_total: number;
+  amount_in_words?: string | null;
+  invoice_status: string;
+  payment_status: string;
+  notes?: string | null;
+  lines: any[];
+  created_at: string;
+}
+
+export const invoicesApi = {
+  calculate: async (data: InvoiceCalculateRequest) => {
+    const response = await apiClient.post<InvoiceCalculateResponse>('/invoices/calculate', data);
+    return response.data;
+  },
+  create: async (data: InvoiceCreateRequest) => {
+    const response = await apiClient.post<InvoiceResponse>('/invoices', data);
+    return response.data;
+  },
+  getAll: async () => {
+    const response = await apiClient.get<{items: InvoiceResponse[], total: number}>('/invoices');
+    return response.data;
+  },
+  getById: async (id: string) => {
+    const response = await apiClient.get<InvoiceResponse>(`/invoices/${id}`);
+    return response.data;
+  },
+  finalize: async (id: string) => {
+    const response = await apiClient.post<InvoiceResponse>(`/invoices/${id}/finalize`, {});
+    return response.data;
+  },
+  cancel: async (id: string, reason: string) => {
+    const response = await apiClient.post<InvoiceResponse>(`/invoices/${id}/cancel`, { cancel_reason: reason });
+    return response.data;
+  },
+  getPdf: async (id: string) => {
+    const response = await apiClient.get(`/invoices/${id}/pdf`, { responseType: 'blob' });
+    const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+    window.open(url, '_blank');
+  }
+};
+```
+
+```typescript
+// File: frontend/src/api/items.ts
+import { apiClient } from './client';
+
+export interface Item {
+  id: number;
+  type: string;
+  sku: string | null;
+  name: string;
+  description: string | null;
+  hsn_sac: string | null;
+  gst_rate: number;
+  cess_rate: number;
+  sale_price: number;
+  purchase_price: number;
+  unit_id: number;
+  stock_quantity: number;
+  low_stock_warning: number;
+  is_active: boolean;
+}
+
+export interface ItemCreateRequest {
+  type: string;
+  sku?: string | null;
+  name: string;
+  description?: string | null;
+  hsn_sac?: string | null;
+  gst_rate: number;
+  cess_rate?: number;
+  sale_price: number;
+  purchase_price: number;
+  unit_id: number;
+  stock_quantity?: number;
+  low_stock_warning?: number;
+  is_active?: boolean;
+}
+
+export const itemsApi = {
+  getAll: async () => {
+    const response = await apiClient.get<Item[]>('/items');
+    return response.data;
+  },
+  create: async (data: ItemCreateRequest) => {
+    const response = await apiClient.post<Item>('/items', data);
+    return response.data;
+  },
+  delete: async (id: number) => {
+    const response = await apiClient.delete(`/items/${id}`);
+    return response.data;
+  }
+};
+```
+
+```typescript
+// File: frontend/src/api/parties.ts
+import { apiClient } from './client';
+
+export interface Address {
+  id?: string;
+  address_type: string;
+  address_line_1: string;
+  address_line_2?: string;
+  city: string;
+  state: string;
+  state_code: string;
+  pincode: string;
+  is_default: boolean;
+}
+
+export interface Party {
+  id: string;
+  party_code?: string;
+  legal_name: string;
+  trade_name?: string | null;
+  party_type: string;
+  account_type: string;
+  contact_person?: string | null;
+  mobile?: string | null;
+  email?: string | null;
+  gstin?: string | null;
+  gst_registration_type?: string | null;
+  pan?: string | null;
+  state: string;
+  state_code: string;
+  place_of_supply?: string | null;
+  status: string;
+  addresses: Address[];
+}
+
+export interface PartyCreateRequest {
+  legal_name: string;
+  trade_name?: string;
+  party_type: string;
+  account_type: string;
+  contact_person?: string;
+  mobile?: string;
+  email?: string;
+  gstin?: string;
+  gst_registration_type?: string;
+  pan?: string;
+  state: string;
+  state_code: string;
+  place_of_supply?: string;
+  addresses?: Address[];
+}
+
+export const partiesApi = {
+  getAll: async (account_type?: string, search?: string) => {
+    const params = new URLSearchParams();
+    if (account_type) params.append('account_type', account_type);
+    if (search) params.append('search', search);
+    const response = await apiClient.get<{items: Party[]}>(`/parties?${params.toString()}`);
+    return response.data.items;
+  },
+  create: async (data: PartyCreateRequest) => {
+    const response = await apiClient.post<Party>('/parties', data);
+    return response.data;
+  },
+  update: async (id: string, data: Partial<PartyCreateRequest>) => {
+    const response = await apiClient.put<Party>(`/parties/${id}`, data);
+    return response.data;
+  },
+  getById: async (id: string) => {
+    const response = await apiClient.get<Party>(`/parties/${id}`);
+    return response.data;
+  }
+};
+```
+
+```typescript
+// File: frontend/src/api/units.ts
+import { apiClient } from './client';
+
+export interface Unit {
+  id: number;
+  name: string;
+  abbreviation: string;
+  category: string;
+  is_base_unit: boolean;
+  base_unit_id: number | null;
+  multiplier: number;
+  formula: string | null;
+  aliases: string | null;
+}
+
+export interface UnitCreateRequest {
+  name: string;
+  abbreviation: string;
+  category: string;
+  is_base_unit: boolean;
+  base_unit_id?: number | null;
+  multiplier?: number;
+  formula?: string | null;
+  aliases?: string | null;
+}
+
+export const unitsApi = {
+  getAll: async () => {
+    const response = await apiClient.get<Unit[]>('/units');
+    return response.data;
+  },
+  create: async (data: UnitCreateRequest) => {
+    const response = await apiClient.post<Unit>('/units', data);
+    return response.data;
+  },
+  delete: async (id: number) => {
+    const response = await apiClient.delete(`/units/${id}`);
+    return response.data;
+  }
+};
+```
+
+```tsx
+// File: frontend/src/app/providers.tsx
+import { createContext, useContext, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+export const queryClient = new QueryClient();
+
+interface AuthContextType {
+  token: string | null;
+  isAuthenticated: boolean;
+  login: (token: string) => void;
+  logout: () => void;
+  isLoading: boolean;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const handleUnauthorized = () => logout();
+    window.addEventListener('unauthorized', handleUnauthorized);
+    setIsLoading(false);
+    return () => window.removeEventListener('unauthorized', handleUnauthorized);
+  }, []);
+
+  const login = (newToken: string) => {
+    localStorage.setItem('token', newToken);
+    setToken(newToken);
+  };
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    setToken(null);
+  };
+
+  return (
+    <AuthContext.Provider value={{ token, isAuthenticated: !!token, login, logout, isLoading }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+export const AppProviders = ({ children }: { children: ReactNode }) => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        {children}
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+};
+```
+
+```tsx
+// File: frontend/src/app/router.tsx
+import { createBrowserRouter, Navigate, Link } from 'react-router-dom';
+import App from '../App';
+import { useAuth } from './providers';
+import LoginPage from '../features/auth/LoginPage';
+import SetupPage from '../features/auth/SetupPage';
+import PinChangePage from '../features/auth/PinChangePage';
+import UnitsPage from '../features/master/UnitsPage';
+import ItemsPage from '../features/master/ItemsPage';
+import PartiesPage from '../features/master/PartiesPage';
+import InvoiceBuilderPage from '../features/invoices/InvoiceBuilderPage';
+import InvoiceListPage from '../features/invoices/InvoiceListPage';
+
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  if (!isAuthenticated) return <Navigate to="/login" />;
+  
+  return <>{children}</>;
+};
+
+const DashboardShell = ({ children }: { children: React.ReactNode }) => {
+  const { logout } = useAuth();
+  return (
+    <div className="min-h-screen flex bg-gray-50">
+      <div className="w-64 bg-white border-r hidden md:block">
+        <div className="h-16 flex items-center px-6 font-bold text-xl text-primary-600 border-b">
+          Artha Billing
+        </div>
+        <nav className="p-4 space-y-2">
+          <Link to="/" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Dashboard</Link>
+          <Link to="/invoices/new" className="block px-4 py-2 text-blue-700 hover:bg-blue-50 font-medium rounded-md bg-blue-50">+ Create Invoice</Link>
+          <Link to="/invoices" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Invoices List</Link>
+          <Link to="/parties" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Customers & Vendors</Link>
+          <Link to="/items" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Items & Products</Link>
+          <Link to="/units" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Units</Link>
+          <Link to="/pin-change" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Security PIN</Link>
+          <button onClick={logout} className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded-md">Logout</button>
+        </nav>
+      </div>
+      <div className="flex-1">
+        <header className="h-16 bg-white border-b flex items-center px-6 md:hidden justify-between">
+          <span className="font-bold text-xl text-primary-600">Artha</span>
+          <button onClick={logout} className="text-sm text-red-600 font-medium">Logout</button>
+        </header>
+        <main className="p-6">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <App />,
+    children: [
+      {
+        path: '/',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <h1 className="text-2xl font-bold mb-4">Welcome to Artha</h1>
+                <p className="text-gray-600 mb-6">This is your secure billing dashboard. Choose a module from the sidebar to begin.</p>
+                <div className="flex space-x-4">
+                  <Link to="/invoices/new" className="px-4 py-2 bg-primary-600 text-white rounded-md font-medium">Create Invoice</Link>
+                  <Link to="/invoices" className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md font-medium hover:bg-gray-50">View Invoices</Link>
+                </div>
+              </div>
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'invoices/new',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <InvoiceBuilderPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'invoices',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <InvoiceListPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'parties',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <PartiesPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'items',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <ItemsPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'units',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <UnitsPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'pin-change',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <PinChangePage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'login',
+        element: <LoginPage />,
+      },
+      {
+        path: 'setup',
+        element: <SetupPage />,
+      }
+    ],
+  },
+]);
+```
+
+```xml
+// File: frontend/src/assets/react.svg
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="35.93" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 228"><path fill="#00D8FF" d="M210.483 73.824a171.49 171.49 0 0 0-8.24-2.597c.465-1.9.893-3.777 1.273-5.621c6.238-30.281 2.16-54.676-11.769-62.708c-13.355-7.7-35.196.329-57.254 19.526a171.23 171.23 0 0 0-6.375 5.848a155.866 155.866 0 0 0-4.241-3.917C100.759 3.829 77.587-4.822 63.673 3.233C50.33 10.957 46.379 33.89 51.995 62.588a170.974 170.974 0 0 0 1.892 8.48c-3.28.932-6.445 1.924-9.474 2.98C17.309 83.498 0 98.307 0 113.668c0 15.865 18.582 31.778 46.812 41.427a145.52 145.52 0 0 0 6.921 2.165a167.467 167.467 0 0 0-2.01 9.138c-5.354 28.2-1.173 50.591 12.134 58.266c13.744 7.926 36.812-.22 59.273-19.855a145.567 145.567 0 0 0 5.342-4.923a168.064 168.064 0 0 0 6.92 6.314c21.758 18.722 43.246 26.282 56.54 18.586c13.731-7.949 18.194-32.003 12.4-61.268a145.016 145.016 0 0 0-1.535-6.842c1.62-.48 3.21-.974 4.76-1.488c29.348-9.723 48.443-25.443 48.443-41.52c0-15.417-17.868-30.326-45.517-39.844Zm-6.365 70.984c-1.4.463-2.836.91-4.3 1.345c-3.24-10.257-7.612-21.163-12.963-32.432c5.106-11 9.31-21.767 12.459-31.957c2.619.758 5.16 1.557 7.61 2.4c23.69 8.156 38.14 20.213 38.14 29.504c0 9.896-15.606 22.743-40.946 31.14Zm-10.514 20.834c2.562 12.94 2.927 24.64 1.23 33.787c-1.524 8.219-4.59 13.698-8.382 15.893c-8.067 4.67-25.32-1.4-43.927-17.412a156.726 156.726 0 0 1-6.437-5.87c7.214-7.889 14.423-17.06 21.459-27.246c12.376-1.098 24.068-2.894 34.671-5.345a134.17 134.17 0 0 1 1.386 6.193ZM87.276 214.515c-7.882 2.783-14.16 2.863-17.955.675c-8.075-4.657-11.432-22.636-6.853-46.752a156.923 156.923 0 0 1 1.869-8.499c10.486 2.32 22.093 3.988 34.498 4.994c7.084 9.967 14.501 19.128 21.976 27.15a134.668 134.668 0 0 1-4.877 4.492c-9.933 8.682-19.886 14.842-28.658 17.94ZM50.35 144.747c-12.483-4.267-22.792-9.812-29.858-15.863c-6.35-5.437-9.555-10.836-9.555-15.216c0-9.322 13.897-21.212 37.076-29.293c2.813-.98 5.757-1.905 8.812-2.773c3.204 10.42 7.406 21.315 12.477 32.332c-5.137 11.18-9.399 22.249-12.634 32.792a134.718 134.718 0 0 1-6.318-1.979Zm12.378-84.26c-4.811-24.587-1.616-43.134 6.425-47.789c8.564-4.958 27.502 2.111 47.463 19.835a144.318 144.318 0 0 1 3.841 3.545c-7.438 7.987-14.787 17.08-21.808 26.988c-12.04 1.116-23.565 2.908-34.161 5.309a160.342 160.342 0 0 1-1.76-7.887Zm110.427 27.268a347.8 347.8 0 0 0-7.785-12.803c8.168 1.033 15.994 2.404 23.343 4.08c-2.206 7.072-4.956 14.465-8.193 22.045a381.151 381.151 0 0 0-7.365-13.322Zm-45.032-43.861c5.044 5.465 10.096 11.566 15.065 18.186a322.04 322.04 0 0 0-30.257-.006c4.974-6.559 10.069-12.652 15.192-18.18ZM82.802 87.83a323.167 323.167 0 0 0-7.227 13.238c-3.184-7.553-5.909-14.98-8.134-22.152c7.304-1.634 15.093-2.97 23.209-3.984a321.524 321.524 0 0 0-7.848 12.897Zm8.081 65.352c-8.385-.936-16.291-2.203-23.593-3.793c2.26-7.3 5.045-14.885 8.298-22.6a321.187 321.187 0 0 0 7.257 13.246c2.594 4.48 5.28 8.868 8.038 13.147Zm37.542 31.03c-5.184-5.592-10.354-11.779-15.403-18.433c4.902.192 9.899.29 14.978.29c5.218 0 10.376-.117 15.453-.343c-4.985 6.774-10.018 12.97-15.028 18.486Zm52.198-57.817c3.422 7.8 6.306 15.345 8.596 22.52c-7.422 1.694-15.436 3.058-23.88 4.071a382.417 382.417 0 0 0 7.859-13.026a347.403 347.403 0 0 0 7.425-13.565Zm-16.898 8.101a358.557 358.557 0 0 1-12.281 19.815a329.4 329.4 0 0 1-23.444.823c-7.967 0-15.716-.248-23.178-.732a310.202 310.202 0 0 1-12.513-19.846h.001a307.41 307.41 0 0 1-10.923-20.627a310.278 310.278 0 0 1 10.89-20.637l-.001.001a307.318 307.318 0 0 1 12.413-19.761c7.613-.576 15.42-.876 23.31-.876H128c7.926 0 15.743.303 23.354.883a329.357 329.357 0 0 1 12.335 19.695a358.489 358.489 0 0 1 11.036 20.54a329.472 329.472 0 0 1-11 20.722Zm22.56-122.124c8.572 4.944 11.906 24.881 6.52 51.026c-.344 1.668-.73 3.367-1.15 5.09c-10.622-2.452-22.155-4.275-34.23-5.408c-7.034-10.017-14.323-19.124-21.64-27.008a160.789 160.789 0 0 1 5.888-5.4c18.9-16.447 36.564-22.941 44.612-18.3ZM128 90.808c12.625 0 22.86 10.235 22.86 22.86s-10.235 22.86-22.86 22.86s-22.86-10.235-22.86-22.86s10.235-22.86 22.86-22.86Z"></path></svg>
+```
+
+```xml
+// File: frontend/src/assets/vite.svg
+<svg xmlns="http://www.w3.org/2000/svg" width="77" height="47" fill="none" aria-labelledby="vite-logo-title" viewBox="0 0 77 47"><title id="vite-logo-title">Vite</title><style>.parenthesis{fill:#000}@media (prefers-color-scheme:dark){.parenthesis{fill:#fff}}</style><path fill="#9135ff" d="M40.151 45.71c-.663.844-2.02.374-2.02-.699V34.708a2.26 2.26 0 0 0-2.262-2.262H24.493c-.92 0-1.457-1.04-.92-1.788l7.479-10.471c1.07-1.498 0-3.578-1.842-3.578H15.443c-.92 0-1.456-1.04-.92-1.788l9.696-13.576c.213-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.472c-1.07 1.497 0 3.578 1.842 3.578h11.376c.944 0 1.474 1.087.89 1.83L40.153 45.712z"/><mask id="a" width="48" height="47" x="14" y="0" maskUnits="userSpaceOnUse" style="mask-type:alpha"><path fill="#000" d="M40.047 45.71c-.663.843-2.02.374-2.02-.699V34.708a2.26 2.26 0 0 0-2.262-2.262H24.389c-.92 0-1.457-1.04-.92-1.788l7.479-10.472c1.07-1.497 0-3.578-1.842-3.578H15.34c-.92 0-1.456-1.04-.92-1.788l9.696-13.575c.213-.297.556-.474.92-.474H53.93c.92 0 1.456 1.04.92 1.788L47.37 13.03c-1.07 1.498 0 3.578 1.842 3.578h11.376c.944 0 1.474 1.088.89 1.831L40.049 45.712z"/></mask><g mask="url(#a)"><g filter="url(#b)"><ellipse cx="5.508" cy="14.704" fill="#eee6ff" rx="5.508" ry="14.704" transform="rotate(269.814 20.96 11.29)scale(-1 1)"/></g><g filter="url(#c)"><ellipse cx="10.399" cy="29.851" fill="#eee6ff" rx="10.399" ry="29.851" transform="rotate(89.814 -16.902 -8.275)scale(1 -1)"/></g><g filter="url(#d)"><ellipse cx="5.508" cy="30.487" fill="#8900ff" rx="5.508" ry="30.487" transform="rotate(89.814 -19.197 -7.127)scale(1 -1)"/></g><g filter="url(#e)"><ellipse cx="5.508" cy="30.599" fill="#8900ff" rx="5.508" ry="30.599" transform="rotate(89.814 -25.928 4.177)scale(1 -1)"/></g><g filter="url(#f)"><ellipse cx="5.508" cy="30.599" fill="#8900ff" rx="5.508" ry="30.599" transform="rotate(89.814 -25.738 5.52)scale(1 -1)"/></g><g filter="url(#g)"><ellipse cx="14.072" cy="22.078" fill="#eee6ff" rx="14.072" ry="22.078" transform="rotate(93.35 31.245 55.578)scale(-1 1)"/></g><g filter="url(#h)"><ellipse cx="3.47" cy="21.501" fill="#8900ff" rx="3.47" ry="21.501" transform="rotate(89.009 35.419 55.202)scale(-1 1)"/></g><g filter="url(#i)"><ellipse cx="3.47" cy="21.501" fill="#8900ff" rx="3.47" ry="21.501" transform="rotate(89.009 35.419 55.202)scale(-1 1)"/></g><g filter="url(#j)"><ellipse cx="14.592" cy="9.743" fill="#8900ff" rx="4.407" ry="29.108" transform="rotate(39.51 14.592 9.743)"/></g><g filter="url(#k)"><ellipse cx="61.728" cy="-5.321" fill="#8900ff" rx="4.407" ry="29.108" transform="rotate(37.892 61.728 -5.32)"/></g><g filter="url(#l)"><ellipse cx="55.618" cy="7.104" fill="#00c2ff" rx="5.971" ry="9.665" transform="rotate(37.892 55.618 7.104)"/></g><g filter="url(#m)"><ellipse cx="12.326" cy="39.103" fill="#8900ff" rx="4.407" ry="29.108" transform="rotate(37.892 12.326 39.103)"/></g><g filter="url(#n)"><ellipse cx="12.326" cy="39.103" fill="#8900ff" rx="4.407" ry="29.108" transform="rotate(37.892 12.326 39.103)"/></g><g filter="url(#o)"><ellipse cx="49.857" cy="30.678" fill="#8900ff" rx="4.407" ry="29.108" transform="rotate(37.892 49.857 30.678)"/></g><g filter="url(#p)"><ellipse cx="52.623" cy="33.171" fill="#00c2ff" rx="5.971" ry="15.297" transform="rotate(37.892 52.623 33.17)"/></g></g><path d="M6.919 0c-9.198 13.166-9.252 33.575 0 46.789h6.215c-9.25-13.214-9.196-33.623 0-46.789zm62.424 0h-6.215c9.198 13.166 9.252 33.575 0 46.789h6.215c9.25-13.214 9.196-33.623 0-46.789" class="parenthesis"/><defs><filter id="b" width="60.045" height="41.654" x="-5.564" y="16.92" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="7.659"/></filter><filter id="c" width="90.34" height="51.437" x="-40.407" y="-6.762" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="7.659"/></filter><filter id="d" width="79.355" height="29.4" x="-35.435" y="2.801" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="e" width="79.579" height="29.4" x="-30.84" y="20.8" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="f" width="79.579" height="29.4" x="-29.307" y="21.949" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="g" width="74.749" height="58.852" x="29.961" y="-17.13" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="7.659"/></filter><filter id="h" width="61.377" height="25.362" x="37.754" y="3.055" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="i" width="61.377" height="25.362" x="37.754" y="3.055" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="j" width="56.045" height="63.649" x="-13.43" y="-22.082" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="k" width="54.814" height="64.646" x="34.321" y="-37.644" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="l" width="33.541" height="35.313" x="38.847" y="-10.552" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="m" width="54.814" height="64.646" x="-15.081" y="6.78" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="n" width="54.814" height="64.646" x="-15.081" y="6.78" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="o" width="54.814" height="64.646" x="22.45" y="-1.645" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter><filter id="p" width="39.409" height="43.623" x="32.919" y="11.36" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17286" stdDeviation="4.596"/></filter></defs></svg>
+```
+
+```tsx
+// File: frontend/src/components/common/Button.tsx
+import React from 'react';
+import type { ButtonHTMLAttributes } from 'react';
+
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+  isLoading?: boolean;
+}
+
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className = '', variant = 'primary', isLoading = false, children, disabled, ...props }, ref) => {
+    const baseStyles = 'inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
+    
+    const variants = {
+      primary: 'bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 shadow-sm border border-transparent',
+      secondary: 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 focus:ring-primary-500 shadow-sm',
+      danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 shadow-sm border border-transparent',
+      ghost: 'bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-500',
+    };
+
+    return (
+      <button
+        ref={ref}
+        className={`${baseStyles} ${variants[variant]} ${className}`}
+        disabled={disabled || isLoading}
+        {...props}
+      >
+        {isLoading && (
+          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        )}
+        {children}
+      </button>
+    );
+  }
+);
+Button.displayName = 'Button';
+```
+
+```tsx
+// File: frontend/src/components/common/Input.tsx
+import React from 'react';
+import type { InputHTMLAttributes } from 'react';
+
+interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+  label?: string;
+  error?: any;
+}
+
+export const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className = '', label, error, id, ...props }, ref) => {
+    const inputId = id || Math.random().toString(36).substring(7);
+    
+    return (
+      <div className="w-full">
+        {label && (
+          <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 mb-1">
+            {label}
+          </label>
+        )}
+        <input
+          id={inputId}
+          ref={ref}
+          className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2 outline-none transition-colors ${
+            error ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500' : ''
+          } ${className}`}
+          {...props}
+        />
+        {error && (
+          <p className="mt-1 text-sm text-red-600">{error}</p>
+        )}
+      </div>
+    );
+  }
+);
+Input.displayName = 'Input';
+```
+
+```tsx
+// File: frontend/src/features/auth/LoginPage.tsx
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useMutation } from '@tanstack/react-query';
+import { authApi } from '../../api/auth';
+import { useAuth } from '../../app/providers';
+import { Button } from '../../components/common/Button';
+import { Input } from '../../components/common/Input';
+
+const loginSchema = z.object({
+  pin: z.string().length(4, 'PIN must be exactly 4 digits').regex(/^\d+$/, 'PIN must contain only numbers'),
+});
+
+type LoginForm = z.infer<typeof loginSchema>;
+
+export default function LoginPage() {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema)
+  });
+
+  const mutation = useMutation({
+    mutationFn: authApi.login,
+    onSuccess: (response) => {
+      login(response.data.token);
+      navigate('/');
+    },
+    onError: (error: any) => {
+      setApiError(error.message || 'Login failed. Please check your PIN.');
+    }
+  });
+
+  const onSubmit = (data: LoginForm) => {
+    setApiError(null);
+    mutation.mutate(data);
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg border border-gray-100">
+        <div>
+          <h2 className="mt-2 text-center text-3xl font-extrabold text-gray-900 tracking-tight">
+            Artha Billing
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Enter your secure 4-digit PIN to access your company dashboard
+          </p>
+        </div>
+        
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+          {apiError && (
+            <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm border border-red-100">
+              {apiError}
+            </div>
+          )}
+          
+          <div className="space-y-4">
+            <Input
+              label="Secure PIN"
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              placeholder="••••"
+              className="text-center text-2xl tracking-[0.5em] py-3"
+              {...register('pin')}
+              error={errors.pin?.message}
+            />
+          </div>
+
+          <div>
+            <Button
+              type="submit"
+              className="w-full py-3"
+              isLoading={mutation.isPending}
+            >
+              Secure Login
+            </Button>
+          </div>
+          
+          <div className="text-center">
+            <p className="text-sm text-gray-500">
+              First time here? <a href="/setup" className="font-medium text-primary-600 hover:text-primary-500">Run setup wizard</a>
+            </p>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+```
+
+```tsx
+// File: frontend/src/features/auth/PinChangePage.tsx
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useMutation } from '@tanstack/react-query';
+import { authApi } from '../../api/auth';
+import { Button } from '../../components/common/Button';
+import { Input } from '../../components/common/Input';
+
+const pinChangeSchema = z.object({
+  old_pin: z.string().length(4, 'PIN must be exactly 4 digits'),
+  new_pin: z.string().length(4, 'PIN must be exactly 4 digits').regex(/^\d+$/, 'PIN must contain only numbers'),
+  confirm_pin: z.string().length(4, 'PIN must be exactly 4 digits'),
+}).refine((data) => data.new_pin === data.confirm_pin, {
+  message: "New PINs don't match",
+  path: ["confirm_pin"],
+});
+
+type PinChangeForm = z.infer<typeof pinChangeSchema>;
+
+export default function PinChangePage() {
+  const navigate = useNavigate();
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const { register, handleSubmit, formState: { errors }, reset } = useForm<PinChangeForm>({
+    resolver: zodResolver(pinChangeSchema)
+  });
+
+  const mutation = useMutation({
+    mutationFn: authApi.changePin,
+    onSuccess: () => {
+      setSuccess(true);
+      reset();
+      setTimeout(() => navigate('/'), 2000);
+    },
+    onError: (error: any) => {
+      setApiError(error.message || 'Failed to change PIN.');
+    }
+  });
+
+  const onSubmit = (data: PinChangeForm) => {
+    setApiError(null);
+    setSuccess(false);
+    mutation.mutate(data);
+  };
+
+  return (
+    <div className="max-w-md mx-auto space-y-8 bg-white p-10 rounded-xl shadow border border-gray-100 mt-12">
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
+          Change Security PIN
+        </h2>
+        <p className="mt-2 text-sm text-gray-600">
+          Update your 4-digit PIN for dashboard access.
+        </p>
+      </div>
+      
+      <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+        {apiError && (
+          <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm border border-red-100">
+            {apiError}
+          </div>
+        )}
+        {success && (
+          <div className="bg-green-50 text-green-600 p-3 rounded-md text-sm border border-green-100">
+            PIN changed successfully! Redirecting...
+          </div>
+        )}
+        
+        <div className="space-y-4">
+          <Input
+            label="Current PIN"
+            type="password"
+            maxLength={4}
+            {...register('old_pin')}
+            error={errors.old_pin?.message}
+          />
+          <Input
+            label="New PIN"
+            type="password"
+            maxLength={4}
+            {...register('new_pin')}
+            error={errors.new_pin?.message}
+          />
+          <Input
+            label="Confirm New PIN"
+            type="password"
+            maxLength={4}
+            {...register('confirm_pin')}
+            error={errors.confirm_pin?.message}
+          />
+        </div>
+
+        <div className="flex space-x-3 pt-2">
+          <Button
+            type="button"
+            variant="secondary"
+            className="w-full"
+            onClick={() => navigate('/')}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            className="w-full"
+            isLoading={mutation.isPending}
+          >
+            Update PIN
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+```
+
+```tsx
+// File: frontend/src/features/auth/SetupPage.tsx
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useMutation } from '@tanstack/react-query';
+import { authApi } from '../../api/auth';
+import { Button } from '../../components/common/Button';
+import { Input } from '../../components/common/Input';
+
+const setupSchema = z.object({
+  company_name: z.string().min(1, 'Company Name is required'),
+  ownership_type: z.string().min(1, 'Ownership Type is required'),
+  mobile: z.string().length(10, 'Mobile must be 10 digits'),
+  email: z.string().email('Invalid email address'),
+  authorized_person_name: z.string().min(1, 'Authorized Person is required'),
+  gst_registered: z.boolean(),
+  gstin: z.string().optional(),
+  address_line_1: z.string().min(1, 'Address is required'),
+  city: z.string().min(1, 'City is required'),
+  district: z.string().min(1, 'District is required'),
+  state: z.string().min(1, 'State is required'),
+  state_code: z.string().length(2, 'State Code must be 2 digits'),
+  pincode: z.string().length(6, 'Pincode must be 6 digits'),
+  country: z.string().default('India'),
+  bank_account_holder_name: z.string().min(1, 'Account Holder Name is required'),
+  bank_account_number: z.string().min(1, 'Account Number is required'),
+  bank_ifsc: z.string().min(1, 'IFSC is required'),
+  bank_name: z.string().min(1, 'Bank Name is required'),
+  bank_branch: z.string().min(1, 'Branch is required'),
+  bank_account_type: z.string().min(1, 'Account Type is required'),
+  pin: z.string().length(4, 'PIN must be exactly 4 digits').regex(/^\d+$/, 'PIN must contain only numbers'),
+  confirm_pin: z.string().length(4, 'PIN must be exactly 4 digits'),
+}).refine((data) => data.pin === data.confirm_pin, {
+  message: "PINs don't match",
+  path: ["confirm_pin"],
+}).refine((data) => {
+  if (data.gst_registered) return !!data.gstin && data.gstin.length === 15;
+  return true;
+}, {
+  message: "Valid GSTIN is required if GST registered",
+  path: ["gstin"],
+});
+
+type SetupForm = z.infer<typeof setupSchema>;
+
+export default function SetupPage() {
+  const navigate = useNavigate();
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<any>({
+    resolver: zodResolver(setupSchema),
+    defaultValues: {
+      gst_registered: true,
+      country: 'India',
+      ownership_type: 'Proprietorship',
+      bank_account_type: 'Current'
+    }
+  });
+
+  const isGstRegistered = watch('gst_registered');
+
+  const mutation = useMutation({
+    mutationFn: authApi.setup,
+    onSuccess: () => {
+      navigate('/login');
+    },
+    onError: (error: any) => {
+      setApiError(error.message || 'Setup failed. Please check your inputs.');
+    }
+  });
+
+  const onSubmit = (data: any) => {
+    setApiError(null);
+    mutation.mutate(data as SetupForm);
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto space-y-8 bg-white p-10 rounded-xl shadow-lg border border-gray-100">
+        <div>
+          <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+            Company Setup
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Initialize your organization profile to start billing.
+          </p>
+        </div>
+        
+        <form className="mt-8 space-y-8" onSubmit={handleSubmit(onSubmit)}>
+          {apiError && (
+            <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm border border-red-100">
+              {apiError}
+            </div>
+          )}
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-6 md:col-span-2">
+              <h3 className="text-lg font-medium border-b pb-2 text-gray-800">Basic Details</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Input label="Company Name" {...register('company_name')} error={errors.company_name?.message} />
+                <Input label="Ownership Type" {...register('ownership_type')} error={errors.ownership_type?.message} />
+                <Input label="Mobile" {...register('mobile')} error={errors.mobile?.message} />
+                <Input label="Email" type="email" {...register('email')} error={errors.email?.message} />
+                <Input label="Authorized Person" {...register('authorized_person_name')} error={errors.authorized_person_name?.message} />
+              </div>
+            </div>
+
+            <div className="space-y-6 md:col-span-2">
+              <h3 className="text-lg font-medium border-b pb-2 text-gray-800">Tax Details</h3>
+              <div className="grid grid-cols-1 gap-6">
+                <div className="flex items-center h-10">
+                  <input type="checkbox" id="gst_registered" className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded" {...register('gst_registered')} />
+                  <label htmlFor="gst_registered" className="ml-2 block text-sm text-gray-900">GST Registered</label>
+                </div>
+                {isGstRegistered && (
+                  <Input label="GSTIN (15 characters)" {...register('gstin')} error={errors.gstin?.message} />
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-6 md:col-span-2">
+              <h3 className="text-lg font-medium border-b pb-2 text-gray-800">Address</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Input label="Address Line 1" className="md:col-span-2" {...register('address_line_1')} error={errors.address_line_1?.message} />
+                <Input label="City" {...register('city')} error={errors.city?.message} />
+                <Input label="District" {...register('district')} error={errors.district?.message} />
+                <Input label="State" {...register('state')} error={errors.state?.message} />
+                <Input label="State Code (e.g. 27 for MH)" {...register('state_code')} error={errors.state_code?.message} />
+                <Input label="Pincode" {...register('pincode')} error={errors.pincode?.message} />
+              </div>
+            </div>
+
+            <div className="space-y-6 md:col-span-2">
+              <h3 className="text-lg font-medium border-b pb-2 text-gray-800">Bank Details</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Input label="Account Holder Name" {...register('bank_account_holder_name')} error={errors.bank_account_holder_name?.message} />
+                <Input label="Account Number" {...register('bank_account_number')} error={errors.bank_account_number?.message} />
+                <Input label="IFSC Code" {...register('bank_ifsc')} error={errors.bank_ifsc?.message} />
+                <Input label="Bank Name" {...register('bank_name')} error={errors.bank_name?.message} />
+                <Input label="Branch" {...register('bank_branch')} error={errors.bank_branch?.message} />
+                <Input label="Account Type" {...register('bank_account_type')} error={errors.bank_account_type?.message} />
+              </div>
+            </div>
+
+            <div className="space-y-6 md:col-span-2">
+              <h3 className="text-lg font-medium border-b pb-2 text-gray-800">Security</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Input label="Create 4-Digit Login PIN" type="password" maxLength={4} {...register('pin')} error={errors.pin?.message} />
+                <Input label="Confirm PIN" type="password" maxLength={4} {...register('confirm_pin')} error={errors.confirm_pin?.message} />
+              </div>
+            </div>
+
+          </div>
+
+          <div className="pt-5 border-t">
+            <Button
+              type="submit"
+              className="w-full md:w-auto px-8"
+              isLoading={mutation.isPending}
+            >
+              Complete Setup
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+```
+
+```tsx
+// File: frontend/src/features/invoices/InvoiceBuilderPage.tsx
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm, useFieldArray } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useNavigate } from 'react-router-dom';
+import { invoicesApi, type InvoiceCalculateRequest, type InvoiceCreateRequest } from '../../api/invoices';
+import { itemsApi } from '../../api/items';
+import { unitsApi } from '../../api/units';
+import { partiesApi } from '../../api/parties';
+import { Button } from '../../components/common/Button';
+import { Input } from '../../components/common/Input';
+
+const invoiceLineSchema = z.object({
+  item_id: z.string().optional(),
+  item_name: z.string().min(1, 'Item name is required'),
+  description: z.string().optional(),
+  hsn_sac: z.string().optional(),
+  quantity: z.coerce.number().min(0.001, 'Quantity must be > 0'),
+  unit_id: z.string().min(1, 'Unit is required'),
+  unit_name: z.string(),
+  unit_symbol: z.string(),
+  rate: z.coerce.number().min(0),
+  discount_type: z.string().default('NONE'),
+  discount_value: z.coerce.number().default(0),
+  gst_rate: z.coerce.number().default(0),
+});
+
+const invoiceSchema = z.object({
+  invoice_type: z.string().default('TAX_INVOICE'),
+  invoice_date: z.string().min(1, 'Date is required'),
+  customer_id: z.string().min(1, 'Customer is required'),
+  place_of_supply: z.string().min(1, 'Place of supply is required'),
+  lines: z.array(invoiceLineSchema).min(1, 'At least one line is required'),
+  notes: z.string().optional(),
+  terms: z.string().optional(),
+});
+
+export default function InvoiceBuilderPage() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  const { data: items = [] } = useQuery({ queryKey: ['items'], queryFn: itemsApi.getAll });
+  const { data: units = [] } = useQuery({ queryKey: ['units'], queryFn: unitsApi.getAll });
+  const { data: parties = [] } = useQuery({ queryKey: ['parties'], queryFn: () => partiesApi.getAll() });
+
+  const { register, control, handleSubmit, watch, setValue, formState: { errors } } = useForm<any>({
+    resolver: zodResolver(invoiceSchema),
+    defaultValues: {
+      invoice_type: 'TAX_INVOICE',
+      invoice_date: new Date().toISOString().split('T')[0],
+      place_of_supply: '',
+      lines: [{ item_name: '', quantity: 1, rate: 0, discount_type: 'NONE', discount_value: 0, gst_rate: 0 }]
+    }
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'lines'
+  });
+
+  const watchAll = watch();
+
+  const calculateMutation = useMutation({
+    mutationFn: invoicesApi.calculate,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: invoicesApi.create,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      alert(`Invoice Draft Created! Draft ID: ${data.id}`);
+      navigate('/');
+    },
+    onError: (error: any) => {
+      setApiError(error.message || 'Failed to create invoice');
+    }
+  });
+
+  // Debounced calculate
+  useEffect(() => {
+    if (!watchAll.lines || watchAll.lines.length === 0) return;
+    
+    // Quick validation before hitting backend
+    const isValidForCalc = watchAll.lines.every((l: any) => l.item_name && l.quantity > 0 && l.unit_id);
+    if (!isValidForCalc) return;
+
+    const timeoutId = setTimeout(() => {
+      const calcData: InvoiceCalculateRequest = {
+        customer_id: watchAll.customer_id || null,
+        place_of_supply: watchAll.place_of_supply || '29', // Default state code fallback
+        lines: watchAll.lines.map((l: any) => ({
+          item_id: l.item_id,
+          item_name: l.item_name,
+          description: l.description,
+          hsn_sac: l.hsn_sac,
+          quantity: Number(l.quantity) || 0,
+          unit_id: l.unit_id,
+          unit_name: l.unit_name || 'Unit',
+          unit_symbol: l.unit_symbol || 'U',
+          rate: Number(l.rate) || 0,
+          discount_type: l.discount_type,
+          discount_value: Number(l.discount_value) || 0,
+          gst_rate: Number(l.gst_rate) || 0,
+        }))
+      };
+      
+      calculateMutation.mutate(calcData);
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [JSON.stringify(watchAll.lines), watchAll.customer_id, watchAll.place_of_supply]);
+
+  const handleItemSelect = (index: number, itemId: string) => {
+    const item = items.find((i: any) => i.id.toString() === itemId);
+    if (item) {
+      setValue(`lines.${index}.item_id`, item.id.toString());
+      setValue(`lines.${index}.item_name`, item.name);
+      setValue(`lines.${index}.description`, item.description || '');
+      setValue(`lines.${index}.hsn_sac`, item.hsn_sac || '');
+      setValue(`lines.${index}.rate`, item.sale_price);
+      setValue(`lines.${index}.gst_rate`, item.gst_rate);
+      
+      const unit = units.find((u: any) => u.id === item.unit_id);
+      if (unit) {
+        setValue(`lines.${index}.unit_id`, unit.id.toString());
+        setValue(`lines.${index}.unit_name`, unit.name);
+        setValue(`lines.${index}.unit_symbol`, unit.abbreviation);
+      }
+    }
+  };
+
+  const handleCustomerSelect = (customerId: string) => {
+    const customer = parties.find((p: any) => p.id === customerId);
+    if (customer) {
+      setValue('place_of_supply', customer.state_code);
+    }
+  };
+
+  const handleUnitSelect = (index: number, unitId: string) => {
+    const unit = units.find((u: any) => u.id.toString() === unitId);
+    if (unit) {
+      setValue(`lines.${index}.unit_id`, unit.id.toString());
+      setValue(`lines.${index}.unit_name`, unit.name);
+      setValue(`lines.${index}.unit_symbol`, unit.abbreviation);
+    }
+  };
+
+  const onSubmit = (data: any) => {
+    setApiError(null);
+    createMutation.mutate(data as InvoiceCreateRequest);
+  };
+
+  const calcData = calculateMutation.data;
+
+  return (
+    <div className="max-w-6xl mx-auto space-y-6 pb-20">
+      <div className="flex justify-between items-center border-b pb-4">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Create Tax Invoice</h2>
+          <p className="mt-1 text-sm text-gray-500">Generate a new GST compliant invoice.</p>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+        {apiError && (
+          <div className="bg-red-50 text-red-600 p-4 rounded-md text-sm border border-red-100 font-medium">
+            Error: {apiError}
+          </div>
+        )}
+
+        {/* Header Information */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Customer</label>
+            <select 
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2"
+              {...register('customer_id')}
+              onChange={(e) => {
+                register('customer_id').onChange(e);
+                handleCustomerSelect(e.target.value);
+              }}
+            >
+              <option value="">Select Customer...</option>
+              {parties.map((p: any) => (
+                <option key={p.id} value={p.id}>{p.legal_name} {p.gstin ? `(${p.gstin})` : ''}</option>
+              ))}
+            </select>
+            {errors.customer_id?.message && <p className="mt-1 text-sm text-red-600">{errors.customer_id.message as string}</p>}
+          </div>
+
+          <Input label="Invoice Date" type="date" {...register('invoice_date')} error={errors.invoice_date?.message} />
+          <Input label="Place of Supply (State Code)" {...register('place_of_supply')} error={errors.place_of_supply?.message} placeholder="e.g. 29" />
+        </div>
+
+        {/* Invoice Lines */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border space-y-4">
+          <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Items & Services</h3>
+          
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-3 py-2 text-left font-medium text-gray-500 w-1/4">Item / Product</th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-500 w-24">HSN</th>
+                  <th className="px-3 py-2 text-right font-medium text-gray-500 w-24">Qty</th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-500 w-28">Unit</th>
+                  <th className="px-3 py-2 text-right font-medium text-gray-500 w-28">Rate (₹)</th>
+                  <th className="px-3 py-2 text-right font-medium text-gray-500 w-24">Discount</th>
+                  <th className="px-3 py-2 text-right font-medium text-gray-500 w-20">GST %</th>
+                  <th className="px-3 py-2 text-right font-medium text-gray-500 w-32">Amount</th>
+                  <th className="px-3 py-2 w-10"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {fields.map((field, index) => {
+                  const calculatedLine = calcData?.lines?.[index];
+                  return (
+                    <tr key={field.id} className="hover:bg-gray-50">
+                      <td className="px-3 py-2">
+                        <select 
+                          className="block w-full rounded border-gray-300 shadow-sm text-sm border px-2 py-1 mb-1"
+                          onChange={(e) => handleItemSelect(index, e.target.value)}
+                        >
+                          <option value="">Select Item...</option>
+                          {items.map((i: any) => (
+                            <option key={i.id} value={i.id}>{i.name}</option>
+                          ))}
+                        </select>
+                        <input type="text" placeholder="Item Name" className="block w-full rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.item_name`)} />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input type="text" className="block w-full rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.hsn_sac`)} />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input type="number" step="any" className="block w-full text-right rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.quantity`)} />
+                      </td>
+                      <td className="px-3 py-2">
+                        <select 
+                          className="block w-full rounded border-gray-300 shadow-sm text-sm border px-2 py-1"
+                          {...register(`lines.${index}.unit_id`)}
+                          onChange={(e) => {
+                            register(`lines.${index}.unit_id`).onChange(e);
+                            handleUnitSelect(index, e.target.value);
+                          }}
+                        >
+                          <option value="">Unit...</option>
+                          {units.map((u: any) => (
+                            <option key={u.id} value={u.id}>{u.abbreviation}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-3 py-2">
+                        <input type="number" step="any" className="block w-full text-right rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.rate`)} />
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex space-x-1">
+                          <input type="number" step="any" className="block w-full text-right rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.discount_value`)} />
+                          <select className="block rounded border-gray-300 shadow-sm text-xs border px-1 py-1 bg-gray-50" {...register(`lines.${index}.discount_type`)}>
+                            <option value="NONE">None</option>
+                            <option value="PERCENT">%</option>
+                            <option value="FIXED">₹</option>
+                          </select>
+                        </div>
+                      </td>
+                      <td className="px-3 py-2">
+                        <input type="number" step="any" className="block w-full text-right rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.gst_rate`)} />
+                      </td>
+                      <td className="px-3 py-2 text-right font-medium text-gray-900 bg-gray-50">
+                        {calculateMutation.isPending ? '...' : (calculatedLine?.line_total ? `₹${calculatedLine.line_total.toFixed(2)}` : '₹0.00')}
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <button type="button" onClick={() => remove(index)} className="text-red-500 hover:text-red-700 font-bold p-1">×</button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          
+          <Button 
+            type="button" 
+            variant="secondary" 
+            onClick={() => append({ item_name: '', quantity: 1, rate: 0, discount_type: 'NONE', discount_value: 0, gst_rate: 0 })}
+          >
+            + Add Line
+          </Button>
+        </div>
+
+        {/* Totals & Notes */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Customer Notes</label>
+              <textarea rows={3} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('notes')} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Terms & Conditions</label>
+              <textarea rows={3} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('terms')} />
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Invoice Summary</h3>
+            
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between text-gray-600">
+                <span>Subtotal</span>
+                <span>₹{(calcData?.subtotal || 0).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-red-600">
+                <span>Discount</span>
+                <span>- ₹{(calcData?.discount_total || 0).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-gray-800 font-medium pt-2 border-t">
+                <span>Taxable Value</span>
+                <span>₹{(calcData?.taxable_total || 0).toFixed(2)}</span>
+              </div>
+              
+              {(calcData?.igst_total || 0) > 0 ? (
+                <div className="flex justify-between text-gray-600">
+                  <span>IGST</span>
+                  <span>₹{(calcData?.igst_total || 0).toFixed(2)}</span>
+                </div>
+              ) : (
+                <>
+                  <div className="flex justify-between text-gray-600">
+                    <span>CGST</span>
+                    <span>₹{(calcData?.cgst_total || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600">
+                    <span>SGST / UTGST</span>
+                    <span>₹{(calcData?.sgst_total || 0).toFixed(2)}</span>
+                  </div>
+                </>
+              )}
+
+              <div className="flex justify-between text-xl font-bold text-gray-900 pt-4 border-t mt-4">
+                <span>Grand Total</span>
+                <span>₹{(calcData?.grand_total || 0).toFixed(2)}</span>
+              </div>
+
+              {calcData?.amount_in_words && (
+                <div className="text-xs text-gray-500 text-right italic mt-1">
+                  Rupees {calcData.amount_in_words}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-lg flex justify-end space-x-4 z-10 md:ml-64">
+          <Button type="button" variant="secondary" onClick={() => navigate('/')}>Cancel</Button>
+          <Button type="submit" isLoading={createMutation.isPending} disabled={calculateMutation.isPending || !calcData?.grand_total}>
+            Save Draft Invoice
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+```
+
+```tsx
+// File: frontend/src/features/invoices/InvoiceListPage.tsx
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { invoicesApi, type InvoiceResponse } from '../../api/invoices';
+import { Button } from '../../components/common/Button';
+
+export default function InvoiceListPage() {
+  const queryClient = useQueryClient();
+  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceResponse | null>(null);
+  
+  const { data, isLoading } = useQuery({
+    queryKey: ['invoices'],
+    queryFn: invoicesApi.getAll
+  });
+  
+  const invoices = data?.items || [];
+
+  const finalizeMutation = useMutation({
+    mutationFn: invoicesApi.finalize,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      setSelectedInvoice(null);
+    }
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: string, reason: string }) => invoicesApi.cancel(id, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      setSelectedInvoice(null);
+    }
+  });
+
+  const handleFinalize = (id: string) => {
+    if (confirm('Are you sure you want to finalize this invoice? Once finalized, it will be locked and an Invoice Number will be generated.')) {
+      finalizeMutation.mutate(id);
+    }
+  };
+
+  const handleCancel = (id: string) => {
+    const reason = prompt('Please enter a reason for cancelling this invoice:');
+    if (reason && reason.length >= 5) {
+      cancelMutation.mutate({ id, reason });
+    } else if (reason !== null) {
+      alert('Cancellation reason must be at least 5 characters long.');
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Invoices</h2>
+          <p className="mt-1 text-sm text-gray-500">Manage your generated tax invoices.</p>
+        </div>
+        <Link to="/invoices/new" className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 font-medium text-sm">
+          + Create Invoice
+        </Link>
+      </div>
+
+      {isLoading ? (
+        <div>Loading invoices...</div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice #</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {invoices.map((inv) => (
+                <tr key={inv.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {inv.invoice_number.startsWith('DRAFT-') ? <span className="text-gray-400 italic">DRAFT</span> : inv.invoice_number}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{inv.invoice_date}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{inv.customer_name_snapshot}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-right text-gray-900">₹{inv.grand_total.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                      ${inv.invoice_status === 'DRAFT' ? 'bg-yellow-100 text-yellow-800' : 
+                        inv.invoice_status === 'FINALIZED' ? 'bg-green-100 text-green-800' : 
+                        'bg-red-100 text-red-800'}`}>
+                      {inv.invoice_status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button 
+                      onClick={() => setSelectedInvoice(inv)}
+                      className="text-primary-600 hover:text-primary-900"
+                    >
+                      View
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {invoices.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                    No invoices found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* View Modal */}
+      {selectedInvoice && (
+        <div className="fixed inset-0 z-10 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={() => setSelectedInvoice(null)}></div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+            <div className="inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full sm:p-6">
+              
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">
+                    {selectedInvoice.invoice_status === 'DRAFT' ? 'Draft Invoice' : `Tax Invoice: ${selectedInvoice.invoice_number}`}
+                  </h3>
+                  <p className="text-sm text-gray-500">Date: {selectedInvoice.invoice_date}</p>
+                </div>
+                <div className={`px-3 py-1 rounded text-sm font-bold 
+                  ${selectedInvoice.invoice_status === 'FINALIZED' ? 'bg-green-100 text-green-800' : 
+                    selectedInvoice.invoice_status === 'CANCELLED' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                  {selectedInvoice.invoice_status}
+                </div>
+              </div>
+
+              <div className="border rounded-md p-4 mb-6 bg-gray-50">
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">Billed To:</h4>
+                <p className="font-medium text-gray-900">{selectedInvoice.customer_name_snapshot}</p>
+                <p className="text-sm text-gray-600">Place of Supply: {selectedInvoice.place_of_supply}</p>
+              </div>
+
+              <div className="overflow-x-auto mb-6">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="px-3 py-2 text-left">Item</th>
+                      <th className="px-3 py-2 text-right">Qty</th>
+                      <th className="px-3 py-2 text-right">Rate</th>
+                      <th className="px-3 py-2 text-right">GST %</th>
+                      <th className="px-3 py-2 text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {selectedInvoice.lines.map((line: any) => (
+                      <tr key={line.id}>
+                        <td className="px-3 py-2">{line.item_name}</td>
+                        <td className="px-3 py-2 text-right">{line.quantity} {line.unit_symbol_snapshot}</td>
+                        <td className="px-3 py-2 text-right">₹{line.rate.toFixed(2)}</td>
+                        <td className="px-3 py-2 text-right">{line.gst_rate}%</td>
+                        <td className="px-3 py-2 text-right">₹{line.line_total.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex justify-end mb-6">
+                <div className="w-64 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Subtotal:</span>
+                    <span className="font-medium">₹{selectedInvoice.subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Taxable Value:</span>
+                    <span className="font-medium">₹{selectedInvoice.taxable_total.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
+                    <span>Grand Total:</span>
+                    <span>₹{selectedInvoice.grand_total.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t flex justify-end space-x-3">
+                <Button type="button" variant="secondary" onClick={() => setSelectedInvoice(null)}>Close</Button>
+                
+                <Button 
+                  type="button" 
+                  variant="secondary"
+                  onClick={() => invoicesApi.getPdf(selectedInvoice.id)}
+                >
+                  View PDF
+                </Button>
+
+                {selectedInvoice.invoice_status === 'FINALIZED' && (
+                  <Button 
+                    type="button" 
+                    variant="danger" 
+                    onClick={() => handleCancel(selectedInvoice.id)}
+                    isLoading={cancelMutation.isPending}
+                  >
+                    Cancel Invoice
+                  </Button>
+                )}
+
+                {selectedInvoice.invoice_status === 'DRAFT' && (
+                  <Button 
+                    type="button" 
+                    onClick={() => handleFinalize(selectedInvoice.id)}
+                    isLoading={finalizeMutation.isPending}
+                  >
+                    Finalize & Generate Number
+                  </Button>
+                )}
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+```tsx
+// File: frontend/src/features/master/ItemsPage.tsx
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { itemsApi } from '../../api/items';
+import { unitsApi } from '../../api/units';
+import { Button } from '../../components/common/Button';
+import { Input } from '../../components/common/Input';
+
+const itemSchema = z.object({
+  type: z.string().min(1, 'Type is required'),
+  name: z.string().min(1, 'Name is required'),
+  sku: z.string().optional(),
+  description: z.string().optional(),
+  hsn_sac: z.string().optional(),
+  gst_rate: z.coerce.number().min(0).max(100),
+  cess_rate: z.coerce.number().min(0).max(100).optional(),
+  sale_price: z.coerce.number().min(0),
+  purchase_price: z.coerce.number().min(0),
+  unit_id: z.string().min(1, 'Unit is required'),
+  stock_quantity: z.coerce.number().optional(),
+  low_stock_warning: z.coerce.number().optional(),
+});
+
+type ItemForm = z.infer<typeof itemSchema>;
+
+export default function ItemsPage() {
+  const queryClient = useQueryClient();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  const { data: items = [], isLoading: itemsLoading } = useQuery({
+    queryKey: ['items'],
+    queryFn: itemsApi.getAll
+  });
+
+  const { data: units = [] } = useQuery({
+    queryKey: ['units'],
+    queryFn: unitsApi.getAll
+  });
+
+  const { register, handleSubmit, watch, formState: { errors }, reset } = useForm<any>({
+    resolver: zodResolver(itemSchema),
+    defaultValues: {
+      type: 'Product',
+      gst_rate: 18,
+      cess_rate: 0,
+      sale_price: 0,
+      purchase_price: 0,
+      stock_quantity: 0,
+      low_stock_warning: 0
+    }
+  });
+
+  const itemType = watch('type');
+
+  const createMutation = useMutation({
+    mutationFn: itemsApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+      setIsModalOpen(false);
+      reset();
+    },
+    onError: (error: any) => {
+      setApiError(error.message || 'Failed to create item');
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: itemsApi.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+    }
+  });
+
+  const onSubmit = (data: any) => {
+    setApiError(null);
+    createMutation.mutate({
+      ...(data as ItemForm),
+      unit_id: parseInt(data.unit_id),
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Products & Services</h2>
+          <p className="mt-1 text-sm text-gray-500">Manage your inventory, pricing, and HSN/SAC codes.</p>
+        </div>
+        <Button onClick={() => setIsModalOpen(true)}>Add New Item</Button>
+      </div>
+
+      {itemsLoading ? (
+        <div>Loading items...</div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name / SKU</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type & HSN</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Sale Price</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {items.map((item) => (
+                <tr key={item.id}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                    <div className="text-xs text-gray-500">{item.sku || 'No SKU'}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.type === 'Service' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
+                      {item.type}
+                    </span>
+                    <div className="text-xs text-gray-500 mt-1">{item.hsn_sac ? `HSN: ${item.hsn_sac}` : '-'}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900 font-medium">
+                    ₹{item.sale_price.toFixed(2)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                    {item.type === 'Product' ? (
+                      <span className={item.stock_quantity <= item.low_stock_warning ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}>
+                        {item.stock_quantity}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">N/A</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button 
+                      onClick={() => {
+                        if (confirm('Are you sure you want to delete this item?')) {
+                          deleteMutation.mutate(item.id);
+                        }
+                      }}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {items.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                    No items found. Click "Add New Item" to create one.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {isModalOpen && (
+        <div className="fixed inset-0 z-10 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={() => setIsModalOpen(false)}></div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+            <div className="inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full sm:p-6">
+              <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4 border-b pb-2">Add New Item</h3>
+              
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                {apiError && (
+                  <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm border border-red-100">
+                    {apiError}
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Basic Details */}
+                  <div className="space-y-4 md:col-span-2 grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Item Type</label>
+                      <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('type')}>
+                        <option value="Product">Product (Goods)</option>
+                        <option value="Service">Service</option>
+                      </select>
+                    </div>
+                    <Input label="Name" {...register('name')} error={errors.name?.message} />
+                  </div>
+
+                  <Input label="SKU / Item Code" {...register('sku')} error={errors.sku?.message} />
+                  <Input label="HSN/SAC Code" {...register('hsn_sac')} error={errors.hsn_sac?.message} />
+                  
+                  <div className="md:col-span-2">
+                    <Input label="Description (Optional)" {...register('description')} error={errors.description?.message} />
+                  </div>
+
+                  {/* Pricing Details */}
+                  <div className="md:col-span-2 bg-gray-50 p-4 rounded-md border border-gray-200">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Pricing & Tax</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Input label="Sale Price" type="number" step="0.01" {...register('sale_price')} error={errors.sale_price?.message} />
+                      <Input label="Purchase Price" type="number" step="0.01" {...register('purchase_price')} error={errors.purchase_price?.message} />
+                      <Input label="GST Rate (%)" type="number" step="0.1" {...register('gst_rate')} error={errors.gst_rate?.message} />
+                      <Input label="CESS Rate (%)" type="number" step="0.1" {...register('cess_rate')} error={errors.cess_rate?.message} />
+                    </div>
+                  </div>
+
+                  {/* Inventory Details */}
+                  <div className="md:col-span-2">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Primary Unit</label>
+                        <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('unit_id')}>
+                          <option value="">Select a unit...</option>
+                          {units.map(u => (
+                            <option key={u.id} value={u.id}>{u.name} ({u.abbreviation})</option>
+                          ))}
+                        </select>
+                        {errors.unit_id?.message && <p className="mt-1 text-sm text-red-600">{errors.unit_id.message as string}</p>}
+                      </div>
+                      
+                      {itemType === 'Product' && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <Input label="Opening Stock" type="number" step="any" {...register('stock_quantity')} error={errors.stock_quantity?.message} />
+                          <Input label="Low Stock Warning" type="number" step="any" {...register('low_stock_warning')} error={errors.low_stock_warning?.message} />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t flex justify-end space-x-3">
+                  <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+                  <Button type="submit" isLoading={createMutation.isPending}>Save Item</Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+```tsx
+// File: frontend/src/features/master/PartiesPage.tsx
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { partiesApi } from '../../api/parties';
+import { Button } from '../../components/common/Button';
+import { Input } from '../../components/common/Input';
+
+const partySchema = z.object({
+  legal_name: z.string().min(1, 'Legal name is required'),
+  trade_name: z.string().optional(),
+  party_type: z.string().min(1, 'Party type is required'),
+  account_type: z.string().min(1, 'Account type is required'),
+  contact_person: z.string().optional(),
+  mobile: z.string().optional(),
+  email: z.string().email('Invalid email').optional().or(z.literal('')),
+  gstin: z.string().optional(),
+  gst_registration_type: z.string().optional(),
+  pan: z.string().optional(),
+  state: z.string().min(1, 'State is required'),
+  state_code: z.string().min(1, 'State code is required'),
+});
+
+type PartyForm = z.infer<typeof partySchema>;
+
+export default function PartiesPage() {
+  const queryClient = useQueryClient();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  const { data: parties = [], isLoading } = useQuery({
+    queryKey: ['parties'],
+    queryFn: () => partiesApi.getAll()
+  });
+
+  const { register, handleSubmit, formState: { errors }, reset } = useForm<PartyForm>({
+    resolver: zodResolver(partySchema),
+    defaultValues: {
+      party_type: 'BUSINESS',
+      account_type: 'CUSTOMER',
+      gst_registration_type: 'UNREGISTERED',
+      state: 'Karnataka',
+      state_code: '29'
+    }
+  });
+
+  const createMutation = useMutation({
+    mutationFn: partiesApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['parties'] });
+      setIsModalOpen(false);
+      reset();
+    },
+    onError: (error: any) => {
+      setApiError(error.message || 'Failed to create party');
+    }
+  });
+
+  const onSubmit = (data: PartyForm) => {
+    setApiError(null);
+    createMutation.mutate(data);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Customers & Suppliers</h2>
+          <p className="mt-1 text-sm text-gray-500">Manage your sundry debtors and creditors.</p>
+        </div>
+        <Button onClick={() => setIsModalOpen(true)}>Add New Party</Button>
+      </div>
+
+      {isLoading ? (
+        <div>Loading parties...</div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Party Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">GSTIN / Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">State</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {parties.map((party) => (
+                <tr key={party.id}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{party.legal_name}</div>
+                    {party.trade_name && <div className="text-xs text-gray-500">{party.trade_name}</div>}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${party.account_type === 'CUSTOMER' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
+                      {party.account_type}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{party.gstin || 'No GSTIN'}</div>
+                    <div className="text-xs text-gray-500">{party.gst_registration_type}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <div>{party.contact_person || '-'}</div>
+                    <div>{party.mobile || '-'}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {party.state} ({party.state_code})
+                  </td>
+                </tr>
+              ))}
+              {parties.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                    No parties found. Click "Add New Party" to create one.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {isModalOpen && (
+        <div className="fixed inset-0 z-10 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={() => setIsModalOpen(false)}></div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+            <div className="inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full sm:p-6">
+              <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4 border-b pb-2">Add New Party</h3>
+              
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                {apiError && (
+                  <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm border border-red-100">
+                    {apiError}
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Basic Details */}
+                  <div className="md:col-span-2 grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Account Type</label>
+                      <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('account_type')}>
+                        <option value="CUSTOMER">Customer (Debtor)</option>
+                        <option value="VENDOR">Vendor (Creditor)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Party Type</label>
+                      <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('party_type')}>
+                        <option value="BUSINESS">Business (B2B)</option>
+                        <option value="INDIVIDUAL">Individual (B2C)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <Input label="Legal Name" {...register('legal_name')} error={errors.legal_name?.message} />
+                  <Input label="Trade Name (Optional)" {...register('trade_name')} error={errors.trade_name?.message} />
+                  
+                  {/* Tax Details */}
+                  <div className="md:col-span-2 bg-gray-50 p-4 rounded-md border border-gray-200">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Tax & Location Details</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">GST Registration</label>
+                        <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('gst_registration_type')}>
+                          <option value="REGISTERED">Registered Regular</option>
+                          <option value="COMPOSITION">Registered Composition</option>
+                          <option value="UNREGISTERED">Unregistered</option>
+                          <option value="CONSUMER">Consumer</option>
+                        </select>
+                      </div>
+                      <Input label="GSTIN" {...register('gstin')} error={errors.gstin?.message} />
+                      <Input label="PAN" {...register('pan')} error={errors.pan?.message} />
+                      
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input label="State" {...register('state')} error={errors.state?.message} placeholder="e.g. Karnataka" />
+                        <Input label="State Code" {...register('state_code')} error={errors.state_code?.message} placeholder="e.g. 29" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contact Details */}
+                  <div className="md:col-span-2">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Contact Information</h4>
+                    <div className="grid grid-cols-3 gap-4">
+                      <Input label="Contact Person" {...register('contact_person')} error={errors.contact_person?.message} />
+                      <Input label="Mobile Number" {...register('mobile')} error={errors.mobile?.message} />
+                      <Input label="Email Address" type="email" {...register('email')} error={errors.email?.message} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t flex justify-end space-x-3">
+                  <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+                  <Button type="submit" isLoading={createMutation.isPending}>Save Party</Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+```tsx
+// File: frontend/src/features/master/UnitsPage.tsx
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { unitsApi } from '../../api/units';
+import { Button } from '../../components/common/Button';
+import { Input } from '../../components/common/Input';
+
+const unitSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  abbreviation: z.string().min(1, 'Abbreviation is required'),
+  category: z.string().min(1, 'Category is required'),
+  is_base_unit: z.boolean(),
+  base_unit_id: z.string().optional(),
+  multiplier: z.coerce.number().optional(),
+  formula: z.string().optional(),
+  aliases: z.string().optional(),
+});
+
+type UnitForm = z.infer<typeof unitSchema>;
+
+export default function UnitsPage() {
+  const queryClient = useQueryClient();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  const { data: units = [], isLoading } = useQuery({
+    queryKey: ['units'],
+    queryFn: unitsApi.getAll
+  });
+
+  const { register, handleSubmit, watch, formState: { errors }, reset } = useForm<any>({
+    resolver: zodResolver(unitSchema),
+    defaultValues: {
+      is_base_unit: true,
+      multiplier: 1
+    }
+  });
+
+  const isBaseUnit = watch('is_base_unit');
+
+  const createMutation = useMutation({
+    mutationFn: unitsApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['units'] });
+      setIsModalOpen(false);
+      reset();
+    },
+    onError: (error: any) => {
+      setApiError(error.message || 'Failed to create unit');
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: unitsApi.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['units'] });
+    }
+  });
+
+  const onSubmit = (data: any) => {
+    setApiError(null);
+    createMutation.mutate({
+      ...(data as UnitForm),
+      base_unit_id: data.base_unit_id ? parseInt(data.base_unit_id) : null,
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Units of Measurement</h2>
+          <p className="mt-1 text-sm text-gray-500">Manage base units, derived units, and custom conversion formulas.</p>
+        </div>
+        <Button onClick={() => setIsModalOpen(true)}>Add New Unit</Button>
+      </div>
+
+      {isLoading ? (
+        <div>Loading units...</div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Abbreviation</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Formula / Multiplier</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {units.map((unit) => (
+                <tr key={unit.id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{unit.abbreviation}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{unit.category}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {unit.is_base_unit ? (
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Base</span>
+                    ) : (
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">Derived</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {unit.formula ? (
+                      <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{unit.formula}</code>
+                    ) : unit.multiplier !== 1 ? (
+                      `${unit.multiplier}x Base`
+                    ) : '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button 
+                      onClick={() => {
+                        if (confirm('Are you sure you want to delete this unit?')) {
+                          deleteMutation.mutate(unit.id);
+                        }
+                      }}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {isModalOpen && (
+        <div className="fixed inset-0 z-10 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={() => setIsModalOpen(false)}></div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+            <div className="inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+              <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Add New Unit</h3>
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                {apiError && (
+                  <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm border border-red-100">
+                    {apiError}
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <Input label="Name (e.g. Kilogram)" {...register('name')} error={errors.name?.message} />
+                  <Input label="Abbreviation (e.g. KG)" {...register('abbreviation')} error={errors.abbreviation?.message} />
+                </div>
+                
+                <Input label="Category (e.g. Weight)" {...register('category')} error={errors.category?.message} />
+                
+                <div className="flex items-center h-10 mt-2">
+                  <input type="checkbox" id="is_base_unit" className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded" {...register('is_base_unit')} />
+                  <label htmlFor="is_base_unit" className="ml-2 block text-sm text-gray-900 font-medium">This is a Base Unit</label>
+                </div>
+
+                {!isBaseUnit && (
+                  <div className="space-y-4 p-4 bg-gray-50 rounded-md border border-gray-200">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Base Unit Reference</label>
+                      <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('base_unit_id')}>
+                        <option value="">Select a base unit...</option>
+                        {units.filter(u => u.is_base_unit).map(u => (
+                          <option key={u.id} value={u.id}>{u.name} ({u.abbreviation})</option>
+                        ))}
+                      </select>
+                    </div>
+                    <Input label="Simple Multiplier (e.g. 1000)" type="number" step="any" {...register('multiplier')} error={errors.multiplier?.message} />
+                    <Input label="Or Custom Formula (e.g. PCS * 1.5)" {...register('formula')} error={errors.formula?.message} />
+                  </div>
+                )}
+
+                <Input label="Aliases (comma separated)" placeholder="kg, kgs, kilo" {...register('aliases')} error={errors.aliases?.message} />
+
+                <div className="mt-5 sm:mt-6 flex justify-end space-x-3">
+                  <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+                  <Button type="submit" isLoading={createMutation.isPending}>Save Unit</Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+```css
+// File: frontend/src/index.css
+@import "tailwindcss";
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+}
+```
+
+```tsx
+// File: frontend/src/main.tsx
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import { RouterProvider } from 'react-router-dom'
+import './index.css'
+import { AppProviders } from './app/providers'
+import { router } from './app/router'
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <AppProviders>
+      <RouterProvider router={router} />
+    </AppProviders>
+  </StrictMode>,
+)
+```
+
+```javascript
+// File: frontend/tailwind.config.js
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          50: '#eff6ff',
+          100: '#dbeafe',
+          500: '#3b82f6',
+          600: '#2563eb',
+          700: '#1d4ed8',
+        },
+      }
+    },
+  },
+  plugins: [],
+}
+```
+
+```json
+// File: frontend/tsconfig.app.json
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "esnext",
+    "types": ["vite/client"],
+    "allowArbitraryExtensions": true,
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"]
+}
+```
+
+```json
+// File: frontend/tsconfig.json
+{
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" }
+  ]
+}
+```
+
+```json
+// File: frontend/tsconfig.node.json
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "module": "nodenext",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    /* Linting */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["vite.config.ts"]
+}
+```
+
+```typescript
+// File: frontend/vite.config.ts
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: [
+    tailwindcss(),
+    react(),
+  ],
+})
 ```

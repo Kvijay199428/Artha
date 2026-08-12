@@ -63,7 +63,66 @@ class InvoiceService:
         db.add(invoice)
         db.flush()
         
+        calculated = InvoiceService.calculate_invoice(db, company_id, company, data)
+        
         # Process lines
+        for line_data in calculated["lines"]:
+            line = InvoiceLine(
+                invoice_id=invoice.id,
+                item_id=line_data.get("item_id"),
+                item_name_snapshot=line_data["item_name"],
+                sku_snapshot=line_data.get("sku"),
+                description_snapshot=line_data.get("description"),
+                hsn_sac_snapshot=line_data.get("hsn_sac_snapshot"),
+                quantity=Decimal(str(line_data["quantity"])),
+                unit_id=line_data.get("unit_id"),
+                unit_name_snapshot=line_data.get("unit_name_snapshot"),
+                unit_symbol_snapshot=line_data.get("unit_symbol_snapshot"),
+                rate=Decimal(str(line_data["rate"])),
+                discount_type=line_data.get("discount_type", "NONE"),
+                discount_value=Decimal(str(line_data.get("discount_value", 0))),
+                discount_amount=Decimal(str(line_data["discount_amount"])),
+                taxable_value=Decimal(str(line_data["taxable_value"])),
+                gst_rate=Decimal(str(line_data["gst_rate"])),
+                cgst_rate=Decimal(str(line_data["cgst_rate"])),
+                sgst_rate=Decimal(str(line_data["sgst_rate"])),
+                igst_rate=Decimal(str(line_data["igst_rate"])),
+                cgst_amount=Decimal(str(line_data["cgst_amount"])),
+                sgst_amount=Decimal(str(line_data["sgst_amount"])),
+                igst_amount=Decimal(str(line_data["igst_amount"])),
+                line_total=Decimal(str(line_data["line_total"])),
+            )
+            db.add(line)
+        
+        invoice.subtotal = Decimal(str(calculated["subtotal"]))
+        invoice.discount_total = Decimal(str(calculated["discount_total"]))
+        invoice.taxable_total = Decimal(str(calculated["taxable_total"]))
+        invoice.cgst_total = Decimal(str(calculated["cgst_total"]))
+        invoice.sgst_total = Decimal(str(calculated["sgst_total"]))
+        invoice.igst_total = Decimal(str(calculated["igst_total"]))
+        invoice.grand_total = Decimal(str(calculated["grand_total"]))
+        invoice.amount_in_words = calculated["amount_in_words"]
+        
+        db.commit()
+        db.refresh(invoice)
+        AuditService.log(db, company_id, "INVOICE", invoice.id, "CREATED")
+        return invoice
+    
+    @staticmethod
+    def calculate_invoice(db: Session, company_id: str, company, data: dict):
+        # Determine interstate by checking company vs customer (if provided)
+        seller_state = company.addresses[0].state_code if company.addresses else None
+        customer_state = None
+        if data.get("customer_id"):
+            customer = db.query(Party).filter(
+                Party.id == data["customer_id"],
+                Party.company_id == company_id
+            ).first()
+            if customer:
+                customer_state = customer.state_code
+        
+        is_interstate = (seller_state or "") != (customer_state or "")
+        
         subtotal = Decimal("0")
         discount_total = Decimal("0")
         taxable_total = Decimal("0")
@@ -71,7 +130,7 @@ class InvoiceService:
         sgst_total = Decimal("0")
         igst_total = Decimal("0")
         
-        is_interstate = (invoice.seller_state_code_snapshot or "") != (invoice.customer_state_code_snapshot or "")
+        calculated_lines = []
         
         for line_data in data["lines"]:
             rate = Decimal(str(line_data["rate"]))
@@ -104,32 +163,30 @@ class InvoiceService:
             
             line_total = (taxable + cgst_amount + sgst_amount + igst_amount).quantize(Decimal("0.01"))
             
-            line = InvoiceLine(
-                invoice_id=invoice.id,
-                item_id=line_data.get("item_id"),
-                item_name_snapshot=line_data["item_name"],
-                sku_snapshot=line_data.get("sku"),
-                description_snapshot=line_data.get("description"),
-                hsn_sac_snapshot=line_data.get("hsn_sac"),
-                quantity=qty,
-                unit_id=line_data.get("unit_id"),
-                unit_name_snapshot=line_data.get("unit_name"),
-                unit_symbol_snapshot=line_data.get("unit_symbol"),
-                rate=rate,
-                discount_type=discount_type,
-                discount_value=discount_value,
-                discount_amount=discount_amount,
-                taxable_value=taxable,
-                gst_rate=gst_rate,
-                cgst_rate=gst_rate / 2 if not is_interstate else Decimal("0"),
-                sgst_rate=gst_rate / 2 if not is_interstate else Decimal("0"),
-                igst_rate=gst_rate if is_interstate else Decimal("0"),
-                cgst_amount=cgst_amount,
-                sgst_amount=sgst_amount,
-                igst_amount=igst_amount,
-                line_total=line_total,
-            )
-            db.add(line)
+            calculated_lines.append({
+                "item_id": line_data.get("item_id"),
+                "item_name": line_data["item_name"],
+                "sku": line_data.get("sku"),
+                "description": line_data.get("description"),
+                "hsn_sac_snapshot": line_data.get("hsn_sac"),
+                "quantity": float(qty),
+                "unit_id": line_data.get("unit_id"),
+                "unit_name_snapshot": line_data.get("unit_name"),
+                "unit_symbol_snapshot": line_data.get("unit_symbol"),
+                "rate": float(rate),
+                "discount_type": discount_type,
+                "discount_value": float(discount_value),
+                "discount_amount": float(discount_amount),
+                "taxable_value": float(taxable),
+                "gst_rate": float(gst_rate),
+                "cgst_rate": float(gst_rate / 2 if not is_interstate else 0),
+                "sgst_rate": float(gst_rate / 2 if not is_interstate else 0),
+                "igst_rate": float(gst_rate if is_interstate else 0),
+                "cgst_amount": float(cgst_amount),
+                "sgst_amount": float(sgst_amount),
+                "igst_amount": float(igst_amount),
+                "line_total": float(line_total),
+            })
             
             subtotal += gross
             discount_total += discount_amount
@@ -138,22 +195,19 @@ class InvoiceService:
             sgst_total += sgst_amount
             igst_total += igst_amount
         
-        round_off = Decimal("0")
         grand_total = (taxable_total + cgst_total + sgst_total + igst_total).quantize(Decimal("0.01"))
         
-        invoice.subtotal = subtotal
-        invoice.discount_total = discount_total
-        invoice.taxable_total = taxable_total
-        invoice.cgst_total = cgst_total
-        invoice.sgst_total = sgst_total
-        invoice.igst_total = igst_total
-        invoice.grand_total = grand_total
-        invoice.amount_in_words = amount_in_words(float(grand_total))
-        
-        db.commit()
-        db.refresh(invoice)
-        AuditService.log(db, company_id, "INVOICE", invoice.id, "CREATED")
-        return invoice
+        return {
+            "subtotal": float(subtotal),
+            "discount_total": float(discount_total),
+            "taxable_total": float(taxable_total),
+            "cgst_total": float(cgst_total),
+            "sgst_total": float(sgst_total),
+            "igst_total": float(igst_total),
+            "grand_total": float(grand_total),
+            "amount_in_words": amount_in_words(float(grand_total)),
+            "lines": calculated_lines,
+        }
     
     @staticmethod
     def finalize_invoice(db: Session, company_id: str, invoice_id: str) -> Invoice:

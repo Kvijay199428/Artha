@@ -1,0 +1,21 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "28030:8000"
+    volumes:
+      - ./storage:/app/storage
+    environment:
+      - DATABASE_URL=sqlite:///./storage/artha.db
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-default_prod_secret_key}
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "28031:80"
+    restart: unless-stopped

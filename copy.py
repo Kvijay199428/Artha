@@ -38,23 +38,29 @@ SOURCE_FILE_PATHS = [
 EXCLUDE_DIR_PATHS = [
     "node_modules",
     "dist",
+    "build",
     ".git",
     "venv",
+    ".venv",
+    "env",
     "__pycache__",
     ".pytest_cache",
+    ".vscode",
+    ".idea",
+    "coverage",
 ]
 
 # Files to exclude
-EXCLUDE_FILE_PATHS = [
+EXCLUDE_FILE_NAMES = set([
     "deploy.py",
     "copy.py",
     "logs.py",
-]
+    "package-lock.json",
+])
 
 # Convert strings to resolved Paths internally
 SOURCE_DIR = [BASE_DIR / p for p in SOURCE_PATHS] + [BASE_DIR / p for p in SOURCE_FILE_PATHS]
-EXCLUDE_DIRS = {(BASE_DIR / p).resolve() for p in EXCLUDE_DIR_PATHS}
-EXCLUDE_FILES = {(BASE_DIR / p).resolve() for p in EXCLUDE_FILE_PATHS}
+EXCLUDE_DIR_NAMES = set(EXCLUDE_DIR_PATHS)
 
 OUTPUT_FILE = BASE_DIR / "artha.md"
 
@@ -73,28 +79,19 @@ EXTENSION_LANG = {
     ".properties": "properties",
     ".sql":        "sql",
     ".sh":         "bash",
-    ".bat":        "batch",
-    ".gradle":     "groovy",
-    ".kt":         "kotlin",
-    ".scala":      "scala",
-    ".proto":      "protobuf",
     ".html":       "html",
     ".css":        "css",
     ".md":         "markdown",
     ".txt":        "text",
-    ".cfg":        "ini",
     ".ini":        "ini",
     ".toml":       "toml",
-    "Dockerfile":  "Dockerfile",
     ".conf":       "conf",
     ".svg":        "xml",
 }
 
-# Extensions to skip (binary / non-script files)
-SKIP_EXTENSIONS = {".jar", ".class", ".war", ".ear", ".zip", ".gz", ".tar",
-                   ".png", ".jpg", ".jpeg", ".gif", ".ico", ".pyc", ".ttf",
-                   ".exe", ".dll", ".so", ".dylib", ".pdf", ".doc", ".docx"}
-
+# Only include files with these extensions (or exactly these names like Dockerfile)
+INCLUDE_EXTENSIONS = set(EXTENSION_LANG.keys())
+INCLUDE_NAMES = {"Dockerfile", "Makefile"}
 
 def collect_files(sources: list[Path]) -> list[tuple[Path, Path]]:
     """Recursively collect all script/source files, sorted by path."""
@@ -105,21 +102,21 @@ def collect_files(sources: list[Path]) -> list[tuple[Path, Path]]:
             continue
 
         if source_dir.is_file():
-            if source_dir.resolve() in EXCLUDE_FILES:
+            if source_dir.name in EXCLUDE_FILE_NAMES:
                 continue
-            if source_dir.suffix.lower() in SKIP_EXTENSIONS:
+            if source_dir.suffix.lower() not in INCLUDE_EXTENSIONS and source_dir.name not in INCLUDE_NAMES:
                 continue
             files.append((source_dir, BASE_DIR))
             continue
 
         for root, dirs, filenames in os.walk(source_dir):
             # Prune excluded directories in-place so os.walk skips them
-            dirs[:] = [d for d in dirs if Path(root, d).resolve() not in EXCLUDE_DIRS]
+            dirs[:] = [d for d in dirs if not d.startswith('.') and d not in EXCLUDE_DIR_NAMES]
             for fname in filenames:
                 fpath = Path(root) / fname
-                if fpath.resolve() in EXCLUDE_FILES:
+                if fname in EXCLUDE_FILE_NAMES:
                     continue
-                if fpath.suffix.lower() in SKIP_EXTENSIONS:
+                if fpath.suffix.lower() not in INCLUDE_EXTENSIONS and fname not in INCLUDE_NAMES:
                     continue
                 files.append((fpath, source_dir))
     files.sort(key=lambda x: x[0])
