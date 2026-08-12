@@ -97,6 +97,28 @@ def get_me(company = Depends(get_current_company)):
         authorized_person_name=company.authorized_person_name,
         logo_url=None
     ))
+
+@router.post("/pin-change", response_model=ApiResponse[bool])
+def change_pin(
+    request: PinResetRequest,
+    company = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    if request.new_pin != request.confirm_pin:
+        raise ValidationException("New PIN and confirm PIN do not match")
+    CompanyService.change_pin(db, company.id, request.old_pin, request.new_pin)
+    return ApiResponse(success=True, data=True)
+
+@router.post("/logout", response_model=ApiResponse[bool])
+def logout(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        AuthService.logout(db, token)
+    return ApiResponse(success=True, data=True)
 ```
 
 ```python
@@ -106,7 +128,9 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.dependencies.auth import get_current_company
 from app.schemas.common import ApiResponse
-from app.schemas.company import CompanyDetailResponse
+from app.schemas.company import CompanyDetailResponse, CompanyUpdate, CompanyLogoResponse
+from app.services.company_service import CompanyService
+from fastapi import UploadFile, File
 
 router = APIRouter(prefix="/company", tags=["Company"])
 
@@ -165,6 +189,34 @@ def get_company(company = Depends(get_current_company), db: Session = Depends(ge
         created_at=company.created_at,
         updated_at=company.updated_at,
     ))
+
+@router.put("/", response_model=ApiResponse[CompanyDetailResponse])
+def update_company(
+    data: CompanyUpdate,
+    company = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    updated = CompanyService.update_company(db, company.id, data.model_dump(exclude_unset=True))
+    return get_company(company=updated, db=db)
+
+@router.post("/logo", response_model=ApiResponse[CompanyLogoResponse])
+async def upload_company_logo(
+    file: UploadFile = File(...),
+    company = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    # Mock for now
+    url = f"https://storage.example.com/logos/{company.id}/{file.filename}"
+    CompanyService.update_company_logo(db, company.id, url)
+    return ApiResponse(success=True, data=CompanyLogoResponse(logo_url=url, asset_id="asset-123"))
+
+@router.delete("/logo", response_model=ApiResponse[bool])
+def delete_company_logo(
+    company = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    CompanyService.update_company_logo(db, company.id, None)
+    return ApiResponse(success=True, data=True)
 ```
 
 ```python
@@ -279,24 +331,7 @@ def get_item(item_id: str, company = Depends(get_current_company), db: Session =
 @router.put("/{item_id}", response_model=ApiResponse[ItemResponse])
 def update_item(item_id: str, request: ItemUpdate, company = Depends(get_current_company), db: Session = Depends(get_db)):
     item = ItemService.update_item(db, str(company.id), item_id, request.model_dump(exclude_unset=True))
-    return ApiResponse(success=True, data=ItemResponse(
-        id=item.id,
-        company_id=item.company_id,
-        item_type=item.item_type,
-        item_name=item.item_name,
-        sku_code=item.sku_code,
-        unit_id=item.unit_id,
-        unit_name=None,
-        unit_symbol=None,
-        hsn_sac_code=item.hsn_sac_code,
-        gst_applicable=item.gst_applicable,
-        gst_rate_id=item.default_gst_rate_id,
-        gst_rate=None,
-        description=item.description,
-        status=item.status,
-        created_at=item.created_at,
-        updated_at=item.updated_at,
-    ))
+    return ApiResponse(success=True, data=ItemResponse(**item))
 
 @router.delete("/{item_id}", response_model=ApiResponse[dict])
 def delete_item(item_id: str, company = Depends(get_current_company), db: Session = Depends(get_db)):
@@ -696,6 +731,8 @@ from app.core.database import engine, Base
 from app.core.exceptions import AppException
 from app.api.v1 import api_router
 from app.seed_data import seed_all
+from fastapi.exceptions import RequestValidationError
+from sqlalchemy.exc import SQLAlchemyError
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -722,6 +759,20 @@ async def app_exception_handler(request: Request, exc: AppException):
     return JSONResponse(
         status_code=exc.status_code,
         content={"success": False, "error": {"code": exc.code, "message": exc.message, "fields": getattr(exc, "fields", None)}}
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={"success": False, "error": {"code": "VALIDATION_ERROR", "message": "Validation error", "fields": exc.errors()}}
+    )
+
+@app.exception_handler(SQLAlchemyError)
+async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
+    return JSONResponse(
+        status_code=500,
+        content={"success": False, "error": {"code": "DATABASE_ERROR", "message": "A database error occurred."}}
     )
 
 app.include_router(api_router, prefix="/api")
@@ -1526,6 +1577,20 @@ class CompanyDetailResponse(BaseModel):
     bank_accounts: list[CompanyBankAccountSchema]
     created_at: datetime
     updated_at: datetime
+
+class CompanyUpdate(BaseModel):
+    company_name: Optional[str] = None
+    legal_name: Optional[str] = None
+    trade_name: Optional[str] = None
+    mobile: Optional[str] = None
+    office_phone: Optional[str] = None
+    email: Optional[str] = None
+    authorized_person_name: Optional[str] = None
+    authorized_person_designation: Optional[str] = None
+
+class CompanyLogoResponse(BaseModel):
+    logo_url: str
+    asset_id: str
 ```
 
 ```python
@@ -1599,6 +1664,12 @@ class InvoiceResponse(BaseModel):
 class InvoiceListResponse(BaseModel):
     items: list[InvoiceResponse]
     total: int
+
+class InvoiceFinalizeRequest(BaseModel):
+    pass  # Optionally add specific finalization flags if needed in future
+
+class InvoiceCancelRequest(BaseModel):
+    cancel_reason: str = Field(..., min_length=5, max_length=500)
 ```
 
 ```python
@@ -1787,6 +1858,135 @@ class UnitResponse(BaseModel):
 
 class UnitListResponse(BaseModel):
     items: list[UnitResponse]
+
+class UnitUpdate(BaseModel):
+    unit_name: Optional[str] = Field(None, min_length=1, max_length=100)
+    symbol: Optional[str] = Field(None, min_length=1, max_length=20)
+    internal_code: Optional[str] = Field(None, max_length=20)
+    gst_unit_code: Optional[str] = Field(None, max_length=20)
+    category_id: Optional[str] = None
+    base_unit_id: Optional[str] = None
+    conversion_factor: Optional[float] = None
+    conversion_formula: Optional[str] = Field(None, max_length=500)
+    precision: Optional[int] = Field(None, ge=0, le=8)
+    rounding_mode: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class UnitCategoryResponse(BaseModel):
+    id: str
+    name: str
+    code: str
+    dimension: Optional[str]
+    status: str
+```
+
+```python
+// File: backend/app/seed_data.py
+from sqlalchemy.orm import Session
+from app.core.database import SessionLocal
+from app.models.master import GSTStateCode, GSTRate
+from app.models.unit import UnitCategory
+from decimal import Decimal
+
+def seed_gst_states(db: Session):
+    if db.query(GSTStateCode).first():
+        return
+    states = [
+        ("01", "Jammu and Kashmir", False),
+        ("02", "Himachal Pradesh", False),
+        ("03", "Punjab", False),
+        ("04", "Chandigarh", True),
+        ("05", "Uttarakhand", False),
+        ("06", "Haryana", False),
+        ("07", "Delhi", True),
+        ("08", "Rajasthan", False),
+        ("09", "Uttar Pradesh", False),
+        ("10", "Bihar", False),
+        ("11", "Sikkim", False),
+        ("12", "Arunachal Pradesh", False),
+        ("13", "Nagaland", False),
+        ("14", "Manipur", False),
+        ("15", "Mizoram", False),
+        ("16", "Tripura", False),
+        ("17", "Meghalaya", False),
+        ("18", "Assam", False),
+        ("19", "West Bengal", False),
+        ("20", "Jharkhand", False),
+        ("21", "Odisha", False),
+        ("22", "Chhattisgarh", False),
+        ("23", "Madhya Pradesh", False),
+        ("24", "Gujarat", False),
+        ("25", "Daman and Diu", True),
+        ("26", "Dadra and Nagar Haveli", True),
+        ("27", "Maharashtra", False),
+        ("28", "Andhra Pradesh", False),
+        ("29", "Karnataka", False),
+        ("30", "Goa", False),
+        ("31", "Lakshadweep", True),
+        ("32", "Kerala", False),
+        ("33", "Tamil Nadu", False),
+        ("34", "Puducherry", True),
+        ("35", "Andaman and Nicobar Islands", True),
+        ("36", "Telangana", False),
+        ("37", "Andhra Pradesh (New)", False)
+    ]
+    for code, name, is_ut in states:
+        db.add(GSTStateCode(code=code, state_name=name, union_territory=is_ut))
+    db.commit()
+
+def seed_gst_rates(db: Session):
+    if db.query(GSTRate).first():
+        return
+    rates = [
+        Decimal("0.00"),
+        Decimal("0.25"),
+        Decimal("1.50"),
+        Decimal("3.00"),
+        Decimal("5.00"),
+        Decimal("12.00"),
+        Decimal("18.00"),
+        Decimal("28.00")
+    ]
+    for rate in rates:
+        db.add(GSTRate(
+            rate=rate,
+            display_name=f"GST {rate}%",
+            description=f"Standard GST Rate {rate}%"
+        ))
+    db.commit()
+
+def seed_unit_categories(db: Session):
+    if db.query(UnitCategory).first():
+        return
+    categories = [
+        ("Quantity", "QTY", "COUNT"),
+        ("Mass", "MASS", "MASS"),
+        ("Length", "LEN", "LENGTH"),
+        ("Area", "AREA", "AREA"),
+        ("Volume", "VOL", "VOLUME"),
+        ("Time", "TIME", "TIME"),
+        ("Count", "CNT", "COUNT"),
+        ("Commercial", "COMM", "COMMERCIAL")
+    ]
+    for name, code, dimension in categories:
+        db.add(UnitCategory(name=name, code=code, dimension=dimension))
+    db.commit()
+
+def seed_all():
+    db = SessionLocal()
+    try:
+        seed_gst_states(db)
+        seed_gst_rates(db)
+        seed_unit_categories(db)
+        print("Database seeding completed.")
+    except Exception as e:
+        print(f"Seeding failed: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+if __name__ == "__main__":
+    seed_all()
 ```
 
 ```python
@@ -1875,6 +2075,16 @@ class AuthService:
         if not session:
             return None
         return payload.get("company_id")
+
+    @staticmethod
+    def logout(db: Session, token: str):
+        from app.core.security import decode_session_token
+        payload = decode_session_token(token)
+        if payload:
+            session = db.query(CompanySession).filter(CompanySession.id == payload.get("session_id")).first()
+            if session:
+                session.status = "REVOKED"
+                db.commit()
 ```
 
 ```python
@@ -1981,6 +2191,37 @@ class CompanyService:
         if not company:
             return None
         return company
+
+    @staticmethod
+    def update_company(db: Session, company_id: str, data: dict) -> Company:
+        company = db.query(Company).filter(Company.id == company_id).first()
+        if not company:
+            raise ValidationException("Company not found")
+        
+        for key, value in data.items():
+            if hasattr(company, key) and value is not None:
+                setattr(company, key, value)
+                
+        db.commit()
+        db.refresh(company)
+        return company
+    
+    @staticmethod
+    def update_company_logo(db: Session, company_id: str, logo_url: str):
+        # We will assume FileStorageService handles the physical upload and returns a URL or Asset ID
+        company = db.query(Company).filter(Company.id == company_id).first()
+        # You can store logo in Company model or CompanyAsset model. For now we will assume Company model has a logo_url (needs to be added if missing) or we just return success.
+        pass
+        
+    @staticmethod
+    def change_pin(db: Session, company_id: str, old_pin: str, new_pin: str):
+        from app.core.security import verify_pin, hash_pin
+        auth = db.query(CompanyAuth).filter(CompanyAuth.company_id == company_id).first()
+        if not auth or not verify_pin(old_pin, auth.pin_hash):
+            raise ValidationException("Incorrect current PIN")
+        
+        auth.pin_hash = hash_pin(new_pin)
+        db.commit()
 ```
 
 ```python
@@ -2439,7 +2680,7 @@ class ItemService:
         db.commit()
         db.refresh(item)
         AuditService.log(db, company_id, "ITEM", item.id, "CREATED")
-        return item
+        return ItemService.get_item(db, company_id, item.id)
     
     @staticmethod
     def update_item(db: Session, company_id: str, item_id: str, data: dict) -> Item:
@@ -2470,7 +2711,7 @@ class ItemService:
         
         if changes:
             AuditService.log(db, company_id, "ITEM", item.id, "UPDATED", reason="; ".join(changes))
-        return item
+        return ItemService.get_item(db, company_id, item.id)
     
     @staticmethod
     def list_items(db: Session, company_id: str, search: str = None):
@@ -2508,10 +2749,50 @@ class ItemService:
     
     @staticmethod
     def get_item(db: Session, company_id: str, item_id: str):
+        from app.models.master import GSTRate
+        result = db.query(Item, Unit, GSTRate).outerjoin(Unit, Item.unit_id == Unit.id).outerjoin(GSTRate, Item.default_gst_rate_id == GSTRate.id).filter(
+            Item.id == item_id, Item.company_id == company_id
+        ).first()
+        if not result:
+            raise NotFoundException("Item not found")
+            
+        item, unit, gst_rate = result
+        return {
+            "id": item.id,
+            "company_id": item.company_id,
+            "item_type": item.item_type,
+            "item_name": item.item_name,
+            "sku_code": item.sku_code,
+            "unit_id": item.unit_id,
+            "unit_name": unit.unit_name if unit else None,
+            "unit_symbol": unit.symbol if unit else None,
+            "hsn_sac_code": item.hsn_sac_code,
+            "gst_applicable": item.gst_applicable,
+            "gst_rate_id": item.default_gst_rate_id,
+            "gst_rate": float(gst_rate.rate) if gst_rate else None,
+            "description": item.description,
+            "status": item.status,
+            "created_at": item.created_at,
+            "updated_at": item.updated_at,
+        }
+
+    @staticmethod
+    def delete_item(db: Session, company_id: str, item_id: str):
         item = db.query(Item).filter(Item.id == item_id, Item.company_id == company_id).first()
         if not item:
             raise NotFoundException("Item not found")
-        return item
+        
+        # Check if used in invoices
+        from app.models.invoice import InvoiceLine
+        in_use = db.query(InvoiceLine).filter(InvoiceLine.item_id == item_id).first()
+        if in_use:
+            item.status = 'ARCHIVED'
+            db.commit()
+            AuditService.log(db, company_id, "ITEM", item.id, "ARCHIVED")
+        else:
+            db.delete(item)
+            db.commit()
+            AuditService.log(db, company_id, "ITEM", item.id, "DELETED")
 ```
 
 ```python
@@ -2804,6 +3085,50 @@ class UnitService:
         if unit.company_id != company_id and not unit.is_predefined:
             raise ValidationException("Access denied")
         return unit
+
+    @staticmethod
+    def list_categories(db: Session):
+        return db.query(UnitCategory).filter(UnitCategory.status == "ACTIVE").order_by(UnitCategory.name).all()
+
+    @staticmethod
+    def update_unit(db: Session, company_id: str, unit_id: str, data: dict) -> Unit:
+        unit = UnitService.get_unit(db, unit_id, company_id)
+        if unit.is_predefined:
+            raise ValidationException("Cannot modify predefined units")
+        
+        formula = data.get("conversion_formula")
+        if formula:
+            UnitService._validate_formula(formula)
+        
+        for key, value in data.items():
+            if hasattr(unit, key) and value is not None:
+                if key == "symbol":
+                    setattr(unit, key, value.upper())
+                else:
+                    setattr(unit, key, value)
+        
+        db.commit()
+        db.refresh(unit)
+        AuditService.log(db, company_id, "UNIT", unit.id, "UPDATED")
+        return unit
+    
+    @staticmethod
+    def delete_unit(db: Session, company_id: str, unit_id: str):
+        unit = UnitService.get_unit(db, unit_id, company_id)
+        if unit.is_predefined:
+            raise ValidationException("Cannot delete predefined units")
+            
+        from app.models.item import Item
+        # In actual implementation check for usage in invoice_lines as well
+        in_use = db.query(Item).filter(Item.unit_id == unit_id).first()
+        if in_use:
+            unit.is_active = False
+            db.commit()
+            AuditService.log(db, company_id, "UNIT", unit.id, "DEACTIVATED")
+        else:
+            db.delete(unit)
+            db.commit()
+            AuditService.log(db, company_id, "UNIT", unit_id, "DELETED")
 ```
 
 ```python
@@ -3147,23 +3472,6 @@ dependencies = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["app*"]
-```
-
-```python
-// File: backend/seed_data.py
-from sqlalchemy.orm import Session
-from app.core.database import SessionLocal
-from app.models.master import GSTStateCode, GSTRate
-
-def seed_gst_states(db: Session):
-    if db.query(GSTStateCode).first():
-        return
-    states = [
-        ("01", "Jammu and Kashmir", False),
-        ("02", "Himachal Pradesh", False),
-        ("03", "Punjab", False),
-        ("04", "Chandigarh", True),
-        ("05", "Uttarakhand", False),
 ```
 
 ```

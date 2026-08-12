@@ -31,7 +31,7 @@ class ItemService:
         db.commit()
         db.refresh(item)
         AuditService.log(db, company_id, "ITEM", item.id, "CREATED")
-        return item
+        return ItemService.get_item(db, company_id, item.id)
     
     @staticmethod
     def update_item(db: Session, company_id: str, item_id: str, data: dict) -> Item:
@@ -62,7 +62,7 @@ class ItemService:
         
         if changes:
             AuditService.log(db, company_id, "ITEM", item.id, "UPDATED", reason="; ".join(changes))
-        return item
+        return ItemService.get_item(db, company_id, item.id)
     
     @staticmethod
     def list_items(db: Session, company_id: str, search: str = None):
@@ -100,7 +100,47 @@ class ItemService:
     
     @staticmethod
     def get_item(db: Session, company_id: str, item_id: str):
+        from app.models.master import GSTRate
+        result = db.query(Item, Unit, GSTRate).outerjoin(Unit, Item.unit_id == Unit.id).outerjoin(GSTRate, Item.default_gst_rate_id == GSTRate.id).filter(
+            Item.id == item_id, Item.company_id == company_id
+        ).first()
+        if not result:
+            raise NotFoundException("Item not found")
+            
+        item, unit, gst_rate = result
+        return {
+            "id": item.id,
+            "company_id": item.company_id,
+            "item_type": item.item_type,
+            "item_name": item.item_name,
+            "sku_code": item.sku_code,
+            "unit_id": item.unit_id,
+            "unit_name": unit.unit_name if unit else None,
+            "unit_symbol": unit.symbol if unit else None,
+            "hsn_sac_code": item.hsn_sac_code,
+            "gst_applicable": item.gst_applicable,
+            "gst_rate_id": item.default_gst_rate_id,
+            "gst_rate": float(gst_rate.rate) if gst_rate else None,
+            "description": item.description,
+            "status": item.status,
+            "created_at": item.created_at,
+            "updated_at": item.updated_at,
+        }
+
+    @staticmethod
+    def delete_item(db: Session, company_id: str, item_id: str):
         item = db.query(Item).filter(Item.id == item_id, Item.company_id == company_id).first()
         if not item:
             raise NotFoundException("Item not found")
-        return item
+        
+        # Check if used in invoices
+        from app.models.invoice import InvoiceLine
+        in_use = db.query(InvoiceLine).filter(InvoiceLine.item_id == item_id).first()
+        if in_use:
+            item.status = 'ARCHIVED'
+            db.commit()
+            AuditService.log(db, company_id, "ITEM", item.id, "ARCHIVED")
+        else:
+            db.delete(item)
+            db.commit()
+            AuditService.log(db, company_id, "ITEM", item.id, "DELETED")

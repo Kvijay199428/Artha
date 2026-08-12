@@ -50,3 +50,17 @@ class CompanyDetailResponse(BaseModel):
     bank_accounts: list[CompanyBankAccountSchema]
     created_at: datetime
     updated_at: datetime
+
+class CompanyUpdate(BaseModel):
+    company_name: Optional[str] = None
+    legal_name: Optional[str] = None
+    trade_name: Optional[str] = None
+    mobile: Optional[str] = None
+    office_phone: Optional[str] = None
+    email: Optional[str] = None
+    authorized_person_name: Optional[str] = None
+    authorized_person_designation: Optional[str] = None
+
+class CompanyLogoResponse(BaseModel):
+    logo_url: str
+    asset_id: str

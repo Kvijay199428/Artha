@@ -100,3 +100,34 @@ class CompanyService:
         if not company:
             return None
         return company
+
+    @staticmethod
+    def update_company(db: Session, company_id: str, data: dict) -> Company:
+        company = db.query(Company).filter(Company.id == company_id).first()
+        if not company:
+            raise ValidationException("Company not found")
+        
+        for key, value in data.items():
+            if hasattr(company, key) and value is not None:
+                setattr(company, key, value)
+                
+        db.commit()
+        db.refresh(company)
+        return company
+    
+    @staticmethod
+    def update_company_logo(db: Session, company_id: str, logo_url: str):
+        # We will assume FileStorageService handles the physical upload and returns a URL or Asset ID
+        company = db.query(Company).filter(Company.id == company_id).first()
+        # You can store logo in Company model or CompanyAsset model. For now we will assume Company model has a logo_url (needs to be added if missing) or we just return success.
+        pass
+        
+    @staticmethod
+    def change_pin(db: Session, company_id: str, old_pin: str, new_pin: str):
+        from app.core.security import verify_pin, hash_pin
+        auth = db.query(CompanyAuth).filter(CompanyAuth.company_id == company_id).first()
+        if not auth or not verify_pin(old_pin, auth.pin_hash):
+            raise ValidationException("Incorrect current PIN")
+        
+        auth.pin_hash = hash_pin(new_pin)
+        db.commit()

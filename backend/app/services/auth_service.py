@@ -57,3 +57,13 @@ class AuthService:
         if not session:
             return None
         return payload.get("company_id")
+
+    @staticmethod
+    def logout(db: Session, token: str):
+        from app.core.security import decode_session_token
+        payload = decode_session_token(token)
+        if payload:
+            session = db.query(CompanySession).filter(CompanySession.id == payload.get("session_id")).first()
+            if session:
+                session.status = "REVOKED"
+                db.commit()

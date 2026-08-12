@@ -65,3 +65,47 @@ class UnitService:
         if unit.company_id != company_id and not unit.is_predefined:
             raise ValidationException("Access denied")
         return unit
+
+    @staticmethod
+    def list_categories(db: Session):
+        return db.query(UnitCategory).filter(UnitCategory.status == "ACTIVE").order_by(UnitCategory.name).all()
+
+    @staticmethod
+    def update_unit(db: Session, company_id: str, unit_id: str, data: dict) -> Unit:
+        unit = UnitService.get_unit(db, unit_id, company_id)
+        if unit.is_predefined:
+            raise ValidationException("Cannot modify predefined units")
+        
+        formula = data.get("conversion_formula")
+        if formula:
+            UnitService._validate_formula(formula)
+        
+        for key, value in data.items():
+            if hasattr(unit, key) and value is not None:
+                if key == "symbol":
+                    setattr(unit, key, value.upper())
+                else:
+                    setattr(unit, key, value)
+        
+        db.commit()
+        db.refresh(unit)
+        AuditService.log(db, company_id, "UNIT", unit.id, "UPDATED")
+        return unit
+    
+    @staticmethod
+    def delete_unit(db: Session, company_id: str, unit_id: str):
+        unit = UnitService.get_unit(db, unit_id, company_id)
+        if unit.is_predefined:
+            raise ValidationException("Cannot delete predefined units")
+            
+        from app.models.item import Item
+        # In actual implementation check for usage in invoice_lines as well
+        in_use = db.query(Item).filter(Item.unit_id == unit_id).first()
+        if in_use:
+            unit.is_active = False
+            db.commit()
+            AuditService.log(db, company_id, "UNIT", unit.id, "DEACTIVATED")
+        else:
+            db.delete(unit)
+            db.commit()
+            AuditService.log(db, company_id, "UNIT", unit_id, "DELETED")

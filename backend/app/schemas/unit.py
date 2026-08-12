@@ -33,3 +33,23 @@ class UnitResponse(BaseModel):
 
 class UnitListResponse(BaseModel):
     items: list[UnitResponse]
+
+class UnitUpdate(BaseModel):
+    unit_name: Optional[str] = Field(None, min_length=1, max_length=100)
+    symbol: Optional[str] = Field(None, min_length=1, max_length=20)
+    internal_code: Optional[str] = Field(None, max_length=20)
+    gst_unit_code: Optional[str] = Field(None, max_length=20)
+    category_id: Optional[str] = None
+    base_unit_id: Optional[str] = None
+    conversion_factor: Optional[float] = None
+    conversion_formula: Optional[str] = Field(None, max_length=500)
+    precision: Optional[int] = Field(None, ge=0, le=8)
+    rounding_mode: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class UnitCategoryResponse(BaseModel):
+    id: str
+    name: str
+    code: str
+    dimension: Optional[str]
+    status: str

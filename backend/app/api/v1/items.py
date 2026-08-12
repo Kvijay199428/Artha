@@ -26,24 +26,7 @@ def get_item(item_id: str, company = Depends(get_current_company), db: Session =
 @router.put("/{item_id}", response_model=ApiResponse[ItemResponse])
 def update_item(item_id: str, request: ItemUpdate, company = Depends(get_current_company), db: Session = Depends(get_db)):
     item = ItemService.update_item(db, str(company.id), item_id, request.model_dump(exclude_unset=True))
-    return ApiResponse(success=True, data=ItemResponse(
-        id=item.id,
-        company_id=item.company_id,
-        item_type=item.item_type,
-        item_name=item.item_name,
-        sku_code=item.sku_code,
-        unit_id=item.unit_id,
-        unit_name=None,
-        unit_symbol=None,
-        hsn_sac_code=item.hsn_sac_code,
-        gst_applicable=item.gst_applicable,
-        gst_rate_id=item.default_gst_rate_id,
-        gst_rate=None,
-        description=item.description,
-        status=item.status,
-        created_at=item.created_at,
-        updated_at=item.updated_at,
-    ))
+    return ApiResponse(success=True, data=ItemResponse(**item))
 
 @router.delete("/{item_id}", response_model=ApiResponse[dict])
 def delete_item(item_id: str, company = Depends(get_current_company), db: Session = Depends(get_db)):

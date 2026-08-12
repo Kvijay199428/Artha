@@ -59,3 +59,25 @@ def get_me(company = Depends(get_current_company)):
         authorized_person_name=company.authorized_person_name,
         logo_url=None
     ))
+
+@router.post("/pin-change", response_model=ApiResponse[bool])
+def change_pin(
+    request: PinResetRequest,
+    company = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    if request.new_pin != request.confirm_pin:
+        raise ValidationException("New PIN and confirm PIN do not match")
+    CompanyService.change_pin(db, company.id, request.old_pin, request.new_pin)
+    return ApiResponse(success=True, data=True)
+
+@router.post("/logout", response_model=ApiResponse[bool])
+def logout(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        AuthService.logout(db, token)
+    return ApiResponse(success=True, data=True)

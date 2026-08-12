@@ -6,6 +6,8 @@ from app.core.database import engine, Base
 from app.core.exceptions import AppException
 from app.api.v1 import api_router
 from app.seed_data import seed_all
+from fastapi.exceptions import RequestValidationError
+from sqlalchemy.exc import SQLAlchemyError
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -32,6 +34,20 @@ async def app_exception_handler(request: Request, exc: AppException):
     return JSONResponse(
         status_code=exc.status_code,
         content={"success": False, "error": {"code": exc.code, "message": exc.message, "fields": getattr(exc, "fields", None)}}
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={"success": False, "error": {"code": "VALIDATION_ERROR", "message": "Validation error", "fields": exc.errors()}}
+    )
+
+@app.exception_handler(SQLAlchemyError)
+async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
+    return JSONResponse(
+        status_code=500,
+        content={"success": False, "error": {"code": "DATABASE_ERROR", "message": "A database error occurred."}}
     )
 
 app.include_router(api_router, prefix="/api")

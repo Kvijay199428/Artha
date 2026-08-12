@@ -3,7 +3,9 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.dependencies.auth import get_current_company
 from app.schemas.common import ApiResponse
-from app.schemas.company import CompanyDetailResponse
+from app.schemas.company import CompanyDetailResponse, CompanyUpdate, CompanyLogoResponse
+from app.services.company_service import CompanyService
+from fastapi import UploadFile, File
 
 router = APIRouter(prefix="/company", tags=["Company"])
 
@@ -62,3 +64,31 @@ def get_company(company = Depends(get_current_company), db: Session = Depends(ge
         created_at=company.created_at,
         updated_at=company.updated_at,
     ))
+
+@router.put("/", response_model=ApiResponse[CompanyDetailResponse])
+def update_company(
+    data: CompanyUpdate,
+    company = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    updated = CompanyService.update_company(db, company.id, data.model_dump(exclude_unset=True))
+    return get_company(company=updated, db=db)
+
+@router.post("/logo", response_model=ApiResponse[CompanyLogoResponse])
+async def upload_company_logo(
+    file: UploadFile = File(...),
+    company = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    # Mock for now
+    url = f"https://storage.example.com/logos/{company.id}/{file.filename}"
+    CompanyService.update_company_logo(db, company.id, url)
+    return ApiResponse(success=True, data=CompanyLogoResponse(logo_url=url, asset_id="asset-123"))
+
+@router.delete("/logo", response_model=ApiResponse[bool])
+def delete_company_logo(
+    company = Depends(get_current_company),
+    db: Session = Depends(get_db)
+):
+    CompanyService.update_company_logo(db, company.id, None)
+    return ApiResponse(success=True, data=True)

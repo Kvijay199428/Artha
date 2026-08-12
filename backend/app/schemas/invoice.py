@@ -67,3 +67,9 @@ class InvoiceResponse(BaseModel):
 class InvoiceListResponse(BaseModel):
     items: list[InvoiceResponse]
     total: int
+
+class InvoiceFinalizeRequest(BaseModel):
+    pass  # Optionally add specific finalization flags if needed in future
+
+class InvoiceCancelRequest(BaseModel):
+    cancel_reason: str = Field(..., min_length=5, max_length=500)
