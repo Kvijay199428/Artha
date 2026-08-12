@@ -32,6 +32,9 @@ def normalize_destination(path_text: str, base_dir: Path) -> Path:
 
     path_text = path_text.strip().replace("\\", "/")
 
+    if "{base}" in path_text:
+        path_text = path_text.replace("{base}", "backend")
+
     # Known agent output root
     marker = "/gst-billing/"
 
@@ -117,6 +120,7 @@ def extract_open_destinations(text: str):
         \s*
         \(
         \s*
+        [fF]?
         (?P<quote>['"])
         (?P<path>.*?)
         (?P=quote)
