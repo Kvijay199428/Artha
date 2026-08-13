@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.dependencies.auth import get_current_company, get_current_user
+from app.dependencies.auth import get_current_company
 from app.schemas.common import ApiResponse
 from app.schemas.boq import BOQCreate, BOQResponse, BOQListResponse
 from app.services.boq_service import BOQService
@@ -9,8 +9,8 @@ from app.services.boq_service import BOQService
 router = APIRouter(prefix="/boqs", tags=["BOQ"])
 
 @router.post("/", response_model=ApiResponse[BOQResponse])
-def create_boq(request: BOQCreate, company = Depends(get_current_company), user = Depends(get_current_user), db: Session = Depends(get_db)):
-    boq = BOQService.create_boq(db, str(company.id), request.model_dump(), str(user.id))
+def create_boq(request: BOQCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    boq = BOQService.create_boq(db, str(company.id), request.model_dump(), None)
     return ApiResponse(success=True, data=_boq_to_response(boq))
 
 @router.get("/", response_model=ApiResponse[BOQListResponse])

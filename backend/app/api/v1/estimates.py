@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.dependencies.auth import get_current_company, get_current_user
+from app.dependencies.auth import get_current_company
 from app.schemas.common import ApiResponse
 from app.schemas.estimate import EstimateCreate, EstimateResponse, EstimateListResponse
 from app.services.estimate_service import EstimateService
@@ -9,8 +9,8 @@ from app.services.estimate_service import EstimateService
 router = APIRouter(prefix="/estimates", tags=["Estimates"])
 
 @router.post("/", response_model=ApiResponse[EstimateResponse])
-def create_estimate(request: EstimateCreate, company = Depends(get_current_company), user = Depends(get_current_user), db: Session = Depends(get_db)):
-    estimate = EstimateService.create_estimate(db, str(company.id), request.model_dump(), str(user.id))
+def create_estimate(request: EstimateCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    estimate = EstimateService.create_estimate(db, str(company.id), request.model_dump(), None)
     return ApiResponse(success=True, data=_estimate_to_response(estimate))
 
 @router.get("/", response_model=ApiResponse[EstimateListResponse])

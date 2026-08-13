@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, Path
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.dependencies.auth import get_current_company, get_current_user
+from app.dependencies.auth import get_current_company
 from app.schemas.common import ApiResponse
 from app.schemas.return_order import (
     ReturnOrderCreate, ReturnOrderResponse, ReturnOrderListResponse, 
@@ -17,8 +17,8 @@ def get_returnable_lines(order_id: str, company = Depends(get_current_company), 
     return ApiResponse(success=True, data=ReturnableLinesResponse(**data))
 
 @router.post("/", response_model=ApiResponse[ReturnOrderResponse])
-def create_return(request: ReturnOrderCreate, company = Depends(get_current_company), user = Depends(get_current_user), db: Session = Depends(get_db)):
-    ret = ReturnService.create_return(db, str(company.id), request.model_dump(), str(user.id))
+def create_return(request: ReturnOrderCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    ret = ReturnService.create_return(db, str(company.id), request.model_dump(), None)
     return ApiResponse(success=True, data=_return_to_response(ret))
 
 @router.get("/", response_model=ApiResponse[ReturnOrderListResponse])
@@ -35,8 +35,8 @@ def get_return(return_id: str, company = Depends(get_current_company), db: Sessi
     return ApiResponse(success=True, data=_return_to_response(ret))
 
 @router.post("/{return_id}/approve", response_model=ApiResponse[ReturnOrderResponse])
-def approve_return(return_id: str, company = Depends(get_current_company), user = Depends(get_current_user), db: Session = Depends(get_db)):
-    ret = ReturnService.approve_return(db, str(company.id), return_id, str(user.id))
+def approve_return(return_id: str, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    ret = ReturnService.approve_return(db, str(company.id), return_id, None)
     return ApiResponse(success=True, data=_return_to_response(ret))
 
 @router.post("/{return_id}/post", response_model=ApiResponse[ReturnOrderResponse])

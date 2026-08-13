@@ -476,7 +476,8 @@ def extract_zip_cmds():
 def get_deploy_commands():
     if env == ENV_PROD:
         cmds = extract_zip_cmds()
-        cmds.append(f"cd {REMOTE_DIR} && bash deploy/deploy-release.sh")
+        cmds.append(f"cd {REMOTE_DIR} && docker compose -f compose.prod.yml build")
+        cmds.append(f"cd {REMOTE_DIR} && docker compose -f compose.prod.yml up -d --force-recreate")
         return cmds
 
     compose = "compose.dev.yml"

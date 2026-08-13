@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.dependencies.auth import get_current_company, get_current_user
+from app.dependencies.auth import get_current_company
 from app.schemas.common import ApiResponse
 from app.schemas.quotation import (
     QuotationCreate, QuotationResponse, QuotationListResponse, QuotationAcceptRequest
@@ -11,8 +11,8 @@ from app.services.quotation_service import QuotationService
 router = APIRouter(prefix="/quotations", tags=["Quotations"])
 
 @router.post("/", response_model=ApiResponse[QuotationResponse])
-def create_quotation(request: QuotationCreate, company = Depends(get_current_company), user = Depends(get_current_user), db: Session = Depends(get_db)):
-    q = QuotationService.create_quotation(db, str(company.id), request.model_dump(), str(user.id))
+def create_quotation(request: QuotationCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    q = QuotationService.create_quotation(db, str(company.id), request.model_dump(), None)
     return ApiResponse(success=True, data=_quotation_to_response(q))
 
 @router.get("/", response_model=ApiResponse[QuotationListResponse])
@@ -34,8 +34,8 @@ def approve_quotation(quotation_id: str, company = Depends(get_current_company),
     return ApiResponse(success=True, data=_quotation_to_response(q))
 
 @router.post("/{quotation_id}/accept", response_model=ApiResponse[QuotationResponse])
-def accept_quotation(quotation_id: str, request: QuotationAcceptRequest, company = Depends(get_current_company), user = Depends(get_current_user), db: Session = Depends(get_db)):
-    q = QuotationService.accept_quotation(db, str(company.id), quotation_id, str(user.id), request.acceptance_method)
+def accept_quotation(quotation_id: str, request: QuotationAcceptRequest, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    q = QuotationService.accept_quotation(db, str(company.id), quotation_id, None, request.acceptance_method)
     return ApiResponse(success=True, data=_quotation_to_response(q))
 
 def _quotation_to_response(q) -> QuotationResponse:
