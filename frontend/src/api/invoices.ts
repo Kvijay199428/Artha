@@ -47,6 +47,7 @@ export interface InvoiceResponse {
   id: string;
   invoice_number: string;
   invoice_type: string;
+  transaction_type: string;
   invoice_date: string;
   customer_name_snapshot: string;
   place_of_supply: string;
@@ -74,8 +75,10 @@ export const invoicesApi = {
     const response = await apiClient.post<InvoiceResponse>('/invoices', data);
     return response.data;
   },
-  getAll: async () => {
-    const response = await apiClient.get<{items: InvoiceResponse[], total: number}>('/invoices');
+  getAll: async (transaction_type?: string) => {
+    const params = new URLSearchParams();
+    if (transaction_type) params.append('transaction_type', transaction_type);
+    const response = await apiClient.get<{items: InvoiceResponse[], total: number}>(`/invoices?${params.toString()}`);
     return response.data;
   },
   getById: async (id: string) => {

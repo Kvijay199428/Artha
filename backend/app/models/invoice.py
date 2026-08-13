@@ -18,8 +18,11 @@ class Invoice(Base):
     invoice_date = Column(DateTime, nullable=False)
     accounting_period_id = Column(String(36), nullable=True)
     
-    # Customer snapshots
-    customer_id = Column(String(36), ForeignKey("parties.id"), nullable=False)
+    order_id = Column(String(36), ForeignKey("supply_orders.id"), nullable=True)
+    transaction_type = Column(String(20), default="SALES") # SALES or PURCHASE
+    
+    # Customer snapshots (For SALES, this is the party. For PURCHASE, this is the company)
+    customer_id = Column(String(36), ForeignKey("parties.id"), nullable=True)
     customer_name_snapshot = Column(String(200), nullable=False)
     customer_gstin_snapshot = Column(String(15), nullable=True)
     customer_address_snapshot = Column(Text, nullable=True)
@@ -27,7 +30,8 @@ class Invoice(Base):
     customer_state_code_snapshot = Column(String(2), nullable=True)
     place_of_supply = Column(String(100), nullable=False)
     
-    # Seller snapshots
+    # Seller snapshots (For SALES, this is the company. For PURCHASE, this is the party)
+    seller_id = Column(String(36), ForeignKey("parties.id"), nullable=True)
     seller_name_snapshot = Column(String(200), nullable=False)
     seller_gstin_snapshot = Column(String(15), nullable=True)
     seller_address_snapshot = Column(Text, nullable=True)

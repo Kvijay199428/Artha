@@ -1,16 +1,22 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import { invoicesApi, type InvoiceResponse } from '../../api/invoices';
 import { Button } from '../../components/common/Button';
 
 export default function InvoiceListPage() {
+  const location = useLocation();
   const queryClient = useQueryClient();
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceResponse | null>(null);
   
+  const isPurchase = location.pathname.includes('purchase-bills');
+  const transactionType = isPurchase ? 'PURCHASE' : 'SALES';
+  const pageTitle = isPurchase ? 'Purchase Bills' : 'Sales Invoices';
+  const partyLabel = isPurchase ? 'Supplier' : 'Customer';
+
   const { data, isLoading } = useQuery({
-    queryKey: ['invoices'],
-    queryFn: invoicesApi.getAll
+    queryKey: ['invoices', transactionType],
+    queryFn: () => invoicesApi.getAll(transactionType)
   });
   
   const invoices = data?.items || [];
@@ -50,12 +56,14 @@ export default function InvoiceListPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Invoices</h2>
-          <p className="mt-1 text-sm text-gray-500">Manage your generated tax invoices.</p>
+          <h2 className="text-2xl font-bold text-gray-900">{pageTitle}</h2>
+          <p className="mt-1 text-sm text-gray-500">Manage your {pageTitle.toLowerCase()}.</p>
         </div>
-        <Link to="/invoices/new" className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 font-medium text-sm">
-          + Create Invoice
-        </Link>
+        {!isPurchase && (
+          <Link to="/invoices/new" className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 font-medium text-sm">
+            + Create Invoice
+          </Link>
+        )}
       </div>
 
       {isLoading ? (
@@ -65,9 +73,9 @@ export default function InvoiceListPage() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice #</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{isPurchase ? 'Bill #' : 'Invoice #'}</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{partyLabel}</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -135,7 +143,7 @@ export default function InvoiceListPage() {
               </div>
 
               <div className="border rounded-md p-4 mb-6 bg-gray-50">
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Billed To:</h4>
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">{isPurchase ? 'From Supplier:' : 'Billed To:'}</h4>
                 <p className="font-medium text-gray-900">{selectedInvoice.customer_name_snapshot}</p>
                 <p className="text-sm text-gray-600">Place of Supply: {selectedInvoice.place_of_supply}</p>
               </div>

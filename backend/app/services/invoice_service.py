@@ -258,10 +258,12 @@ class InvoiceService:
         return invoice
     
     @staticmethod
-    def list_invoices(db: Session, company_id: str, status: str = None):
+    def list_invoices(db: Session, company_id: str, status: str = None, transaction_type: str = None) -> list[Invoice]:
         query = db.query(Invoice).filter(Invoice.company_id == company_id)
         if status:
             query = query.filter(Invoice.invoice_status == status)
+        if transaction_type:
+            query = query.filter(Invoice.transaction_type == transaction_type)
         return query.order_by(Invoice.created_at.desc()).all()
     
     @staticmethod

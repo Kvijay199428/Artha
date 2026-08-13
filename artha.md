@@ -14,6 +14,52 @@ COPY . .
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
+```ini
+// File: backend/alembic.ini
+[alembic]
+script_location = migrations
+prepend_sys_path = .
+version_path_separator = os
+
+sqlalchemy.url = sqlite:///./data/artha.db
+
+[post_write_hooks]
+
+[loggers]
+keys = root,sqlalchemy,alembic
+
+[handlers]
+keys = console
+
+[formatters]
+keys = generic
+
+[logger_root]
+level = WARN
+handlers = console
+qualname =
+
+[logger_sqlalchemy]
+level = WARN
+handlers =
+qualname = sqlalchemy.engine
+
+[logger_alembic]
+level = INFO
+handlers =
+qualname = alembic
+
+[handler_console]
+class = StreamHandler
+args = (sys.stderr,)
+level = NOTSET
+formatter = generic
+
+[formatter_generic]
+format = %(levelname)-5.5s [%(name)s] %(message)s
+datefmt = %H:%M:%S
+```
+
 ```python
 // File: backend/app/__init__.py
 
@@ -27,7 +73,7 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```python
 // File: backend/app/api/v1/__init__.py
 from fastapi import APIRouter
-from app.api.v1 import auth, company, units, items, parties, invoices, master
+from app.api.v1 import auth, company, units, items, parties, invoices, master, orders, returns
 
 api_router = APIRouter(prefix="/v1")
 api_router.include_router(auth.router)
@@ -37,6 +83,8 @@ api_router.include_router(items.router)
 api_router.include_router(parties.router)
 api_router.include_router(invoices.router)
 api_router.include_router(master.router)
+api_router.include_router(orders.router)
+api_router.include_router(returns.router)
 ```
 
 ```python
@@ -249,8 +297,13 @@ def create_invoice(request: InvoiceCreate, company = Depends(get_current_company
     return ApiResponse(success=True, data=_invoice_to_response(invoice))
 
 @router.get("/", response_model=ApiResponse[InvoiceListResponse])
-def list_invoices(status: str = Query(None), company = Depends(get_current_company), db: Session = Depends(get_db)):
-    invoices = InvoiceService.list_invoices(db, str(company.id), status)
+def list_invoices(
+    status: str = Query(None), 
+    transaction_type: str = Query(None),
+    company = Depends(get_current_company), 
+    db: Session = Depends(get_db)
+):
+    invoices = InvoiceService.list_invoices(db, str(company.id), status, transaction_type)
     return ApiResponse(success=True, data=InvoiceListResponse(
         items=[_invoice_to_response(i) for i in invoices],
         total=len(invoices)
@@ -288,9 +341,10 @@ def _invoice_to_response(invoice) -> InvoiceResponse:
         id=invoice.id,
         invoice_number=invoice.invoice_number,
         invoice_type=invoice.invoice_type,
+        transaction_type=invoice.transaction_type,
         invoice_date=invoice.invoice_date.date(),
-        customer_name_snapshot=invoice.customer_name_snapshot,
-        customer_gstin_snapshot=invoice.customer_gstin_snapshot,
+        customer_name_snapshot=invoice.customer_name_snapshot if invoice.transaction_type == "SALES" else invoice.seller_name_snapshot,
+        customer_gstin_snapshot=invoice.customer_gstin_snapshot if invoice.transaction_type == "SALES" else invoice.seller_gstin_snapshot,
         place_of_supply=invoice.place_of_supply,
         subtotal=float(invoice.subtotal),
         discount_total=float(invoice.discount_total),
@@ -395,6 +449,118 @@ def get_gst_rates(db: Session = Depends(get_db)):
 ```
 
 ```python
+// File: backend/app/api/v1/orders.py
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
+from app.core.database import get_db
+from app.dependencies.auth import get_current_company
+from app.schemas.common import ApiResponse
+from app.schemas.order import (
+    SupplyOrderCreate, SupplyOrderResponse, SupplyOrderListResponse, 
+    SupplyOrderCalculateRequest, SupplyOrderCalculateResponse, SupplyOrderLineResponse
+)
+from app.schemas.invoice import InvoiceResponse
+from app.services.order_service import OrderService
+from app.api.v1.invoices import _invoice_to_response
+from typing import Optional
+
+router = APIRouter(prefix="/orders", tags=["Orders"])
+
+@router.post("/calculate", response_model=ApiResponse[SupplyOrderCalculateResponse])
+def calculate_order(request: SupplyOrderCalculateRequest, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    result = OrderService.calculate_order(db, str(company.id), company, request.model_dump())
+    return ApiResponse(success=True, data=SupplyOrderCalculateResponse(**result))
+
+@router.post("/", response_model=ApiResponse[SupplyOrderResponse])
+def create_order(request: SupplyOrderCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    order = OrderService.create_order(db, str(company.id), company, request.model_dump())
+    return ApiResponse(success=True, data=_order_to_response(order))
+
+@router.get("/", response_model=ApiResponse[SupplyOrderListResponse])
+def list_orders(
+    order_type: Optional[str] = Query(None),
+    company = Depends(get_current_company), 
+    db: Session = Depends(get_db)
+):
+    orders = OrderService.list_orders(db, str(company.id), order_type)
+    return ApiResponse(success=True, data=SupplyOrderListResponse(
+        items=[_order_to_response(o) for o in orders],
+        total=len(orders)
+    ))
+
+@router.get("/{order_id}", response_model=ApiResponse[SupplyOrderResponse])
+def get_order(order_id: str, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    order = OrderService.get_order(db, str(company.id), order_id)
+    return ApiResponse(success=True, data=_order_to_response(order))
+
+@router.post("/{order_id}/confirm", response_model=ApiResponse[SupplyOrderResponse])
+def confirm_order(order_id: str, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    order = OrderService.confirm_order(db, str(company.id), order_id)
+    return ApiResponse(success=True, data=_order_to_response(order))
+
+@router.post("/{order_id}/convert", response_model=ApiResponse[InvoiceResponse])
+def convert_to_invoice(order_id: str, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    invoice = OrderService.convert_to_invoice(db, str(company.id), order_id)
+    return ApiResponse(success=True, data=_invoice_to_response(invoice))
+
+
+def _order_to_response(order) -> SupplyOrderResponse:
+    lines = []
+    for line in order.lines:
+        lines.append(SupplyOrderLineResponse(
+            id=line.id,
+            item_id=line.item_id,
+            item_name_snapshot=line.item_name_snapshot,
+            sku_snapshot=line.sku_snapshot,
+            hsn_sac_snapshot=line.hsn_sac_snapshot,
+            unit_id=line.unit_id,
+            unit_name_snapshot=line.unit_name_snapshot,
+            unit_symbol_snapshot=line.unit_symbol_snapshot,
+            quantity=float(line.quantity),
+            fulfilled_quantity=float(line.fulfilled_quantity),
+            rate=float(line.rate),
+            discount_type=line.discount_type,
+            discount_value=float(line.discount_value),
+            tax_treatment=line.tax_treatment.value,
+            gst_rate=float(line.gst_rate),
+            taxable_value=float(line.taxable_value),
+            cgst_amount=float(line.cgst_amount),
+            sgst_amount=float(line.sgst_amount),
+            igst_amount=float(line.igst_amount),
+            cess_amount=float(line.cess_amount),
+            line_total=float(line.line_total),
+            description=line.description
+        ))
+        
+    return SupplyOrderResponse(
+        id=order.id,
+        order_type=order.order_type.value,
+        tax_treatment=order.tax_treatment.value,
+        order_number=order.order_number,
+        order_date=order.order_date,
+        expected_date=order.expected_date,
+        party_id=order.party_id,
+        place_of_supply=order.place_of_supply,
+        status=order.status.value,
+        revision=order.revision,
+        subtotal=float(order.subtotal),
+        discount_total=float(order.discount_total),
+        taxable_total=float(order.taxable_total),
+        cgst_total=float(order.cgst_total),
+        sgst_total=float(order.sgst_total),
+        igst_total=float(order.igst_total),
+        cess_total=float(order.cess_total),
+        other_charges=float(order.other_charges),
+        round_off=float(order.round_off),
+        grand_total=float(order.grand_total),
+        amount_in_words=order.amount_in_words,
+        notes=order.notes,
+        terms=order.terms,
+        lines=lines
+    )
+```
+
+```python
 // File: backend/app/api/v1/parties.py
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
@@ -479,6 +645,128 @@ def _party_to_response(party) -> PartyResponse:
             "upi_id": b.upi_id,
             "is_primary": b.is_primary,
         } for b in party.bank_accounts],
+    )
+```
+
+```python
+// File: backend/app/api/v1/returns.py
+from fastapi import APIRouter, Depends, Query, Path
+from sqlalchemy.orm import Session
+from app.core.database import get_db
+from app.dependencies.auth import get_current_company, get_current_user
+from app.schemas.common import ApiResponse
+from app.schemas.return_order import (
+    ReturnOrderCreate, ReturnOrderResponse, ReturnOrderListResponse, 
+    ReturnableLinesResponse, ReturnSettlementCreate, ReturnSettlementResponse
+)
+from app.services.return_service import ReturnService
+
+router = APIRouter(prefix="/returns", tags=["Returns"])
+
+@router.get("/order/{order_id}/returnable-lines", response_model=ApiResponse[ReturnableLinesResponse])
+def get_returnable_lines(order_id: str, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    data = ReturnService.get_returnable_lines(db, str(company.id), order_id)
+    return ApiResponse(success=True, data=ReturnableLinesResponse(**data))
+
+@router.post("/", response_model=ApiResponse[ReturnOrderResponse])
+def create_return(request: ReturnOrderCreate, company = Depends(get_current_company), user = Depends(get_current_user), db: Session = Depends(get_db)):
+    ret = ReturnService.create_return(db, str(company.id), request.model_dump(), str(user.id))
+    return ApiResponse(success=True, data=_return_to_response(ret))
+
+@router.get("/", response_model=ApiResponse[ReturnOrderListResponse])
+def list_returns(return_type: str = Query(None), company = Depends(get_current_company), db: Session = Depends(get_db)):
+    returns = ReturnService.list_returns(db, str(company.id), return_type)
+    return ApiResponse(success=True, data=ReturnOrderListResponse(
+        items=[_return_to_response(r) for r in returns],
+        total=len(returns)
+    ))
+
+@router.get("/{return_id}", response_model=ApiResponse[ReturnOrderResponse])
+def get_return(return_id: str, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    ret = ReturnService.get_return(db, str(company.id), return_id)
+    return ApiResponse(success=True, data=_return_to_response(ret))
+
+@router.post("/{return_id}/approve", response_model=ApiResponse[ReturnOrderResponse])
+def approve_return(return_id: str, company = Depends(get_current_company), user = Depends(get_current_user), db: Session = Depends(get_db)):
+    ret = ReturnService.approve_return(db, str(company.id), return_id, str(user.id))
+    return ApiResponse(success=True, data=_return_to_response(ret))
+
+@router.post("/{return_id}/post", response_model=ApiResponse[ReturnOrderResponse])
+def post_return(return_id: str, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    ret = ReturnService.post_return(db, str(company.id), return_id)
+    return ApiResponse(success=True, data=_return_to_response(ret))
+
+@router.post("/{return_id}/settlements", response_model=ApiResponse[ReturnSettlementResponse])
+def add_settlement(return_id: str, request: ReturnSettlementCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    settlement = ReturnService.add_settlement(db, str(company.id), return_id, request.model_dump())
+    return ApiResponse(success=True, data=ReturnSettlementResponse(
+        id=settlement.id,
+        settlement_type=settlement.settlement_type.value,
+        amount=float(settlement.amount),
+        status=settlement.status,
+        settlement_date=settlement.settlement_date,
+        reference_number=settlement.reference_number,
+        notes=settlement.notes
+    ))
+
+def _return_to_response(ret) -> ReturnOrderResponse:
+    lines = []
+    for l in ret.lines:
+        lines.append({
+            "id": l.id,
+            "original_order_line_id": l.original_order_line_id,
+            "item_id": l.item_id,
+            "item_name_snapshot": l.item_name_snapshot,
+            "sku_snapshot": l.sku_snapshot,
+            "hsn_sac_snapshot": l.hsn_sac_snapshot,
+            "unit_snapshot": l.unit_snapshot,
+            "original_quantity": float(l.original_quantity),
+            "previously_returned_quantity": float(l.previously_returned_quantity),
+            "return_quantity": float(l.return_quantity),
+            "remaining_quantity": float(l.remaining_quantity),
+            "rate": float(l.rate),
+            "taxable_value": float(l.taxable_value),
+            "gst_rate": float(l.gst_rate),
+            "cgst_amount": float(l.cgst_amount),
+            "sgst_amount": float(l.sgst_amount),
+            "igst_amount": float(l.igst_amount),
+            "line_total": float(l.line_total),
+            "condition": l.condition.value,
+            "warehouse_action": l.warehouse_action.value
+        })
+        
+    settlements = []
+    for s in ret.settlements:
+        settlements.append({
+            "id": s.id,
+            "settlement_type": s.settlement_type.value,
+            "amount": float(s.amount),
+            "status": s.status,
+            "settlement_date": s.settlement_date,
+            "reference_number": s.reference_number,
+            "notes": s.notes
+        })
+        
+    return ReturnOrderResponse(
+        id=ret.id,
+        return_number=ret.return_number,
+        return_type=ret.return_type.value,
+        original_order_id=ret.original_order_id,
+        party_id=ret.party_id,
+        return_date=ret.return_date.date(),
+        status=ret.status.value,
+        financial_status=ret.financial_status.value,
+        reason=ret.reason,
+        subtotal=float(ret.subtotal),
+        discount_total=float(ret.discount_total),
+        taxable_total=float(ret.taxable_total),
+        cgst_total=float(ret.cgst_total),
+        sgst_total=float(ret.sgst_total),
+        igst_total=float(ret.igst_total),
+        grand_total=float(ret.grand_total),
+        created_at=ret.created_at,
+        lines=lines,
+        settlements=settlements
     )
 ```
 
@@ -819,6 +1107,8 @@ from app.models.invoice import (
     Invoice, InvoiceLine, InvoiceSeries, Payment,
     CreditNote, DebitNote
 )
+from app.models.order import SupplyOrder, SupplyOrderLine
+from app.models.return_order import ReturnOrder, ReturnOrderLine, ReturnSettlement
 from app.models.audit import AuditLog
 from app.models.master import GSTStateCode, GSTRate, HSNSACCode
 
@@ -830,6 +1120,7 @@ __all__ = [
     "Item", "ItemVersion",
     "Party", "PartyAddress", "PartyBankAccount", "PartyLedgerEntry", "PaymentAllocation",
     "Invoice", "InvoiceLine", "InvoiceSeries", "Payment", "CreditNote", "DebitNote",
+    "SupplyOrder", "SupplyOrderLine",
     "AuditLog",
     "GSTStateCode", "GSTRate", "HSNSACCode",
 ]
@@ -1050,8 +1341,11 @@ class Invoice(Base):
     invoice_date = Column(DateTime, nullable=False)
     accounting_period_id = Column(String(36), nullable=True)
     
-    # Customer snapshots
-    customer_id = Column(String(36), ForeignKey("parties.id"), nullable=False)
+    order_id = Column(String(36), ForeignKey("supply_orders.id"), nullable=True)
+    transaction_type = Column(String(20), default="SALES") # SALES or PURCHASE
+    
+    # Customer snapshots (For SALES, this is the party. For PURCHASE, this is the company)
+    customer_id = Column(String(36), ForeignKey("parties.id"), nullable=True)
     customer_name_snapshot = Column(String(200), nullable=False)
     customer_gstin_snapshot = Column(String(15), nullable=True)
     customer_address_snapshot = Column(Text, nullable=True)
@@ -1059,7 +1353,8 @@ class Invoice(Base):
     customer_state_code_snapshot = Column(String(2), nullable=True)
     place_of_supply = Column(String(100), nullable=False)
     
-    # Seller snapshots
+    # Seller snapshots (For SALES, this is the company. For PURCHASE, this is the party)
+    seller_id = Column(String(36), ForeignKey("parties.id"), nullable=True)
     seller_name_snapshot = Column(String(200), nullable=False)
     seller_gstin_snapshot = Column(String(15), nullable=True)
     seller_address_snapshot = Column(Text, nullable=True)
@@ -1291,6 +1586,109 @@ class HSNSACCode(Base):
 ```
 
 ```python
+// File: backend/app/models/order.py
+from sqlalchemy import Column, String, Date, Numeric, ForeignKey, Enum, Text, Integer
+from sqlalchemy.orm import relationship
+import enum
+from app.core.database import Base
+from app.models.audit import AuditableMixin
+
+class OrderType(str, enum.Enum):
+    PURCHASE = "PURCHASE"
+    SALES = "SALES"
+
+class TaxTreatment(str, enum.Enum):
+    GST = "GST"
+    WITHOUT_GST = "WITHOUT_GST"
+
+class OrderStatus(str, enum.Enum):
+    DRAFT = "DRAFT"
+    CONFIRMED = "CONFIRMED"
+    PARTIALLY_FULFILLED = "PARTIALLY_FULFILLED"
+    FULFILLED = "FULFILLED"
+    CLOSED = "CLOSED"
+    CANCELLED = "CANCELLED"
+
+class SupplyOrder(Base, AuditableMixin):
+    __tablename__ = "supply_orders"
+
+    id = Column(String(36), primary_key=True)
+    company_id = Column(String(36), ForeignKey("companies.id"), nullable=False)
+    party_id = Column(String(36), ForeignKey("parties.id"), nullable=False)
+
+    order_type = Column(Enum(OrderType), nullable=False)
+    tax_treatment = Column(Enum(TaxTreatment), nullable=False)
+    order_number = Column(String(50), nullable=True, index=True)
+    
+    order_date = Column(Date, nullable=False)
+    expected_date = Column(Date, nullable=True)
+    
+    place_of_supply = Column(String(2), nullable=True) # State code
+    
+    status = Column(Enum(OrderStatus), default=OrderStatus.DRAFT, nullable=False)
+    revision = Column(Integer, default=1, nullable=False)
+
+    subtotal = Column(Numeric(15, 2), default=0)
+    discount_total = Column(Numeric(15, 2), default=0)
+    taxable_total = Column(Numeric(15, 2), default=0)
+    
+    cgst_total = Column(Numeric(15, 2), default=0)
+    sgst_total = Column(Numeric(15, 2), default=0)
+    igst_total = Column(Numeric(15, 2), default=0)
+    cess_total = Column(Numeric(15, 2), default=0)
+    
+    other_charges = Column(Numeric(15, 2), default=0)
+    round_off = Column(Numeric(15, 2), default=0)
+    grand_total = Column(Numeric(15, 2), default=0)
+    amount_in_words = Column(String(255), nullable=True)
+
+    notes = Column(Text, nullable=True)
+    terms = Column(Text, nullable=True)
+
+    lines = relationship("SupplyOrderLine", back_populates="order", cascade="all, delete-orphan")
+    party = relationship("Party")
+
+
+class SupplyOrderLine(Base):
+    __tablename__ = "supply_order_lines"
+
+    id = Column(String(36), primary_key=True)
+    order_id = Column(String(36), ForeignKey("supply_orders.id", ondelete="CASCADE"), nullable=False)
+    item_id = Column(String(36), ForeignKey("items.id"), nullable=True)
+
+    # Snapshots
+    item_name_snapshot = Column(String(255), nullable=False)
+    sku_snapshot = Column(String(100), nullable=True)
+    hsn_sac_snapshot = Column(String(20), nullable=True)
+    
+    unit_id = Column(String(36), nullable=False)
+    unit_name_snapshot = Column(String(100), nullable=False)
+    unit_symbol_snapshot = Column(String(20), nullable=False)
+    
+    quantity = Column(Numeric(15, 4), nullable=False)
+    fulfilled_quantity = Column(Numeric(15, 4), default=0, nullable=False)
+    
+    rate = Column(Numeric(15, 2), nullable=False)
+    
+    discount_type = Column(String(20), default="NONE") # NONE, PERCENT, FIXED
+    discount_value = Column(Numeric(15, 2), default=0)
+    
+    tax_treatment = Column(Enum(TaxTreatment), nullable=False)
+    gst_rate = Column(Numeric(5, 2), default=0)
+    
+    taxable_value = Column(Numeric(15, 2), default=0)
+    cgst_amount = Column(Numeric(15, 2), default=0)
+    sgst_amount = Column(Numeric(15, 2), default=0)
+    igst_amount = Column(Numeric(15, 2), default=0)
+    cess_amount = Column(Numeric(15, 2), default=0)
+    
+    line_total = Column(Numeric(15, 2), nullable=False)
+    description = Column(Text, nullable=True)
+
+    order = relationship("SupplyOrder", back_populates="lines")
+```
+
+```python
 // File: backend/app/models/party.py
 import uuid
 from datetime import datetime, timezone
@@ -1402,6 +1800,175 @@ class PaymentAllocation(Base):
     invoice_id = Column(String(36), nullable=False)
     allocated_amount = Column(Numeric(15, 2), nullable=False)
     allocation_date = Column(DateTime, default=utc_now)
+```
+
+```python
+// File: backend/app/models/return_order.py
+import uuid
+from datetime import datetime, timezone
+from sqlalchemy import Column, String, DateTime, Integer, ForeignKey, Numeric, Text, Enum
+from sqlalchemy.orm import relationship
+import enum
+from app.core.database import Base
+
+def utc_now():
+    return datetime.now(timezone.utc)
+
+class ReturnType(enum.Enum):
+    SUPPLY_IN_RETURN = "SUPPLY_IN_RETURN"
+    SUPPLY_OUT_RETURN = "SUPPLY_OUT_RETURN"
+
+class ReturnStatus(enum.Enum):
+    DRAFT = "DRAFT"
+    REQUESTED = "REQUESTED"
+    APPROVED = "APPROVED"
+    RECEIVED = "RECEIVED"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+
+class FinancialStatus(enum.Enum):
+    NOT_REQUIRED = "NOT_REQUIRED"
+    ADJUSTED = "ADJUSTED"
+    REFUND_PENDING = "REFUND_PENDING"
+    PARTIALLY_REFUNDED = "PARTIALLY_REFUNDED"
+    REFUNDED = "REFUNDED"
+    CREDIT_CREATED = "CREDIT_CREATED"
+
+class SettlementType(enum.Enum):
+    ADJUST_RECEIVABLE = "ADJUST_RECEIVABLE"
+    ADJUST_PAYABLE = "ADJUST_PAYABLE"
+    CUSTOMER_REFUND = "CUSTOMER_REFUND"
+    SUPPLIER_REFUND = "SUPPLIER_REFUND"
+    CUSTOMER_CREDIT = "CUSTOMER_CREDIT"
+    SUPPLIER_CREDIT = "SUPPLIER_CREDIT"
+
+class ItemCondition(enum.Enum):
+    GOOD = "GOOD"
+    DAMAGED = "DAMAGED"
+    DEFECTIVE = "DEFECTIVE"
+    EXPIRED = "EXPIRED"
+    REPAIR = "REPAIR"
+    SCRAP = "SCRAP"
+    OTHER = "OTHER"
+
+class WarehouseAction(enum.Enum):
+    RETURN_TO_STOCK = "RETURN_TO_STOCK"
+    QUARANTINE = "QUARANTINE"
+    REPAIR = "REPAIR"
+    SCRAP = "SCRAP"
+    RETURN_TO_SUPPLIER = "RETURN_TO_SUPPLIER"
+    NONE = "NONE"
+
+class ReturnOrder(Base):
+    __tablename__ = "returns"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    company_id = Column(String(36), ForeignKey("companies.id"), nullable=False)
+    
+    return_number = Column(String(50), nullable=True)
+    return_type = Column(Enum(ReturnType), nullable=False)
+    
+    original_order_id = Column(String(36), ForeignKey("supply_orders.id"), nullable=False)
+    original_order_type = Column(String(20), nullable=False)
+    
+    party_id = Column(String(36), ForeignKey("parties.id"), nullable=False)
+    
+    return_date = Column(DateTime, nullable=False, default=utc_now)
+    
+    status = Column(Enum(ReturnStatus), default=ReturnStatus.DRAFT)
+    financial_status = Column(Enum(FinancialStatus), default=FinancialStatus.NOT_REQUIRED)
+    
+    reason = Column(Text, nullable=True)
+    
+    # Financial Totals
+    subtotal = Column(Numeric(15, 2), default=0)
+    discount_total = Column(Numeric(15, 2), default=0)
+    taxable_total = Column(Numeric(15, 2), default=0)
+    
+    cgst_total = Column(Numeric(15, 2), default=0)
+    sgst_total = Column(Numeric(15, 2), default=0)
+    igst_total = Column(Numeric(15, 2), default=0)
+    cess_total = Column(Numeric(15, 2), default=0)
+    
+    other_charges = Column(Numeric(15, 2), default=0)
+    round_off = Column(Numeric(15, 2), default=0)
+    grand_total = Column(Numeric(15, 2), default=0)
+    amount_in_words = Column(String(500), nullable=True)
+    
+    created_by = Column(String(36), nullable=True)
+    approved_by = Column(String(36), nullable=True)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+    
+    lines = relationship("ReturnOrderLine", back_populates="return_order", cascade="all, delete-orphan")
+    settlements = relationship("ReturnSettlement", back_populates="return_order", cascade="all, delete-orphan")
+
+class ReturnOrderLine(Base):
+    __tablename__ = "return_lines"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    return_id = Column(String(36), ForeignKey("returns.id"), nullable=False)
+    original_order_line_id = Column(String(36), ForeignKey("supply_order_lines.id"), nullable=False)
+    item_id = Column(String(36), nullable=True)
+    
+    # Snapshots from original
+    item_name_snapshot = Column(String(200), nullable=False)
+    sku_snapshot = Column(String(100), nullable=True)
+    hsn_sac_snapshot = Column(String(20), nullable=True)
+    unit_id = Column(String(36), nullable=True)
+    unit_snapshot = Column(String(50), nullable=True)
+    
+    # Quantities
+    original_quantity = Column(Numeric(15, 5), nullable=False)
+    previously_returned_quantity = Column(Numeric(15, 5), default=0)
+    return_quantity = Column(Numeric(15, 5), nullable=False)
+    remaining_quantity = Column(Numeric(15, 5), nullable=False)
+    
+    # Financials (snapshots from original)
+    original_rate = Column(Numeric(15, 4), nullable=False)
+    rate = Column(Numeric(15, 4), nullable=False)
+    
+    discount_type = Column(String(20), nullable=True)
+    discount_value = Column(Numeric(15, 4), default=0)
+    discount_amount = Column(Numeric(15, 2), default=0)
+    
+    tax_treatment = Column(String(20), nullable=False)
+    gst_rate = Column(Numeric(5, 2), default=0)
+    
+    taxable_value = Column(Numeric(15, 2), default=0)
+    cgst_amount = Column(Numeric(15, 2), default=0)
+    sgst_amount = Column(Numeric(15, 2), default=0)
+    igst_amount = Column(Numeric(15, 2), default=0)
+    cess_amount = Column(Numeric(15, 2), default=0)
+    
+    line_total = Column(Numeric(15, 2), default=0)
+    
+    # Condition
+    condition = Column(Enum(ItemCondition), default=ItemCondition.GOOD)
+    warehouse_action = Column(Enum(WarehouseAction), default=WarehouseAction.RETURN_TO_STOCK)
+    
+    return_order = relationship("ReturnOrder", back_populates="lines")
+
+class ReturnSettlement(Base):
+    __tablename__ = "return_settlements"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    return_id = Column(String(36), ForeignKey("returns.id"), nullable=False)
+    
+    settlement_type = Column(Enum(SettlementType), nullable=False)
+    amount = Column(Numeric(15, 2), nullable=False)
+    
+    payment_id = Column(String(36), nullable=True) # Linked to a Payment if it's a direct refund
+    ledger_entry_id = Column(String(36), nullable=True)
+    
+    status = Column(String(20), default="COMPLETED")
+    settlement_date = Column(DateTime, nullable=False, default=utc_now)
+    reference_number = Column(String(100), nullable=True)
+    notes = Column(Text, nullable=True)
+    
+    created_at = Column(DateTime, default=utc_now)
+    
+    return_order = relationship("ReturnOrder", back_populates="settlements")
 ```
 
 ```python
@@ -1677,6 +2244,7 @@ class InvoiceResponse(BaseModel):
     id: str
     invoice_number: str
     invoice_type: str
+    transaction_type: str
     invoice_date: date
     customer_name_snapshot: str
     customer_gstin_snapshot: Optional[str]
@@ -1752,6 +2320,113 @@ class ItemResponse(BaseModel):
 
 class ItemListResponse(BaseModel):
     items: list[ItemResponse]
+```
+
+```python
+// File: backend/app/schemas/order.py
+from typing import List, Optional
+from pydantic import BaseModel, Field
+from datetime import date
+from decimal import Decimal
+from app.models.order import OrderType, TaxTreatment, OrderStatus
+
+class SupplyOrderLineCreate(BaseModel):
+    item_id: Optional[str] = None
+    item_name: str
+    sku: Optional[str] = None
+    hsn_sac: Optional[str] = None
+    unit_id: str
+    unit_name: str
+    unit_symbol: str
+    quantity: float
+    rate: float
+    discount_type: str = "NONE"
+    discount_value: float = 0
+    gst_rate: float = 0
+    description: Optional[str] = None
+
+class SupplyOrderCreate(BaseModel):
+    order_type: OrderType
+    tax_treatment: TaxTreatment
+    party_id: str
+    order_date: date
+    expected_date: Optional[date] = None
+    place_of_supply: str
+    lines: List[SupplyOrderLineCreate] = Field(..., min_length=1)
+    notes: Optional[str] = None
+    terms: Optional[str] = None
+
+class SupplyOrderCalculateRequest(BaseModel):
+    tax_treatment: TaxTreatment
+    party_id: Optional[str] = None
+    place_of_supply: str
+    lines: List[SupplyOrderLineCreate] = Field(..., min_length=1)
+
+class SupplyOrderCalculateResponse(BaseModel):
+    subtotal: float
+    discount_total: float
+    taxable_total: float
+    cgst_total: float
+    sgst_total: float
+    igst_total: float
+    cess_total: float
+    grand_total: float
+    amount_in_words: Optional[str]
+    lines: List[dict]
+
+class SupplyOrderLineResponse(BaseModel):
+    id: str
+    item_id: Optional[str]
+    item_name_snapshot: str
+    sku_snapshot: Optional[str]
+    hsn_sac_snapshot: Optional[str]
+    unit_id: str
+    unit_name_snapshot: str
+    unit_symbol_snapshot: str
+    quantity: float
+    fulfilled_quantity: float
+    rate: float
+    discount_type: str
+    discount_value: float
+    tax_treatment: str
+    gst_rate: float
+    taxable_value: float
+    cgst_amount: float
+    sgst_amount: float
+    igst_amount: float
+    cess_amount: float
+    line_total: float
+    description: Optional[str]
+
+class SupplyOrderResponse(BaseModel):
+    id: str
+    order_type: str
+    tax_treatment: str
+    order_number: Optional[str]
+    order_date: date
+    expected_date: Optional[date]
+    party_id: str
+    place_of_supply: str
+    status: str
+    revision: int
+    subtotal: float
+    discount_total: float
+    taxable_total: float
+    cgst_total: float
+    sgst_total: float
+    igst_total: float
+    cess_total: float
+    other_charges: float
+    round_off: float
+    grand_total: float
+    amount_in_words: Optional[str]
+    notes: Optional[str]
+    terms: Optional[str]
+    lines: List[SupplyOrderLineResponse]
+
+class SupplyOrderListResponse(BaseModel):
+    items: List[SupplyOrderResponse]
+    total: int
 ```
 
 ```python
@@ -1853,6 +2528,111 @@ class PartyResponse(BaseModel):
 
 class PartyListResponse(BaseModel):
     items: list[PartyResponse]
+```
+
+```python
+// File: backend/app/schemas/return_order.py
+from pydantic import BaseModel
+from typing import List, Optional
+from datetime import date, datetime
+from decimal import Decimal
+from app.models.return_order import ReturnType, ReturnStatus, FinancialStatus, SettlementType, ItemCondition, WarehouseAction
+
+class ReturnOrderLineCreate(BaseModel):
+    original_order_line_id: str
+    return_quantity: Decimal
+    condition: Optional[ItemCondition] = ItemCondition.GOOD
+    warehouse_action: Optional[WarehouseAction] = WarehouseAction.RETURN_TO_STOCK
+
+class ReturnOrderCreate(BaseModel):
+    original_order_id: str
+    return_type: ReturnType
+    reason: Optional[str] = None
+    lines: List[ReturnOrderLineCreate]
+
+class ReturnOrderLineResponse(BaseModel):
+    id: str
+    original_order_line_id: str
+    item_id: Optional[str]
+    item_name_snapshot: str
+    sku_snapshot: Optional[str]
+    hsn_sac_snapshot: Optional[str]
+    unit_snapshot: Optional[str]
+    
+    original_quantity: float
+    previously_returned_quantity: float
+    return_quantity: float
+    remaining_quantity: float
+    
+    rate: float
+    taxable_value: float
+    gst_rate: float
+    cgst_amount: float
+    sgst_amount: float
+    igst_amount: float
+    line_total: float
+    
+    condition: str
+    warehouse_action: str
+
+class ReturnSettlementResponse(BaseModel):
+    id: str
+    settlement_type: str
+    amount: float
+    status: str
+    settlement_date: datetime
+    reference_number: Optional[str]
+    notes: Optional[str]
+
+class ReturnOrderResponse(BaseModel):
+    id: str
+    return_number: Optional[str]
+    return_type: str
+    original_order_id: str
+    party_id: str
+    return_date: date
+    
+    status: str
+    financial_status: str
+    reason: Optional[str]
+    
+    subtotal: float
+    discount_total: float
+    taxable_total: float
+    cgst_total: float
+    sgst_total: float
+    igst_total: float
+    grand_total: float
+    
+    created_at: datetime
+    lines: List[ReturnOrderLineResponse]
+    settlements: List[ReturnSettlementResponse]
+
+class ReturnOrderListResponse(BaseModel):
+    items: List[ReturnOrderResponse]
+    total: int
+
+class ReturnableLineResponse(BaseModel):
+    original_order_line_id: str
+    item_name_snapshot: str
+    unit_symbol_snapshot: Optional[str]
+    rate: float
+    gst_rate: float
+    original_quantity: float
+    previously_returned_quantity: float
+    returnable_quantity: float
+
+class ReturnableLinesResponse(BaseModel):
+    order_id: str
+    order_type: str
+    tax_treatment: str
+    lines: List[ReturnableLineResponse]
+
+class ReturnSettlementCreate(BaseModel):
+    settlement_type: SettlementType
+    amount: Decimal
+    reference_number: Optional[str] = None
+    notes: Optional[str] = None
 ```
 
 ```python
@@ -2700,10 +3480,12 @@ class InvoiceService:
         return invoice
     
     @staticmethod
-    def list_invoices(db: Session, company_id: str, status: str = None):
+    def list_invoices(db: Session, company_id: str, status: str = None, transaction_type: str = None) -> list[Invoice]:
         query = db.query(Invoice).filter(Invoice.company_id == company_id)
         if status:
             query = query.filter(Invoice.invoice_status == status)
+        if transaction_type:
+            query = query.filter(Invoice.transaction_type == transaction_type)
         return query.order_by(Invoice.created_at.desc()).all()
     
     @staticmethod
@@ -2881,6 +3663,301 @@ class ItemService:
             db.delete(item)
             db.commit()
             AuditService.log(db, company_id, "ITEM", item.id, "DELETED")
+```
+
+```python
+// File: backend/app/services/order_service.py
+from sqlalchemy.orm import Session
+from datetime import datetime
+from decimal import Decimal, ROUND_HALF_UP
+import uuid
+
+from app.models.order import SupplyOrder, SupplyOrderLine, OrderStatus, TaxTreatment, OrderType
+from app.models.company import Company
+from app.models.invoice import Invoice, InvoiceLine
+from app.models.party import Party
+from app.core.exceptions import NotFoundException, ValidationException
+from app.utils.currency import number_to_words
+
+class OrderService:
+    @staticmethod
+    def calculate_order(db: Session, company_id: str, company: Company, data: dict) -> dict:
+        tax_treatment = data["tax_treatment"]
+        seller_state_code = company.state_code
+        customer_state_code = data.get("place_of_supply") or seller_state_code
+        
+        is_interstate = (seller_state_code or "") != (customer_state_code or "")
+        
+        subtotal = Decimal("0")
+        discount_total = Decimal("0")
+        taxable_total = Decimal("0")
+        cgst_total = Decimal("0")
+        sgst_total = Decimal("0")
+        igst_total = Decimal("0")
+        
+        calculated_lines = []
+        
+        for line_data in data["lines"]:
+            rate = Decimal(str(line_data["rate"]))
+            qty = Decimal(str(line_data["quantity"]))
+            gross_amount = rate * qty
+            
+            discount_type = line_data.get("discount_type", "NONE")
+            discount_value = Decimal(str(line_data.get("discount_value", 0)))
+            
+            line_discount = Decimal("0")
+            if discount_type == "PERCENT":
+                line_discount = gross_amount * (discount_value / Decimal("100"))
+            elif discount_type == "FIXED":
+                line_discount = discount_value
+                
+            taxable_value = gross_amount - line_discount
+            if taxable_value < 0:
+                taxable_value = Decimal("0")
+                
+            line_cgst = Decimal("0")
+            line_sgst = Decimal("0")
+            line_igst = Decimal("0")
+            
+            if tax_treatment == TaxTreatment.GST.value:
+                gst_rate = Decimal(str(line_data.get("gst_rate", 0)))
+                if is_interstate:
+                    line_igst = taxable_value * (gst_rate / Decimal("100"))
+                else:
+                    half_rate = gst_rate / Decimal("2")
+                    line_cgst = taxable_value * (half_rate / Decimal("100"))
+                    line_sgst = taxable_value * (half_rate / Decimal("100"))
+            
+            # Rounding for tax amounts
+            line_cgst = line_cgst.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            line_sgst = line_sgst.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            line_igst = line_igst.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            
+            line_total = taxable_value + line_cgst + line_sgst + line_igst
+            
+            subtotal += gross_amount
+            discount_total += line_discount
+            taxable_total += taxable_value
+            cgst_total += line_cgst
+            sgst_total += line_sgst
+            igst_total += line_igst
+            
+            calc_line = {
+                **line_data,
+                "gross_amount": float(gross_amount),
+                "taxable_value": float(taxable_value),
+                "cgst_amount": float(line_cgst),
+                "sgst_amount": float(line_sgst),
+                "igst_amount": float(line_igst),
+                "cess_amount": 0.0,
+                "line_total": float(line_total)
+            }
+            calculated_lines.append(calc_line)
+            
+        grand_total = taxable_total + cgst_total + sgst_total + igst_total
+        grand_total_rounded = grand_total.quantize(Decimal("1."), rounding=ROUND_HALF_UP)
+        round_off = grand_total_rounded - grand_total
+        
+        amount_in_words_str = number_to_words(grand_total_rounded)
+        
+        return {
+            "subtotal": float(subtotal),
+            "discount_total": float(discount_total),
+            "taxable_total": float(taxable_total),
+            "cgst_total": float(cgst_total),
+            "sgst_total": float(sgst_total),
+            "igst_total": float(igst_total),
+            "cess_total": 0.0,
+            "round_off": float(round_off),
+            "grand_total": float(grand_total_rounded),
+            "amount_in_words": amount_in_words_str,
+            "lines": calculated_lines
+        }
+
+    @staticmethod
+    def create_order(db: Session, company_id: str, company: Company, data: dict) -> SupplyOrder:
+        calc_result = OrderService.calculate_order(db, company_id, company, data)
+        
+        order = SupplyOrder(
+            id=str(uuid.uuid4()),
+            company_id=company_id,
+            party_id=data["party_id"],
+            order_type=data["order_type"],
+            tax_treatment=data["tax_treatment"],
+            order_date=datetime.strptime(data["order_date"], "%Y-%m-%d").date(),
+            expected_date=datetime.strptime(data["expected_date"], "%Y-%m-%d").date() if data.get("expected_date") else None,
+            place_of_supply=data["place_of_supply"],
+            status=OrderStatus.DRAFT,
+            revision=1,
+            
+            subtotal=calc_result["subtotal"],
+            discount_total=calc_result["discount_total"],
+            taxable_total=calc_result["taxable_total"],
+            cgst_total=calc_result["cgst_total"],
+            sgst_total=calc_result["sgst_total"],
+            igst_total=calc_result["igst_total"],
+            cess_total=calc_result["cess_total"],
+            other_charges=0,
+            round_off=calc_result["round_off"],
+            grand_total=calc_result["grand_total"],
+            amount_in_words=calc_result["amount_in_words"],
+            notes=data.get("notes"),
+            terms=data.get("terms")
+        )
+        
+        for line_data in calc_result["lines"]:
+            line = SupplyOrderLine(
+                id=str(uuid.uuid4()),
+                order_id=order.id,
+                item_id=line_data.get("item_id"),
+                item_name_snapshot=line_data["item_name"],
+                sku_snapshot=line_data.get("sku"),
+                hsn_sac_snapshot=line_data.get("hsn_sac"),
+                unit_id=line_data["unit_id"],
+                unit_name_snapshot=line_data["unit_name"],
+                unit_symbol_snapshot=line_data["unit_symbol"],
+                quantity=line_data["quantity"],
+                rate=line_data["rate"],
+                discount_type=line_data.get("discount_type", "NONE"),
+                discount_value=line_data.get("discount_value", 0),
+                tax_treatment=order.tax_treatment,
+                gst_rate=line_data.get("gst_rate", 0),
+                taxable_value=line_data["taxable_value"],
+                cgst_amount=line_data["cgst_amount"],
+                sgst_amount=line_data["sgst_amount"],
+                igst_amount=line_data["igst_amount"],
+                cess_amount=0,
+                line_total=line_data["line_total"],
+                description=line_data.get("description")
+            )
+            order.lines.append(line)
+            
+        db.add(order)
+        db.commit()
+        db.refresh(order)
+        return order
+
+    @staticmethod
+    def get_order(db: Session, company_id: str, order_id: str) -> SupplyOrder:
+        order = db.query(SupplyOrder).filter(
+            SupplyOrder.id == order_id, 
+            SupplyOrder.company_id == company_id
+        ).first()
+        if not order:
+            raise NotFoundException("Order not found")
+        return order
+
+    @staticmethod
+    def list_orders(db: Session, company_id: str, order_type: str = None) -> list[SupplyOrder]:
+        query = db.query(SupplyOrder).filter(SupplyOrder.company_id == company_id)
+        if order_type:
+            query = query.filter(SupplyOrder.order_type == order_type)
+        return query.order_by(SupplyOrder.created_at.desc()).all()
+
+    @staticmethod
+    def confirm_order(db: Session, company_id: str, order_id: str) -> SupplyOrder:
+        order = OrderService.get_order(db, company_id, order_id)
+        if order.status != OrderStatus.DRAFT:
+            raise ValidationException("Only DRAFT orders can be confirmed.")
+            
+        # In a full system, you would allocate a real order number here
+        order.order_number = f"ORD-{datetime.now().strftime('%Y%m')}-{order.id[:6].upper()}"
+        order.status = OrderStatus.CONFIRMED
+        
+        db.commit()
+        db.refresh(order)
+        return order
+
+    @staticmethod
+    def convert_to_invoice(db: Session, company_id: str, order_id: str) -> Invoice:
+        order = OrderService.get_order(db, company_id, order_id)
+        if order.status not in [OrderStatus.CONFIRMED, OrderStatus.PARTIALLY_FULFILLED]:
+            raise ValidationException("Only confirmed orders can be converted to bills/invoices.")
+            
+        party = db.query(Party).filter(Party.id == order.party_id).first()
+        company = db.query(Company).filter(Company.id == company_id).first()
+        
+        invoice = Invoice(
+            id=str(uuid.uuid4()),
+            company_id=company_id,
+            invoice_number=f"DRAFT-{str(uuid.uuid4())[:8].upper()}",
+            invoice_series="DRAFT",
+            invoice_date=datetime.utcnow().date(),
+            order_id=order.id,
+            transaction_type=order.order_type.value,
+            place_of_supply=order.place_of_supply,
+            
+            subtotal=order.subtotal,
+            discount_total=order.discount_total,
+            taxable_total=order.taxable_total,
+            cgst_total=order.cgst_total,
+            sgst_total=order.sgst_total,
+            igst_total=order.igst_total,
+            cess_total=order.cess_total,
+            grand_total=order.grand_total,
+            amount_in_words=order.amount_in_words,
+            notes=order.notes,
+            terms=order.terms,
+            invoice_status="DRAFT"
+        )
+        
+        if order.order_type == OrderType.SALES:
+            invoice.customer_id = party.id
+            invoice.customer_name_snapshot = party.legal_name
+            invoice.customer_gstin_snapshot = party.gstin
+            invoice.customer_state_code_snapshot = party.state_code
+            
+            invoice.seller_id = None
+            invoice.seller_name_snapshot = company.legal_name
+            invoice.seller_gstin_snapshot = company.gstin
+            invoice.seller_state_code_snapshot = company.state_code
+        else:
+            invoice.seller_id = party.id
+            invoice.seller_name_snapshot = party.legal_name
+            invoice.seller_gstin_snapshot = party.gstin
+            invoice.seller_state_code_snapshot = party.state_code
+            
+            invoice.customer_id = None
+            invoice.customer_name_snapshot = company.legal_name
+            invoice.customer_gstin_snapshot = company.gstin
+            invoice.customer_state_code_snapshot = company.state_code
+
+        for o_line in order.lines:
+            unfulfilled = o_line.quantity - o_line.fulfilled_quantity
+            if unfulfilled <= 0:
+                continue # Skip fully fulfilled lines
+                
+            line = InvoiceLine(
+                id=str(uuid.uuid4()),
+                invoice_id=invoice.id,
+                item_id=o_line.item_id,
+                item_name_snapshot=o_line.item_name_snapshot,
+                sku_snapshot=o_line.sku_snapshot,
+                hsn_sac_snapshot=o_line.hsn_sac_snapshot,
+                quantity=unfulfilled,
+                unit_id=o_line.unit_id,
+                unit_name_snapshot=o_line.unit_name_snapshot,
+                unit_symbol_snapshot=o_line.unit_symbol_snapshot,
+                rate=o_line.rate,
+                discount_type=o_line.discount_type,
+                discount_value=o_line.discount_value,
+                gst_rate=o_line.gst_rate,
+            )
+            # Recalculate line totals for unfulfilled qty
+            # For simplicity in this method, we'll just ratio the amounts. In a real system, we should re-run the calculation engine.
+            ratio = unfulfilled / o_line.quantity
+            line.taxable_value = o_line.taxable_value * ratio
+            line.cgst_amount = o_line.cgst_amount * ratio
+            line.sgst_amount = o_line.sgst_amount * ratio
+            line.igst_amount = o_line.igst_amount * ratio
+            line.line_total = o_line.line_total * ratio
+            
+            invoice.lines.append(line)
+            
+        db.add(invoice)
+        db.commit()
+        db.refresh(invoice)
+        return invoice
 ```
 
 ```python
@@ -3125,6 +4202,229 @@ class PdfService:
         doc.build(elements)
         buffer.seek(0)
         return buffer.getvalue()
+```
+
+```python
+// File: backend/app/services/return_service.py
+from sqlalchemy.orm import Session
+from sqlalchemy.sql import func
+from app.models.return_order import ReturnOrder, ReturnOrderLine, ReturnType, ReturnStatus, FinancialStatus, ReturnSettlement, SettlementType
+from app.models.order import SupplyOrder, SupplyOrderLine, OrderStatus
+from app.core.exceptions import NotFoundException, ValidationException
+import uuid
+from decimal import Decimal
+
+class ReturnService:
+    @staticmethod
+    def get_returnable_lines(db: Session, company_id: str, order_id: str):
+        order = db.query(SupplyOrder).filter(SupplyOrder.id == order_id, SupplyOrder.company_id == company_id).first()
+        if not order:
+            raise NotFoundException("Order not found")
+            
+        lines_data = []
+        for line in order.lines:
+            # Calculate previously returned quantity
+            prev_returned = db.query(func.sum(ReturnOrderLine.return_quantity)).join(ReturnOrder).filter(
+                ReturnOrderLine.original_order_line_id == line.id,
+                ReturnOrder.status != ReturnStatus.CANCELLED
+            ).scalar() or Decimal('0')
+            
+            returnable = line.quantity - prev_returned
+            if returnable > 0:
+                lines_data.append({
+                    "original_order_line_id": line.id,
+                    "item_name_snapshot": line.item_name_snapshot,
+                    "unit_symbol_snapshot": line.unit_symbol_snapshot,
+                    "rate": float(line.rate),
+                    "gst_rate": float(line.gst_rate),
+                    "original_quantity": float(line.quantity),
+                    "previously_returned_quantity": float(prev_returned),
+                    "returnable_quantity": float(returnable)
+                })
+                
+        return {
+            "order_id": order.id,
+            "order_type": order.order_type.value,
+            "tax_treatment": order.tax_treatment.value,
+            "lines": lines_data
+        }
+
+    @staticmethod
+    def create_return(db: Session, company_id: str, data: dict, user_id: str = None) -> ReturnOrder:
+        order = db.query(SupplyOrder).filter(SupplyOrder.id == data["original_order_id"], SupplyOrder.company_id == company_id).first()
+        if not order:
+            raise NotFoundException("Order not found")
+            
+        ret_order = ReturnOrder(
+            id=str(uuid.uuid4()),
+            company_id=company_id,
+            return_number=f"RET-DRAFT-{str(uuid.uuid4())[:8].upper()}",
+            return_type=ReturnType(data["return_type"]),
+            original_order_id=order.id,
+            original_order_type=order.order_type.value,
+            party_id=order.party_id,
+            reason=data.get("reason"),
+            created_by=user_id,
+            status=ReturnStatus.DRAFT,
+            financial_status=FinancialStatus.NOT_REQUIRED
+        )
+        
+        db.add(ret_order)
+        db.flush()
+        
+        subtotal = Decimal('0')
+        taxable_total = Decimal('0')
+        cgst_total = Decimal('0')
+        sgst_total = Decimal('0')
+        igst_total = Decimal('0')
+        cess_total = Decimal('0')
+        
+        for line_data in data["lines"]:
+            order_line = db.query(SupplyOrderLine).filter(SupplyOrderLine.id == line_data["original_order_line_id"]).first()
+            if not order_line or order_line.supply_order_id != order.id:
+                raise ValidationException(f"Invalid line {line_data['original_order_line_id']}")
+                
+            prev_returned = db.query(func.sum(ReturnOrderLine.return_quantity)).join(ReturnOrder).filter(
+                ReturnOrderLine.original_order_line_id == order_line.id,
+                ReturnOrder.status != ReturnStatus.CANCELLED
+            ).scalar() or Decimal('0')
+            
+            return_qty = Decimal(str(line_data["return_quantity"]))
+            
+            if return_qty <= 0:
+                raise ValidationException("Return quantity must be greater than 0")
+            if prev_returned + return_qty > order_line.quantity:
+                raise ValidationException(f"Cannot return {return_qty}. Only {order_line.quantity - prev_returned} remaining.")
+                
+            ratio = return_qty / order_line.quantity
+            
+            r_line = ReturnOrderLine(
+                id=str(uuid.uuid4()),
+                return_id=ret_order.id,
+                original_order_line_id=order_line.id,
+                item_id=order_line.item_id,
+                item_name_snapshot=order_line.item_name_snapshot,
+                sku_snapshot=order_line.sku_snapshot,
+                hsn_sac_snapshot=order_line.hsn_sac_snapshot,
+                unit_id=order_line.unit_id,
+                unit_snapshot=order_line.unit_symbol_snapshot,
+                
+                original_quantity=order_line.quantity,
+                previously_returned_quantity=prev_returned,
+                return_quantity=return_qty,
+                remaining_quantity=order_line.quantity - (prev_returned + return_qty),
+                
+                original_rate=order_line.rate,
+                rate=order_line.rate,
+                discount_type=order_line.discount_type,
+                discount_value=order_line.discount_value,
+                
+                tax_treatment=order.tax_treatment.value,
+                gst_rate=order_line.gst_rate,
+                
+                taxable_value=order_line.taxable_value * ratio,
+                cgst_amount=order_line.cgst_amount * ratio,
+                sgst_amount=order_line.sgst_amount * ratio,
+                igst_amount=order_line.igst_amount * ratio,
+                cess_amount=order_line.cess_amount * ratio,
+                line_total=order_line.line_total * ratio,
+                
+                condition=line_data.get("condition", "GOOD"),
+                warehouse_action=line_data.get("warehouse_action", "RETURN_TO_STOCK")
+            )
+            
+            db.add(r_line)
+            
+            taxable_total += r_line.taxable_value
+            cgst_total += r_line.cgst_amount
+            sgst_total += r_line.sgst_amount
+            igst_total += r_line.igst_amount
+            cess_total += r_line.cess_amount
+            
+        ret_order.taxable_total = taxable_total
+        ret_order.subtotal = taxable_total # Assuming no discount at doc level here
+        ret_order.cgst_total = cgst_total
+        ret_order.sgst_total = sgst_total
+        ret_order.igst_total = igst_total
+        ret_order.cess_total = cess_total
+        ret_order.grand_total = taxable_total + cgst_total + sgst_total + igst_total + cess_total
+        
+        db.commit()
+        db.refresh(ret_order)
+        return ret_order
+
+    @staticmethod
+    def list_returns(db: Session, company_id: str, return_type: str = None) -> list[ReturnOrder]:
+        query = db.query(ReturnOrder).filter(ReturnOrder.company_id == company_id)
+        if return_type:
+            query = query.filter(ReturnOrder.return_type == return_type)
+        return query.order_by(ReturnOrder.created_at.desc()).all()
+
+    @staticmethod
+    def get_return(db: Session, company_id: str, return_id: str) -> ReturnOrder:
+        ret = db.query(ReturnOrder).filter(ReturnOrder.id == return_id, ReturnOrder.company_id == company_id).first()
+        if not ret:
+            raise NotFoundException("Return not found")
+        return ret
+        
+    @staticmethod
+    def approve_return(db: Session, company_id: str, return_id: str, user_id: str) -> ReturnOrder:
+        ret = ReturnService.get_return(db, company_id, return_id)
+        if ret.status != ReturnStatus.DRAFT:
+            raise ValidationException("Only DRAFT returns can be approved")
+            
+        ret.status = ReturnStatus.APPROVED
+        ret.return_number = f"RET-{str(uuid.uuid4())[:6].upper()}"
+        ret.approved_by = user_id
+        
+        db.commit()
+        db.refresh(ret)
+        return ret
+        
+    @staticmethod
+    def post_return(db: Session, company_id: str, return_id: str) -> ReturnOrder:
+        ret = ReturnService.get_return(db, company_id, return_id)
+        if ret.status != ReturnStatus.APPROVED:
+            raise ValidationException("Only APPROVED returns can be posted")
+            
+        ret.status = ReturnStatus.COMPLETED
+        # Here we would integrate with accounting/inventory engines
+        ret.financial_status = FinancialStatus.REFUND_PENDING
+        
+        db.commit()
+        db.refresh(ret)
+        return ret
+
+    @staticmethod
+    def add_settlement(db: Session, company_id: str, return_id: str, data: dict) -> ReturnSettlement:
+        ret = ReturnService.get_return(db, company_id, return_id)
+        if ret.status != ReturnStatus.COMPLETED:
+            raise ValidationException("Can only settle COMPLETED returns")
+            
+        settled_so_far = sum(s.amount for s in ret.settlements)
+        amount = Decimal(str(data["amount"]))
+        
+        if settled_so_far + amount > ret.grand_total:
+            raise ValidationException("Settlement amount exceeds return total")
+            
+        settlement = ReturnSettlement(
+            return_id=ret.id,
+            settlement_type=SettlementType(data["settlement_type"]),
+            amount=amount,
+            reference_number=data.get("reference_number"),
+            notes=data.get("notes")
+        )
+        db.add(settlement)
+        
+        new_total = settled_so_far + amount
+        if new_total >= ret.grand_total:
+            ret.financial_status = FinancialStatus.REFUNDED
+        else:
+            ret.financial_status = FinancialStatus.PARTIALLY_REFUNDED
+            
+        db.commit()
+        db.refresh(settlement)
+        return settlement
 ```
 
 ```python
@@ -4269,6 +5569,7 @@ export interface InvoiceResponse {
   id: string;
   invoice_number: string;
   invoice_type: string;
+  transaction_type: string;
   invoice_date: string;
   customer_name_snapshot: string;
   place_of_supply: string;
@@ -4296,8 +5597,10 @@ export const invoicesApi = {
     const response = await apiClient.post<InvoiceResponse>('/invoices', data);
     return response.data;
   },
-  getAll: async () => {
-    const response = await apiClient.get<{items: InvoiceResponse[], total: number}>('/invoices');
+  getAll: async (transaction_type?: string) => {
+    const params = new URLSearchParams();
+    if (transaction_type) params.append('transaction_type', transaction_type);
+    const response = await apiClient.get<{items: InvoiceResponse[], total: number}>(`/invoices?${params.toString()}`);
     return response.data;
   },
   getById: async (id: string) => {
@@ -4374,6 +5677,102 @@ export const itemsApi = {
 ```
 
 ```typescript
+// File: frontend/src/api/orders.ts
+import { apiClient } from './client';
+
+export interface SupplyOrderLineCreate {
+  item_id?: string | null;
+  item_name: string;
+  sku?: string | null;
+  hsn_sac?: string | null;
+  unit_id: string;
+  unit_name: string;
+  unit_symbol: string;
+  quantity: number;
+  rate: number;
+  discount_type?: string;
+  discount_value?: number;
+  gst_rate?: number;
+  description?: string | null;
+}
+
+export interface SupplyOrderCreateRequest {
+  order_type: 'PURCHASE' | 'SALES';
+  tax_treatment: 'GST' | 'WITHOUT_GST';
+  party_id: string;
+  order_date: string;
+  expected_date?: string | null;
+  place_of_supply: string;
+  lines: SupplyOrderLineCreate[];
+  notes?: string | null;
+  terms?: string | null;
+}
+
+export interface SupplyOrderCalculateRequest {
+  tax_treatment: 'GST' | 'WITHOUT_GST';
+  party_id?: string | null;
+  place_of_supply: string;
+  lines: SupplyOrderLineCreate[];
+}
+
+export interface SupplyOrderResponse {
+  id: string;
+  order_type: 'PURCHASE' | 'SALES';
+  tax_treatment: 'GST' | 'WITHOUT_GST';
+  order_number?: string | null;
+  order_date: string;
+  expected_date?: string | null;
+  party_id: string;
+  place_of_supply: string;
+  status: string;
+  revision: number;
+  subtotal: number;
+  discount_total: number;
+  taxable_total: number;
+  cgst_total: number;
+  sgst_total: number;
+  igst_total: number;
+  cess_total: number;
+  other_charges: number;
+  round_off: number;
+  grand_total: number;
+  amount_in_words?: string | null;
+  notes?: string | null;
+  terms?: string | null;
+  lines: any[];
+}
+
+export const ordersApi = {
+  calculate: async (data: SupplyOrderCalculateRequest) => {
+    const response = await apiClient.post<any>('/orders/calculate', data);
+    return response.data;
+  },
+  create: async (data: SupplyOrderCreateRequest) => {
+    const response = await apiClient.post<SupplyOrderResponse>('/orders', data);
+    return response.data;
+  },
+  getAll: async (order_type?: string) => {
+    const params = new URLSearchParams();
+    if (order_type) params.append('order_type', order_type);
+    const response = await apiClient.get<{items: SupplyOrderResponse[], total: number}>(`/orders?${params.toString()}`);
+    return response.data;
+  },
+  getById: async (id: string) => {
+    const response = await apiClient.get<SupplyOrderResponse>(`/orders/${id}`);
+    return response.data;
+  },
+  confirm: async (id: string) => {
+    const response = await apiClient.post<SupplyOrderResponse>(`/orders/${id}/confirm`, {});
+    return response.data;
+  },
+  convert: async (id: string) => {
+    const response = await apiClient.post<any>(`/orders/${id}/convert`, {});
+    return response.data;
+  }
+};
+```
+
+```typescript
 // File: frontend/src/api/parties.ts
 import { apiClient } from './client';
 
@@ -4444,6 +5843,113 @@ export const partiesApi = {
   },
   getById: async (id: string) => {
     const response = await apiClient.get<Party>(`/parties/${id}`);
+    return response.data;
+  }
+};
+```
+
+```typescript
+// File: frontend/src/api/returns.ts
+import { apiClient } from './client';
+
+export interface ReturnOrderLineCreate {
+  original_order_line_id: string;
+  return_quantity: number;
+  condition?: string;
+  warehouse_action?: string;
+}
+
+export interface ReturnOrderCreateRequest {
+  original_order_id: string;
+  return_type: string;
+  reason?: string;
+  lines: ReturnOrderLineCreate[];
+}
+
+export interface ReturnOrderLineResponse {
+  id: string;
+  original_order_line_id: string;
+  item_id: string | null;
+  item_name_snapshot: string;
+  unit_snapshot: string | null;
+  original_quantity: number;
+  previously_returned_quantity: number;
+  return_quantity: number;
+  remaining_quantity: number;
+  rate: number;
+  taxable_value: number;
+  gst_rate: number;
+  cgst_amount: number;
+  sgst_amount: number;
+  igst_amount: number;
+  line_total: number;
+  condition: string;
+  warehouse_action: string;
+}
+
+export interface ReturnOrderResponse {
+  id: string;
+  return_number: string | null;
+  return_type: string;
+  original_order_id: string;
+  party_id: string;
+  return_date: string;
+  status: string;
+  financial_status: string;
+  reason: string | null;
+  subtotal: number;
+  taxable_total: number;
+  cgst_total: number;
+  sgst_total: number;
+  igst_total: number;
+  grand_total: number;
+  created_at: string;
+  lines: ReturnOrderLineResponse[];
+}
+
+export interface ReturnableLineResponse {
+  original_order_line_id: string;
+  item_name_snapshot: string;
+  unit_symbol_snapshot: string | null;
+  rate: number;
+  gst_rate: number;
+  original_quantity: number;
+  previously_returned_quantity: number;
+  returnable_quantity: number;
+}
+
+export interface ReturnableLinesResponse {
+  order_id: string;
+  order_type: string;
+  tax_treatment: string;
+  lines: ReturnableLineResponse[];
+}
+
+export const returnsApi = {
+  getReturnableLines: async (orderId: string) => {
+    const response = await apiClient.get<ReturnableLinesResponse>(`/returns/order/${orderId}/returnable-lines`);
+    return response.data;
+  },
+  create: async (data: ReturnOrderCreateRequest) => {
+    const response = await apiClient.post<ReturnOrderResponse>('/returns', data);
+    return response.data;
+  },
+  getAll: async (returnType?: string) => {
+    const params = new URLSearchParams();
+    if (returnType) params.append('return_type', returnType);
+    const response = await apiClient.get<{items: ReturnOrderResponse[], total: number}>(`/returns?${params.toString()}`);
+    return response.data;
+  },
+  getById: async (id: string) => {
+    const response = await apiClient.get<ReturnOrderResponse>(`/returns/${id}`);
+    return response.data;
+  },
+  approve: async (id: string) => {
+    const response = await apiClient.post<ReturnOrderResponse>(`/returns/${id}/approve`, {});
+    return response.data;
+  },
+  post: async (id: string) => {
+    const response = await apiClient.post<ReturnOrderResponse>(`/returns/${id}/post`, {});
     return response.data;
   }
 };
@@ -4570,6 +6076,10 @@ import ItemsPage from '../features/master/ItemsPage';
 import PartiesPage from '../features/master/PartiesPage';
 import InvoiceBuilderPage from '../features/invoices/InvoiceBuilderPage';
 import InvoiceListPage from '../features/invoices/InvoiceListPage';
+import OrderListPage from '../features/orders/OrderListPage';
+import OrderBuilderPage from '../features/orders/OrderBuilderPage';
+import ReturnListPage from '../features/returns/ReturnListPage';
+import ReturnBuilderPage from '../features/returns/ReturnBuilderPage';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -4591,7 +6101,12 @@ const DashboardShell = ({ children }: { children: React.ReactNode }) => {
         <nav className="p-4 space-y-2">
           <Link to="/" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Dashboard</Link>
           <Link to="/invoices/new" className="block px-4 py-2 text-blue-700 hover:bg-blue-50 font-medium rounded-md bg-blue-50">+ Create Invoice</Link>
-          <Link to="/invoices" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Invoices List</Link>
+          <Link to="/invoices" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Sales Invoices</Link>
+          <Link to="/purchase-bills" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Purchase Bills</Link>
+          <Link to="/supply-in" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Supply In</Link>
+          <Link to="/supply-in/returns" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md pl-8">↳ Returns</Link>
+          <Link to="/supply-out" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Supply Out</Link>
+          <Link to="/supply-out/returns" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md pl-8">↳ Returns</Link>
           <Link to="/parties" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Customers & Vendors</Link>
           <Link to="/items" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Items & Products</Link>
           <Link to="/units" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Units</Link>
@@ -4650,6 +6165,96 @@ export const router = createBrowserRouter([
           <ProtectedRoute>
             <DashboardShell>
               <InvoiceListPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'purchase-bills',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <InvoiceListPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'supply-in',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <OrderListPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'supply-in/returns',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <ReturnListPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'supply-in/returns/new',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <ReturnBuilderPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'supply-in/new',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <OrderBuilderPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'supply-out',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <OrderListPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'supply-out/returns',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <ReturnListPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'supply-out/returns/new',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <ReturnBuilderPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'supply-out/new',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <OrderBuilderPage />
             </DashboardShell>
           </ProtectedRoute>
         ),
@@ -5560,17 +7165,23 @@ export default function InvoiceBuilderPage() {
 // File: frontend/src/features/invoices/InvoiceListPage.tsx
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import { invoicesApi, type InvoiceResponse } from '../../api/invoices';
 import { Button } from '../../components/common/Button';
 
 export default function InvoiceListPage() {
+  const location = useLocation();
   const queryClient = useQueryClient();
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceResponse | null>(null);
   
+  const isPurchase = location.pathname.includes('purchase-bills');
+  const transactionType = isPurchase ? 'PURCHASE' : 'SALES';
+  const pageTitle = isPurchase ? 'Purchase Bills' : 'Sales Invoices';
+  const partyLabel = isPurchase ? 'Supplier' : 'Customer';
+
   const { data, isLoading } = useQuery({
-    queryKey: ['invoices'],
-    queryFn: invoicesApi.getAll
+    queryKey: ['invoices', transactionType],
+    queryFn: () => invoicesApi.getAll(transactionType)
   });
   
   const invoices = data?.items || [];
@@ -5610,12 +7221,14 @@ export default function InvoiceListPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Invoices</h2>
-          <p className="mt-1 text-sm text-gray-500">Manage your generated tax invoices.</p>
+          <h2 className="text-2xl font-bold text-gray-900">{pageTitle}</h2>
+          <p className="mt-1 text-sm text-gray-500">Manage your {pageTitle.toLowerCase()}.</p>
         </div>
-        <Link to="/invoices/new" className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 font-medium text-sm">
-          + Create Invoice
-        </Link>
+        {!isPurchase && (
+          <Link to="/invoices/new" className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 font-medium text-sm">
+            + Create Invoice
+          </Link>
+        )}
       </div>
 
       {isLoading ? (
@@ -5625,9 +7238,9 @@ export default function InvoiceListPage() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice #</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{isPurchase ? 'Bill #' : 'Invoice #'}</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{partyLabel}</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -5695,7 +7308,7 @@ export default function InvoiceListPage() {
               </div>
 
               <div className="border rounded-md p-4 mb-6 bg-gray-50">
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Billed To:</h4>
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">{isPurchase ? 'From Supplier:' : 'Billed To:'}</h4>
                 <p className="font-medium text-gray-900">{selectedInvoice.customer_name_snapshot}</p>
                 <p className="text-sm text-gray-600">Place of Supply: {selectedInvoice.place_of_supply}</p>
               </div>
@@ -6425,6 +8038,1102 @@ export default function UnitsPage() {
                   <Button type="submit" isLoading={createMutation.isPending}>Save Unit</Button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+```tsx
+// File: frontend/src/features/orders/OrderBuilderPage.tsx
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm, useFieldArray } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { ordersApi, type SupplyOrderCalculateRequest, type SupplyOrderCreateRequest } from '../../api/orders';
+import { itemsApi } from '../../api/items';
+import { unitsApi } from '../../api/units';
+import { partiesApi } from '../../api/parties';
+import { Button } from '../../components/common/Button';
+import { Input } from '../../components/common/Input';
+
+const orderLineSchema = z.object({
+  item_id: z.string().optional(),
+  item_name: z.string().min(1, 'Item name is required'),
+  description: z.string().optional(),
+  sku: z.string().optional(),
+  hsn_sac: z.string().optional(),
+  quantity: z.coerce.number().min(0.001, 'Quantity must be > 0'),
+  unit_id: z.string().min(1, 'Unit is required'),
+  unit_name: z.string(),
+  unit_symbol: z.string(),
+  rate: z.coerce.number().min(0),
+  discount_type: z.string().default('NONE'),
+  discount_value: z.coerce.number().default(0),
+  gst_rate: z.coerce.number().default(0),
+});
+
+const orderSchema = z.object({
+  order_type: z.enum(['PURCHASE', 'SALES']),
+  tax_treatment: z.enum(['GST', 'WITHOUT_GST']),
+  order_date: z.string().min(1, 'Date is required'),
+  expected_date: z.string().optional(),
+  party_id: z.string().min(1, 'Party is required'),
+  place_of_supply: z.string().min(1, 'Place of supply is required'),
+  lines: z.array(orderLineSchema).min(1, 'At least one line is required'),
+  notes: z.string().optional(),
+  terms: z.string().optional(),
+});
+
+
+
+export default function OrderBuilderPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const queryClient = useQueryClient();
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  // Determine order type from URL (e.g. /supply-in/new -> PURCHASE)
+  const isPurchase = location.pathname.includes('supply-in');
+  const defaultOrderType = isPurchase ? 'PURCHASE' : 'SALES';
+
+  const { data: items = [] } = useQuery({ queryKey: ['items'], queryFn: itemsApi.getAll });
+  const { data: units = [] } = useQuery({ queryKey: ['units'], queryFn: unitsApi.getAll });
+  const { data: parties = [] } = useQuery({ 
+    queryKey: ['parties', isPurchase ? 'VENDOR' : 'CUSTOMER'], 
+    queryFn: () => partiesApi.getAll(isPurchase ? 'VENDOR' : 'CUSTOMER') 
+  });
+
+  const { register, control, handleSubmit, watch, setValue, formState: { errors } } = useForm<any>({
+    resolver: zodResolver(orderSchema),
+    defaultValues: {
+      order_type: defaultOrderType,
+      tax_treatment: 'GST',
+      order_date: new Date().toISOString().split('T')[0],
+      expected_date: '',
+      place_of_supply: '',
+      lines: [{ item_name: '', quantity: 1, rate: 0, discount_type: 'NONE', discount_value: 0, gst_rate: 0, unit_name: '', unit_symbol: '', unit_id: '' }]
+    }
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'lines'
+  });
+
+  const watchAll = watch();
+  const taxTreatment = watchAll.tax_treatment;
+
+  const calculateMutation = useMutation({
+    mutationFn: ordersApi.calculate,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: ordersApi.create,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      alert(`Order Draft Created! ID: ${data.id}`);
+      navigate(isPurchase ? '/supply-in' : '/supply-out');
+    },
+    onError: (error: any) => {
+      setApiError(error.message || 'Failed to create order');
+    }
+  });
+
+  // Debounced calculate
+  useEffect(() => {
+    if (!watchAll.lines || watchAll.lines.length === 0) return;
+    
+    // Quick validation before hitting backend
+    const isValidForCalc = watchAll.lines.every((l: any) => l.item_name && l.quantity > 0 && l.unit_id);
+    if (!isValidForCalc) return;
+
+    const timeoutId = setTimeout(() => {
+      const calcData: SupplyOrderCalculateRequest = {
+        tax_treatment: watchAll.tax_treatment as 'GST' | 'WITHOUT_GST',
+        party_id: watchAll.party_id || null,
+        place_of_supply: watchAll.place_of_supply || '29', // Default state code fallback
+        lines: watchAll.lines.map((l: any) => ({
+          item_id: l.item_id,
+          item_name: l.item_name,
+          sku: l.sku,
+          description: l.description,
+          hsn_sac: l.hsn_sac,
+          quantity: Number(l.quantity) || 0,
+          unit_id: l.unit_id,
+          unit_name: l.unit_name || 'Unit',
+          unit_symbol: l.unit_symbol || 'U',
+          rate: Number(l.rate) || 0,
+          discount_type: l.discount_type,
+          discount_value: Number(l.discount_value) || 0,
+          gst_rate: Number(l.gst_rate) || 0,
+        }))
+      };
+      
+      calculateMutation.mutate(calcData);
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [JSON.stringify(watchAll.lines), watchAll.party_id, watchAll.place_of_supply, watchAll.tax_treatment]);
+
+  const handleItemSelect = (index: number, itemId: string) => {
+    const item = items.find((i: any) => i.id.toString() === itemId);
+    if (item) {
+      setValue(`lines.${index}.item_id`, item.id.toString());
+      setValue(`lines.${index}.item_name`, item.name);
+      setValue(`lines.${index}.sku`, item.sku || '');
+      setValue(`lines.${index}.description`, item.description || '');
+      setValue(`lines.${index}.hsn_sac`, item.hsn_sac || '');
+      setValue(`lines.${index}.rate`, isPurchase ? (item.purchase_price || 0) : item.sale_price);
+      setValue(`lines.${index}.gst_rate`, item.gst_rate);
+      
+      const unit = units.find((u: any) => u.id === item.unit_id);
+      if (unit) {
+        setValue(`lines.${index}.unit_id`, unit.id.toString());
+        setValue(`lines.${index}.unit_name`, unit.name);
+        setValue(`lines.${index}.unit_symbol`, unit.abbreviation);
+      }
+    }
+  };
+
+  const handlePartySelect = (partyId: string) => {
+    const party = parties.find((p: any) => p.id === partyId);
+    if (party) {
+      setValue('place_of_supply', party.state_code);
+    }
+  };
+
+  const handleUnitSelect = (index: number, unitId: string) => {
+    const unit = units.find((u: any) => u.id.toString() === unitId);
+    if (unit) {
+      setValue(`lines.${index}.unit_id`, unit.id.toString());
+      setValue(`lines.${index}.unit_name`, unit.name);
+      setValue(`lines.${index}.unit_symbol`, unit.abbreviation);
+    }
+  };
+
+  const onSubmit = (data: any) => {
+    setApiError(null);
+    createMutation.mutate(data as SupplyOrderCreateRequest);
+  };
+
+  const calcData = calculateMutation.data;
+  const partyLabel = isPurchase ? 'Supplier' : 'Customer';
+
+  return (
+    <div className="max-w-6xl mx-auto space-y-6 pb-20">
+      <div className="flex justify-between items-center border-b pb-4">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">
+            {isPurchase ? 'Create Supply In (Purchase Order)' : 'Create Supply Out (Sales Order)'}
+          </h2>
+          <p className="mt-1 text-sm text-gray-500">Draft a new {isPurchase ? 'purchase' : 'sales'} order.</p>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+        {apiError && (
+          <div className="bg-red-50 text-red-600 p-4 rounded-md text-sm border border-red-100 font-medium">
+            Error: {apiError}
+          </div>
+        )}
+
+        {/* Header Information */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border grid grid-cols-1 md:grid-cols-4 gap-6">
+          
+          <div className="md:col-span-4 border-b pb-4 mb-2 flex space-x-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Order Type</label>
+              <div className="flex items-center space-x-2 mt-2">
+                <input type="radio" value="PURCHASE" disabled {...register('order_type')} /> <span className="text-sm">Purchase Order</span>
+                <input type="radio" value="SALES" disabled {...register('order_type')} className="ml-4" /> <span className="text-sm">Sales Order</span>
+              </div>
+            </div>
+            
+            <div className="pl-6 border-l">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tax Treatment</label>
+              <div className="flex items-center space-x-2 mt-2">
+                <input type="radio" value="GST" {...register('tax_treatment')} /> <span className="text-sm">GST</span>
+                <input type="radio" value="WITHOUT_GST" {...register('tax_treatment')} className="ml-4" /> <span className="text-sm">Without GST</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">{partyLabel}</label>
+            <select 
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2"
+              {...register('party_id')}
+              onChange={(e) => {
+                register('party_id').onChange(e);
+                handlePartySelect(e.target.value);
+              }}
+            >
+              <option value="">Select {partyLabel}...</option>
+              {parties.map((p: any) => (
+                <option key={p.id} value={p.id}>{p.legal_name} {p.gstin ? `(${p.gstin})` : ''}</option>
+              ))}
+            </select>
+            {errors.party_id?.message && <p className="mt-1 text-sm text-red-600">{errors.party_id.message as string}</p>}
+          </div>
+
+          <Input label="Order Date" type="date" {...register('order_date')} error={errors.order_date?.message} />
+          <Input label="Expected Date" type="date" {...register('expected_date')} error={errors.expected_date?.message} />
+          
+          <div className="md:col-span-2">
+            <Input label="Place of Supply (State Code)" {...register('place_of_supply')} error={errors.place_of_supply?.message} placeholder="e.g. 29" />
+          </div>
+        </div>
+
+        {/* Invoice Lines */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border space-y-4">
+          <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Items & Services</h3>
+          
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-3 py-2 text-left font-medium text-gray-500 w-1/4">Item / Product</th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-500 w-24">HSN/SKU</th>
+                  <th className="px-3 py-2 text-right font-medium text-gray-500 w-24">Qty</th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-500 w-28">Unit</th>
+                  <th className="px-3 py-2 text-right font-medium text-gray-500 w-28">Rate (₹)</th>
+                  <th className="px-3 py-2 text-right font-medium text-gray-500 w-24">Discount</th>
+                  {taxTreatment === 'GST' && <th className="px-3 py-2 text-right font-medium text-gray-500 w-20">GST %</th>}
+                  <th className="px-3 py-2 text-right font-medium text-gray-500 w-32">Amount</th>
+                  <th className="px-3 py-2 w-10"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {fields.map((field, index) => {
+                  const calculatedLine = calcData?.lines?.[index];
+                  return (
+                    <tr key={field.id} className="hover:bg-gray-50">
+                      <td className="px-3 py-2">
+                        <select 
+                          className="block w-full rounded border-gray-300 shadow-sm text-sm border px-2 py-1 mb-1"
+                          onChange={(e) => handleItemSelect(index, e.target.value)}
+                        >
+                          <option value="">Select Item...</option>
+                          {items.map((i: any) => (
+                            <option key={i.id} value={i.id}>{i.name}</option>
+                          ))}
+                        </select>
+                        <input type="text" placeholder="Item Name" className="block w-full rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.item_name`)} />
+                      </td>
+                      <td className="px-3 py-2 space-y-1">
+                        <input type="text" placeholder="HSN" className="block w-full rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.hsn_sac`)} />
+                        <input type="text" placeholder="SKU" className="block w-full rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.sku`)} />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input type="number" step="any" className="block w-full text-right rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.quantity`)} />
+                      </td>
+                      <td className="px-3 py-2">
+                        <select 
+                          className="block w-full rounded border-gray-300 shadow-sm text-sm border px-2 py-1"
+                          {...register(`lines.${index}.unit_id`)}
+                          onChange={(e) => {
+                            register(`lines.${index}.unit_id`).onChange(e);
+                            handleUnitSelect(index, e.target.value);
+                          }}
+                        >
+                          <option value="">Unit...</option>
+                          {units.map((u: any) => (
+                            <option key={u.id} value={u.id}>{u.abbreviation}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-3 py-2">
+                        <input type="number" step="any" className="block w-full text-right rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.rate`)} />
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex space-x-1">
+                          <input type="number" step="any" className="block w-full text-right rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.discount_value`)} />
+                          <select className="block rounded border-gray-300 shadow-sm text-xs border px-1 py-1 bg-gray-50" {...register(`lines.${index}.discount_type`)}>
+                            <option value="NONE">None</option>
+                            <option value="PERCENT">%</option>
+                            <option value="FIXED">₹</option>
+                          </select>
+                        </div>
+                      </td>
+                      {taxTreatment === 'GST' && (
+                        <td className="px-3 py-2">
+                          <input type="number" step="any" className="block w-full text-right rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.gst_rate`)} />
+                        </td>
+                      )}
+                      <td className="px-3 py-2 text-right font-medium text-gray-900 bg-gray-50">
+                        {calculateMutation.isPending ? '...' : (calculatedLine?.line_total ? `₹${calculatedLine.line_total.toFixed(2)}` : '₹0.00')}
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <button type="button" onClick={() => remove(index)} className="text-red-500 hover:text-red-700 font-bold p-1">×</button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          
+          <Button 
+            type="button" 
+            variant="secondary" 
+            onClick={() => append({ item_name: '', quantity: 1, rate: 0, discount_type: 'NONE', discount_value: 0, gst_rate: 0, unit_name: '', unit_symbol: '', unit_id: '' })}
+          >
+            + Add Line
+          </Button>
+        </div>
+
+        {/* Totals & Notes */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Order Notes</label>
+              <textarea rows={3} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('notes')} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Terms & Conditions</label>
+              <textarea rows={3} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('terms')} />
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Order Summary</h3>
+            
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between text-gray-600">
+                <span>Gross Amount</span>
+                <span>₹{(calcData?.subtotal || 0).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-red-600">
+                <span>Discount</span>
+                <span>- ₹{(calcData?.discount_total || 0).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-gray-800 font-medium pt-2 border-t">
+                <span>{taxTreatment === 'GST' ? 'Taxable Value' : 'Net Amount'}</span>
+                <span>₹{(calcData?.taxable_total || 0).toFixed(2)}</span>
+              </div>
+              
+              {taxTreatment === 'GST' && (
+                <>
+                  {(calcData?.igst_total || 0) > 0 ? (
+                    <div className="flex justify-between text-gray-600">
+                      <span>IGST</span>
+                      <span>₹{(calcData?.igst_total || 0).toFixed(2)}</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex justify-between text-gray-600">
+                        <span>CGST</span>
+                        <span>₹{(calcData?.cgst_total || 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-gray-600">
+                        <span>SGST / UTGST</span>
+                        <span>₹{(calcData?.sgst_total || 0).toFixed(2)}</span>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+
+              <div className="flex justify-between text-xl font-bold text-gray-900 pt-4 border-t mt-4">
+                <span>Grand Total</span>
+                <span>₹{(calcData?.grand_total || 0).toFixed(2)}</span>
+              </div>
+
+              {calcData?.amount_in_words && (
+                <div className="text-xs text-gray-500 text-right italic mt-1">
+                  Rupees {calcData.amount_in_words}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-lg flex justify-end space-x-4 z-10 md:ml-64">
+          <Button type="button" variant="secondary" onClick={() => navigate(isPurchase ? '/supply-in' : '/supply-out')}>Cancel</Button>
+          <Button type="submit" isLoading={createMutation.isPending} disabled={calculateMutation.isPending || !calcData?.grand_total}>
+            Save Draft Order
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+```
+
+```tsx
+// File: frontend/src/features/orders/OrderListPage.tsx
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link, useLocation } from 'react-router-dom';
+import { ordersApi, type SupplyOrderResponse } from '../../api/orders';
+import { Button } from '../../components/common/Button';
+
+export default function OrderListPage() {
+  const location = useLocation();
+  const queryClient = useQueryClient();
+  const [selectedOrder, setSelectedOrder] = useState<SupplyOrderResponse | null>(null);
+
+  const isPurchase = location.pathname.includes('supply-in');
+  const orderType = isPurchase ? 'PURCHASE' : 'SALES';
+  const pageTitle = isPurchase ? 'Supply In (Purchase Orders)' : 'Supply Out (Sales Orders)';
+  const newLink = isPurchase ? '/supply-in/new' : '/supply-out/new';
+  const partyLabel = isPurchase ? 'Supplier' : 'Customer';
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['orders', orderType],
+    queryFn: () => ordersApi.getAll(orderType)
+  });
+
+  const confirmMutation = useMutation({
+    mutationFn: ordersApi.confirm,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      setSelectedOrder(null);
+    }
+  });
+
+  const convertMutation = useMutation({
+    mutationFn: ordersApi.convert,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      alert('Order successfully converted to ' + (isPurchase ? 'Purchase Bill' : 'Sales Invoice') + '!');
+      setSelectedOrder(null);
+    }
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">{pageTitle}</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Manage your {orderType.toLowerCase()} orders.
+          </p>
+        </div>
+        <Link to={newLink}>
+          <Button>Create {isPurchase ? 'Purchase' : 'Sales'} Order</Button>
+        </Link>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order No</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{partyLabel}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tax Type</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {isLoading ? (
+              <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">Loading orders...</td></tr>
+            ) : data?.items.length === 0 ? (
+              <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">No {orderType.toLowerCase()} orders found.</td></tr>
+            ) : (
+              data?.items.map((order) => (
+                <tr key={order.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.order_date}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{order.order_number || 'DRAFT'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.party_id.substring(0,8)}...</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                      ${order.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' : 
+                        order.status === 'CONFIRMED' ? 'bg-blue-100 text-blue-800' : 
+                        order.status === 'CANCELLED' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                      {order.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.tax_treatment.replace('_', ' ')}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-bold">₹{order.grand_total.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button onClick={() => setSelectedOrder(order)} className="text-primary-600 hover:text-primary-900">View</button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* View Modal */}
+      {selectedOrder && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">
+                  {selectedOrder.order_number || 'Draft Order'}
+                </h3>
+                <p className="text-sm text-gray-500">Date: {selectedOrder.order_date} | Type: {selectedOrder.order_type} | Tax: {selectedOrder.tax_treatment.replace('_', ' ')}</p>
+              </div>
+              <button onClick={() => setSelectedOrder(null)} className="text-gray-400 hover:text-gray-500 text-2xl font-bold">&times;</button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1">
+              <table className="min-w-full divide-y divide-gray-200 border mb-6 text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-gray-500 font-medium">Item</th>
+                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Qty</th>
+                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Rate</th>
+                    {selectedOrder.tax_treatment === 'GST' && (
+                      <>
+                        <th className="px-4 py-2 text-right text-gray-500 font-medium">Taxable</th>
+                        <th className="px-4 py-2 text-right text-gray-500 font-medium">GST</th>
+                      </>
+                    )}
+                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {selectedOrder.lines.map((line: any) => (
+                    <tr key={line.id}>
+                      <td className="px-4 py-2">{line.item_name_snapshot}</td>
+                      <td className="px-4 py-2 text-right">{line.quantity} {line.unit_symbol_snapshot}</td>
+                      <td className="px-4 py-2 text-right">₹{line.rate.toFixed(2)}</td>
+                      {selectedOrder.tax_treatment === 'GST' && (
+                        <>
+                          <td className="px-4 py-2 text-right">₹{line.taxable_value.toFixed(2)}</td>
+                          <td className="px-4 py-2 text-right">{line.gst_rate}% (₹{(line.cgst_amount+line.sgst_amount+line.igst_amount).toFixed(2)})</td>
+                        </>
+                      )}
+                      <td className="px-4 py-2 text-right font-medium">₹{line.line_total.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div className="flex justify-end">
+                <div className="w-64 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Subtotal</span>
+                    <span>₹{selectedOrder.subtotal.toFixed(2)}</span>
+                  </div>
+                  {selectedOrder.tax_treatment === 'GST' && (
+                    <>
+                      {selectedOrder.igst_total > 0 ? (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">IGST</span>
+                          <span>₹{selectedOrder.igst_total.toFixed(2)}</span>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">CGST</span>
+                            <span>₹{selectedOrder.cgst_total.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">SGST</span>
+                            <span>₹{selectedOrder.sgst_total.toFixed(2)}</span>
+                          </div>
+                        </>
+                      )}
+                    </>
+                  )}
+                  <div className="flex justify-between font-bold text-lg pt-2 border-t mt-2">
+                    <span>Grand Total</span>
+                    <span>₹{selectedOrder.grand_total.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t bg-gray-50 flex justify-end space-x-3 rounded-b-lg">
+              <Button variant="secondary" onClick={() => setSelectedOrder(null)}>Close</Button>
+              {selectedOrder.status === 'DRAFT' && (
+                <Button 
+                  onClick={() => confirmMutation.mutate(selectedOrder.id)}
+                  isLoading={confirmMutation.isPending}
+                >
+                  Confirm Order
+                </Button>
+              )}
+              {selectedOrder.status === 'CONFIRMED' && (
+                <Button 
+                  onClick={() => convertMutation.mutate(selectedOrder.id)}
+                  isLoading={convertMutation.isPending}
+                >
+                  Convert to {isPurchase ? 'Purchase Bill' : 'Sales Invoice'}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+```tsx
+// File: frontend/src/features/returns/ReturnBuilderPage.tsx
+import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useForm, useFieldArray } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { returnsApi, type ReturnOrderCreateRequest, type ReturnableLinesResponse } from '../../api/returns';
+import { ordersApi } from '../../api/orders';
+import { Button } from '../../components/common/Button';
+import { Input } from '../../components/common/Input';
+
+const returnLineSchema = z.object({
+  original_order_line_id: z.string().min(1),
+  item_name_snapshot: z.string(),
+  unit_snapshot: z.string().optional(),
+  returnable_quantity: z.number(),
+  rate: z.number(),
+  return_quantity: z.number().min(0),
+  condition: z.string().optional(),
+  warehouse_action: z.string().optional(),
+});
+
+const returnSchema = z.object({
+  original_order_id: z.string().min(1, 'Order ID is required'),
+  reason: z.string().optional(),
+  lines: z.array(returnLineSchema),
+});
+
+export default function ReturnBuilderPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isSupplyIn = location.pathname.includes('supply-in');
+  const returnType = isSupplyIn ? 'SUPPLY_IN_RETURN' : 'SUPPLY_OUT_RETURN';
+  const orderType = isSupplyIn ? 'PURCHASE' : 'SALES';
+  
+  const [orderId, setOrderId] = useState<string>('');
+  const [returnableData, setReturnableData] = useState<ReturnableLinesResponse | null>(null);
+
+  const { data: orders } = useQuery({
+    queryKey: ['orders', orderType],
+    queryFn: () => ordersApi.getAll(orderType)
+  });
+
+  const { register, control, handleSubmit, setValue, watch } = useForm<any>({
+    resolver: zodResolver(returnSchema),
+    defaultValues: {
+      original_order_id: '',
+      reason: '',
+      lines: []
+    }
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'lines'
+  });
+
+  const fetchLinesMutation = useMutation({
+    mutationFn: returnsApi.getReturnableLines,
+    onSuccess: (data) => {
+      setReturnableData(data);
+      // Populate fields automatically
+      remove();
+      data.lines.forEach(line => {
+        append({
+          original_order_line_id: line.original_order_line_id,
+          item_name_snapshot: line.item_name_snapshot,
+          unit_snapshot: line.unit_symbol_snapshot || '',
+          returnable_quantity: line.returnable_quantity,
+          rate: line.rate,
+          return_quantity: 0,
+          condition: 'GOOD',
+          warehouse_action: 'RETURN_TO_STOCK'
+        });
+      });
+    },
+    onError: () => {
+      alert("Failed to fetch returnable lines or order not found.");
+      setReturnableData(null);
+    }
+  });
+
+  const handleOrderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    setOrderId(val);
+    setValue('original_order_id', val);
+    if (val) {
+      fetchLinesMutation.mutate(val);
+    } else {
+      setReturnableData(null);
+      remove();
+    }
+  };
+
+  const createMutation = useMutation({
+    mutationFn: returnsApi.create,
+    onSuccess: () => {
+      navigate(`${isSupplyIn ? '/supply-in' : '/supply-out'}/returns`);
+    },
+    onError: (err: any) => {
+      alert(err?.response?.data?.detail || "Failed to create return");
+    }
+  });
+
+  const onSubmit = (data: any) => {
+    // filter out lines with 0 return qty
+    const filteredLines = data.lines.filter((l: any) => l.return_quantity > 0);
+    if (filteredLines.length === 0) {
+      alert("Please enter a return quantity for at least one item.");
+      return;
+    }
+    
+    // validate max qty
+    const invalid = filteredLines.find((l: any) => l.return_quantity > l.returnable_quantity);
+    if (invalid) {
+      alert(`Cannot return more than ${invalid.returnable_quantity} for ${invalid.item_name_snapshot}`);
+      return;
+    }
+    
+    const request: ReturnOrderCreateRequest = {
+      original_order_id: data.original_order_id,
+      return_type: returnType,
+      reason: data.reason,
+      lines: filteredLines.map((l: any) => ({
+        original_order_line_id: l.original_order_line_id,
+        return_quantity: l.return_quantity,
+        condition: l.condition,
+        warehouse_action: l.warehouse_action
+      }))
+    };
+    
+    createMutation.mutate(request);
+  };
+
+  const formLines = watch('lines');
+  
+  const estimatedTotal = formLines?.reduce((sum: number, line: any) => {
+    return sum + (Number(line.return_quantity || 0) * Number(line.rate || 0));
+  }, 0) || 0;
+
+  return (
+    <div className="max-w-5xl mx-auto space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900">
+          Create {isSupplyIn ? 'Purchase Return' : 'Sales Return'}
+        </h2>
+        <p className="mt-1 text-sm text-gray-500">
+          Initiate a return against a confirmed {orderType.toLowerCase()} order.
+        </p>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm border p-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Select Original Order *</label>
+              <select
+                className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                value={orderId}
+                onChange={handleOrderChange}
+                required
+              >
+                <option value="">-- Select Order --</option>
+                {orders?.items.filter(o => o.status === 'CONFIRMED').map(o => (
+                  <option key={o.id} value={o.id}>
+                    {o.order_number || 'DRAFT'} - {o.party_id.substring(0,8)} (₹{o.grand_total.toFixed(2)})
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <Input
+              label="Reason for Return"
+              {...register('reason')}
+              placeholder="e.g. Damaged goods, wrong item..."
+            />
+          </div>
+          
+          {fetchLinesMutation.isPending && (
+            <div className="text-sm text-gray-500 py-4">Fetching returnable items...</div>
+          )}
+
+          {returnableData && fields.length > 0 && (
+            <div className="mt-8">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Return Items</h3>
+              
+              <div className="overflow-x-auto border rounded-lg">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Returnable Max</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Rate</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Condition</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase w-32">Return Qty</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {fields.map((field, index) => {
+                      const line = formLines[index];
+                      return (
+                        <tr key={field.id} className={line.return_quantity > 0 ? 'bg-red-50' : ''}>
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                            {line.item_name_snapshot}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-500 text-right">
+                            {line.returnable_quantity} {line.unit_snapshot}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-500 text-right">
+                            ₹{line.rate.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <select
+                              {...register(`lines.${index}.condition`)}
+                              className="text-sm rounded border-gray-300 w-full"
+                            >
+                              <option value="GOOD">Good / Resaleable</option>
+                              <option value="DAMAGED">Damaged</option>
+                              <option value="DEFECTIVE">Defective</option>
+                              <option value="SCRAP">Scrap</option>
+                            </select>
+                          </td>
+                          <td className="px-4 py-3">
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              max={line.returnable_quantity}
+                              {...register(`lines.${index}.return_quantity`, { valueAsNumber: true })}
+                              className="w-full rounded border-gray-300 text-right text-sm font-medium text-red-600 focus:ring-red-500 focus:border-red-500"
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-4 flex justify-between items-center text-sm">
+                <div className="text-gray-500 italic">
+                  Note: The exact tax reversals will be calculated automatically by the server.
+                </div>
+                <div className="font-medium text-lg">
+                  Estimated Base Return Value: <span className="text-red-600">₹{estimatedTotal.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {returnableData && fields.length === 0 && (
+            <div className="text-sm text-red-500 py-4 font-medium">
+              This order has no remaining items that can be returned.
+            </div>
+          )}
+
+          <div className="flex justify-end space-x-4 pt-6 border-t">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => navigate(-1)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              isLoading={createMutation.isPending}
+              disabled={!returnableData || fields.length === 0}
+            >
+              Create Draft Return
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+```
+
+```tsx
+// File: frontend/src/features/returns/ReturnListPage.tsx
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLocation, Link } from 'react-router-dom';
+import { returnsApi, type ReturnOrderResponse } from '../../api/returns';
+import { Button } from '../../components/common/Button';
+
+export default function ReturnListPage() {
+  const location = useLocation();
+  const queryClient = useQueryClient();
+  const [selectedReturn, setSelectedReturn] = useState<ReturnOrderResponse | null>(null);
+
+  const isSupplyIn = location.pathname.includes('supply-in');
+  const returnType = isSupplyIn ? 'SUPPLY_IN_RETURN' : 'SUPPLY_OUT_RETURN';
+  const pageTitle = isSupplyIn ? 'Purchase Returns (Supply In)' : 'Sales Returns (Supply Out)';
+  const partyLabel = isSupplyIn ? 'Supplier' : 'Customer';
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['returns', returnType],
+    queryFn: () => returnsApi.getAll(returnType)
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: returnsApi.approve,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['returns'] });
+      setSelectedReturn(null);
+    }
+  });
+
+  const postMutation = useMutation({
+    mutationFn: returnsApi.post,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['returns'] });
+      setSelectedReturn(null);
+    }
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">{pageTitle}</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Manage your {returnType.toLowerCase().replace('_', ' ')}s.
+          </p>
+        </div>
+        <Link to={`${isSupplyIn ? '/supply-in' : '/supply-out'}/returns/new`}>
+          <Button>+ Create Return</Button>
+        </Link>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Return No</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{partyLabel}</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Financial</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {isLoading ? (
+              <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">Loading returns...</td></tr>
+            ) : data?.items.length === 0 ? (
+              <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">No returns found.</td></tr>
+            ) : (
+              data?.items.map((ret) => (
+                <tr key={ret.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{ret.return_date}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{ret.return_number || 'DRAFT'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{ret.party_id.substring(0,8)}...</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                      ${ret.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' : 
+                        ret.status === 'APPROVED' ? 'bg-blue-100 text-blue-800' : 
+                        ret.status === 'COMPLETED' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                      {ret.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                      {ret.financial_status.replace('_', ' ')}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-bold">₹{ret.grand_total.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button onClick={() => setSelectedReturn(ret)} className="text-primary-600 hover:text-primary-900">View</button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* View Modal */}
+      {selectedReturn && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">
+                  {selectedReturn.return_number || 'Draft Return'}
+                </h3>
+                <p className="text-sm text-gray-500">Original Order: {selectedReturn.original_order_id.substring(0, 8)}...</p>
+              </div>
+              <button onClick={() => setSelectedReturn(null)} className="text-gray-400 hover:text-gray-500 text-2xl font-bold">&times;</button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1">
+              <table className="min-w-full divide-y divide-gray-200 border mb-6 text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-gray-500 font-medium">Item</th>
+                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Return Qty</th>
+                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Rate</th>
+                    <th className="px-4 py-2 text-right text-gray-500 font-medium">GST</th>
+                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {selectedReturn.lines.map((line: any) => (
+                    <tr key={line.id}>
+                      <td className="px-4 py-2">
+                        {line.item_name_snapshot}
+                        <div className="text-xs text-gray-500">Condition: {line.condition}</div>
+                      </td>
+                      <td className="px-4 py-2 text-right font-medium text-red-600">
+                        {line.return_quantity} {line.unit_snapshot}
+                      </td>
+                      <td className="px-4 py-2 text-right">₹{line.rate.toFixed(2)}</td>
+                      <td className="px-4 py-2 text-right">{line.gst_rate}%</td>
+                      <td className="px-4 py-2 text-right font-medium">₹{line.line_total.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div className="flex justify-end">
+                <div className="w-64 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Subtotal</span>
+                    <span>₹{selectedReturn.subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-lg pt-2 border-t mt-2">
+                    <span>Grand Total</span>
+                    <span>₹{selectedReturn.grand_total.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t bg-gray-50 flex justify-end space-x-3 rounded-b-lg">
+              <Button variant="secondary" onClick={() => setSelectedReturn(null)}>Close</Button>
+              {selectedReturn.status === 'DRAFT' && (
+                <Button 
+                  onClick={() => approveMutation.mutate(selectedReturn.id)}
+                  isLoading={approveMutation.isPending}
+                >
+                  Approve Return
+                </Button>
+              )}
+              {selectedReturn.status === 'APPROVED' && (
+                <Button 
+                  onClick={() => postMutation.mutate(selectedReturn.id)}
+                  isLoading={postMutation.isPending}
+                >
+                  Post Return (Process)
+                </Button>
+              )}
             </div>
           </div>
         </div>

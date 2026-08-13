@@ -9,6 +9,10 @@ import ItemsPage from '../features/master/ItemsPage';
 import PartiesPage from '../features/master/PartiesPage';
 import InvoiceBuilderPage from '../features/invoices/InvoiceBuilderPage';
 import InvoiceListPage from '../features/invoices/InvoiceListPage';
+import OrderListPage from '../features/orders/OrderListPage';
+import OrderBuilderPage from '../features/orders/OrderBuilderPage';
+import ReturnListPage from '../features/returns/ReturnListPage';
+import ReturnBuilderPage from '../features/returns/ReturnBuilderPage';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -30,7 +34,12 @@ const DashboardShell = ({ children }: { children: React.ReactNode }) => {
         <nav className="p-4 space-y-2">
           <Link to="/" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Dashboard</Link>
           <Link to="/invoices/new" className="block px-4 py-2 text-blue-700 hover:bg-blue-50 font-medium rounded-md bg-blue-50">+ Create Invoice</Link>
-          <Link to="/invoices" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Invoices List</Link>
+          <Link to="/invoices" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Sales Invoices</Link>
+          <Link to="/purchase-bills" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Purchase Bills</Link>
+          <Link to="/supply-in" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Supply In</Link>
+          <Link to="/supply-in/returns" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md pl-8">↳ Returns</Link>
+          <Link to="/supply-out" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Supply Out</Link>
+          <Link to="/supply-out/returns" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md pl-8">↳ Returns</Link>
           <Link to="/parties" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Customers & Vendors</Link>
           <Link to="/items" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Items & Products</Link>
           <Link to="/units" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Units</Link>
@@ -89,6 +98,96 @@ export const router = createBrowserRouter([
           <ProtectedRoute>
             <DashboardShell>
               <InvoiceListPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'purchase-bills',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <InvoiceListPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'supply-in',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <OrderListPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'supply-in/returns',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <ReturnListPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'supply-in/returns/new',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <ReturnBuilderPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'supply-in/new',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <OrderBuilderPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'supply-out',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <OrderListPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'supply-out/returns',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <ReturnListPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'supply-out/returns/new',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <ReturnBuilderPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'supply-out/new',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <OrderBuilderPage />
             </DashboardShell>
           </ProtectedRoute>
         ),

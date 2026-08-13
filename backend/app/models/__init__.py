@@ -10,6 +10,8 @@ from app.models.invoice import (
     Invoice, InvoiceLine, InvoiceSeries, Payment,
     CreditNote, DebitNote
 )
+from app.models.order import SupplyOrder, SupplyOrderLine
+from app.models.return_order import ReturnOrder, ReturnOrderLine, ReturnSettlement
 from app.models.audit import AuditLog
 from app.models.master import GSTStateCode, GSTRate, HSNSACCode
 
@@ -21,6 +23,7 @@ __all__ = [
     "Item", "ItemVersion",
     "Party", "PartyAddress", "PartyBankAccount", "PartyLedgerEntry", "PaymentAllocation",
     "Invoice", "InvoiceLine", "InvoiceSeries", "Payment", "CreditNote", "DebitNote",
+    "SupplyOrder", "SupplyOrderLine",
     "AuditLog",
     "GSTStateCode", "GSTRate", "HSNSACCode",
 ]

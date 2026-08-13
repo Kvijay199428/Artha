@@ -62,6 +62,7 @@ class InvoiceResponse(BaseModel):
     id: str
     invoice_number: str
     invoice_type: str
+    transaction_type: str
     invoice_date: date
     customer_name_snapshot: str
     customer_gstin_snapshot: Optional[str]

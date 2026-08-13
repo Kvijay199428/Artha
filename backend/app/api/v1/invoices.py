@@ -21,8 +21,13 @@ def create_invoice(request: InvoiceCreate, company = Depends(get_current_company
     return ApiResponse(success=True, data=_invoice_to_response(invoice))
 
 @router.get("/", response_model=ApiResponse[InvoiceListResponse])
-def list_invoices(status: str = Query(None), company = Depends(get_current_company), db: Session = Depends(get_db)):
-    invoices = InvoiceService.list_invoices(db, str(company.id), status)
+def list_invoices(
+    status: str = Query(None), 
+    transaction_type: str = Query(None),
+    company = Depends(get_current_company), 
+    db: Session = Depends(get_db)
+):
+    invoices = InvoiceService.list_invoices(db, str(company.id), status, transaction_type)
     return ApiResponse(success=True, data=InvoiceListResponse(
         items=[_invoice_to_response(i) for i in invoices],
         total=len(invoices)
@@ -60,9 +65,10 @@ def _invoice_to_response(invoice) -> InvoiceResponse:
         id=invoice.id,
         invoice_number=invoice.invoice_number,
         invoice_type=invoice.invoice_type,
+        transaction_type=invoice.transaction_type,
         invoice_date=invoice.invoice_date.date(),
-        customer_name_snapshot=invoice.customer_name_snapshot,
-        customer_gstin_snapshot=invoice.customer_gstin_snapshot,
+        customer_name_snapshot=invoice.customer_name_snapshot if invoice.transaction_type == "SALES" else invoice.seller_name_snapshot,
+        customer_gstin_snapshot=invoice.customer_gstin_snapshot if invoice.transaction_type == "SALES" else invoice.seller_gstin_snapshot,
         place_of_supply=invoice.place_of_supply,
         subtotal=float(invoice.subtotal),
         discount_total=float(invoice.discount_total),
