@@ -10,7 +10,7 @@ from app.models.party import Party
 from app.models.quotation import Quotation, QuotationStatus
 from app.models.boq import DocumentLink
 from app.core.exceptions import NotFoundException, ValidationException
-from app.utils.currency import number_to_words
+from app.utils.currency import amount_in_words
 
 class OrderService:
     @staticmethod
@@ -91,7 +91,7 @@ class OrderService:
         grand_total_rounded = grand_total.quantize(Decimal("1."), rounding=ROUND_HALF_UP)
         round_off = grand_total_rounded - grand_total
         
-        amount_in_words_str = number_to_words(grand_total_rounded)
+        amount_in_words_str = amount_in_words(grand_total_rounded)
         
         return {
             "subtotal": float(subtotal),
