@@ -13,6 +13,10 @@ import OrderListPage from '../features/orders/OrderListPage';
 import OrderBuilderPage from '../features/orders/OrderBuilderPage';
 import ReturnListPage from '../features/returns/ReturnListPage';
 import ReturnBuilderPage from '../features/returns/ReturnBuilderPage';
+import QuotationListPage from '../features/quotations/QuotationListPage';
+import QuotationBuilderPage from '../features/quotations/QuotationBuilderPage';
+import BOQListPage from '../features/boqs/BOQListPage';
+import EstimateListPage from '../features/estimates/EstimateListPage';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -37,9 +41,13 @@ const DashboardShell = ({ children }: { children: React.ReactNode }) => {
           <Link to="/invoices" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Sales Invoices</Link>
           <Link to="/purchase-bills" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Purchase Bills</Link>
           <Link to="/supply-in" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Supply In</Link>
+          <Link to="/supply-in/quotations" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md pl-8">↳ Quotations</Link>
           <Link to="/supply-in/returns" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md pl-8">↳ Returns</Link>
           <Link to="/supply-out" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Supply Out</Link>
+          <Link to="/supply-out/quotations" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md pl-8">↳ Quotations</Link>
           <Link to="/supply-out/returns" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md pl-8">↳ Returns</Link>
+          <Link to="/boqs" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">BOQ</Link>
+          <Link to="/estimates" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Estimates</Link>
           <Link to="/parties" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Customers & Vendors</Link>
           <Link to="/items" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Items & Products</Link>
           <Link to="/units" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Units</Link>
@@ -123,6 +131,26 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'supply-in/quotations',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <QuotationListPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'supply-in/quotations/new',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <QuotationBuilderPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'supply-in/returns',
         element: (
           <ProtectedRoute>
@@ -163,6 +191,26 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'supply-out/quotations',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <QuotationListPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'supply-out/quotations/new',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <QuotationBuilderPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'supply-out/returns',
         element: (
           <ProtectedRoute>
@@ -178,6 +226,26 @@ export const router = createBrowserRouter([
           <ProtectedRoute>
             <DashboardShell>
               <ReturnBuilderPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'boqs',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <BOQListPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'estimates',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <EstimateListPage />
             </DashboardShell>
           </ProtectedRoute>
         ),

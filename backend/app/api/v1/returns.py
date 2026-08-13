@@ -44,9 +44,42 @@ def post_return(return_id: str, company = Depends(get_current_company), db: Sess
     ret = ReturnService.post_return(db, str(company.id), return_id)
     return ApiResponse(success=True, data=_return_to_response(ret))
 
+@router.post("/{return_id}/adjust-receivable", response_model=ApiResponse[ReturnSettlementResponse])
+def adjust_receivable(return_id: str, request: ReturnSettlementCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    request.settlement_type = "ADJUST_RECEIVABLE"
+    return _process_settlement(db, str(company.id), return_id, request)
+
+@router.post("/{return_id}/adjust-payable", response_model=ApiResponse[ReturnSettlementResponse])
+def adjust_payable(return_id: str, request: ReturnSettlementCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    request.settlement_type = "ADJUST_PAYABLE"
+    return _process_settlement(db, str(company.id), return_id, request)
+
+@router.post("/{return_id}/customer-refund", response_model=ApiResponse[ReturnSettlementResponse])
+def customer_refund(return_id: str, request: ReturnSettlementCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    request.settlement_type = "CUSTOMER_REFUND"
+    return _process_settlement(db, str(company.id), return_id, request)
+
+@router.post("/{return_id}/supplier-refund", response_model=ApiResponse[ReturnSettlementResponse])
+def supplier_refund(return_id: str, request: ReturnSettlementCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    request.settlement_type = "SUPPLIER_REFUND"
+    return _process_settlement(db, str(company.id), return_id, request)
+
+@router.post("/{return_id}/customer-credit", response_model=ApiResponse[ReturnSettlementResponse])
+def customer_credit(return_id: str, request: ReturnSettlementCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    request.settlement_type = "CUSTOMER_CREDIT"
+    return _process_settlement(db, str(company.id), return_id, request)
+
+@router.post("/{return_id}/supplier-credit", response_model=ApiResponse[ReturnSettlementResponse])
+def supplier_credit(return_id: str, request: ReturnSettlementCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    request.settlement_type = "SUPPLIER_CREDIT"
+    return _process_settlement(db, str(company.id), return_id, request)
+
 @router.post("/{return_id}/settlements", response_model=ApiResponse[ReturnSettlementResponse])
 def add_settlement(return_id: str, request: ReturnSettlementCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
-    settlement = ReturnService.add_settlement(db, str(company.id), return_id, request.model_dump())
+    return _process_settlement(db, str(company.id), return_id, request)
+
+def _process_settlement(db: Session, company_id: str, return_id: str, request: ReturnSettlementCreate):
+    settlement = ReturnService.add_settlement(db, company_id, return_id, request.model_dump())
     return ApiResponse(success=True, data=ReturnSettlementResponse(
         id=settlement.id,
         settlement_type=settlement.settlement_type.value,

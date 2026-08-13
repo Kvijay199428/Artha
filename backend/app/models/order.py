@@ -2,7 +2,7 @@ from sqlalchemy import Column, String, Date, Numeric, ForeignKey, Enum, Text, In
 from sqlalchemy.orm import relationship
 import enum
 from app.core.database import Base
-from app.models.audit import AuditableMixin
+
 
 class OrderType(str, enum.Enum):
     PURCHASE = "PURCHASE"
@@ -20,7 +20,7 @@ class OrderStatus(str, enum.Enum):
     CLOSED = "CLOSED"
     CANCELLED = "CANCELLED"
 
-class SupplyOrder(Base, AuditableMixin):
+class SupplyOrder(Base):
     __tablename__ = "supply_orders"
 
     id = Column(String(36), primary_key=True)

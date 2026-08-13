@@ -8,6 +8,7 @@ import { ordersApi, type SupplyOrderCalculateRequest, type SupplyOrderCreateRequ
 import { itemsApi } from '../../api/items';
 import { unitsApi } from '../../api/units';
 import { partiesApi } from '../../api/parties';
+import { quotationsApi } from '../../api/quotations';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 
@@ -58,7 +59,16 @@ export default function OrderBuilderPage() {
     queryFn: () => partiesApi.getAll(isPurchase ? 'VENDOR' : 'CUSTOMER') 
   });
 
-  const { register, control, handleSubmit, watch, setValue, formState: { errors } } = useForm<any>({
+  const searchParams = new URLSearchParams(location.search);
+  const quotationId = searchParams.get('quotation_id');
+
+  const { data: quotation } = useQuery({
+    queryKey: ['quotations', quotationId],
+    queryFn: () => quotationsApi.getById(quotationId!),
+    enabled: !!quotationId
+  });
+
+  const { register, control, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<any>({
     resolver: zodResolver(orderSchema),
     defaultValues: {
       order_type: defaultOrderType,
@@ -77,6 +87,41 @@ export default function OrderBuilderPage() {
 
   const watchAll = watch();
   const taxTreatment = watchAll.tax_treatment;
+
+  // Pre-fill form if quotation is loaded
+  useEffect(() => {
+    if (quotation && units.length > 0) {
+      reset({
+        quotation_id: quotation.id,
+        order_type: quotation.quotation_type,
+        tax_treatment: quotation.tax_treatment,
+        order_date: new Date().toISOString().split('T')[0],
+        expected_date: '',
+        party_id: quotation.party_id,
+        place_of_supply: quotation.place_of_supply,
+        notes: quotation.notes || '',
+        terms: quotation.terms || '',
+        lines: quotation.lines.map((l: any) => {
+          const unit = units.find((u: any) => String(u.id) === String(l.unit_id));
+          return {
+            item_id: l.item_id || '',
+            item_name: l.item_name_snapshot,
+            sku: l.sku_snapshot || '',
+            hsn_sac: l.hsn_sac_snapshot || '',
+            description: l.description || '',
+            quantity: l.quantity,
+            unit_id: l.unit_id || '',
+            unit_name: unit?.name || l.unit_snapshot || '',
+            unit_symbol: unit?.abbreviation || l.unit_snapshot || '',
+            rate: l.rate,
+            discount_type: l.discount_type || 'NONE',
+            discount_value: l.discount_value || 0,
+            gst_rate: l.gst_rate || 0
+          };
+        })
+      });
+    }
+  }, [quotation, units, reset]);
 
   const calculateMutation = useMutation({
     mutationFn: ordersApi.calculate,
@@ -181,7 +226,9 @@ export default function OrderBuilderPage() {
           <h2 className="text-2xl font-bold text-gray-900">
             {isPurchase ? 'Create Supply In (Purchase Order)' : 'Create Supply Out (Sales Order)'}
           </h2>
-          <p className="mt-1 text-sm text-gray-500">Draft a new {isPurchase ? 'purchase' : 'sales'} order.</p>
+          <p className="mt-1 text-sm text-gray-500">
+            {quotationId ? 'Draft a new order from accepted quotation.' : `Draft a new ${isPurchase ? 'purchase' : 'sales'} order.`}
+          </p>
         </div>
       </div>
 

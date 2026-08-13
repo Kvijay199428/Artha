@@ -7,6 +7,8 @@ from app.models.order import SupplyOrder, SupplyOrderLine, OrderStatus, TaxTreat
 from app.models.company import Company
 from app.models.invoice import Invoice, InvoiceLine
 from app.models.party import Party
+from app.models.quotation import Quotation, QuotationStatus
+from app.models.boq import DocumentLink
 from app.core.exceptions import NotFoundException, ValidationException
 from app.utils.currency import number_to_words
 
@@ -106,7 +108,7 @@ class OrderService:
         }
 
     @staticmethod
-    def create_order(db: Session, company_id: str, company: Company, data: dict) -> SupplyOrder:
+    def create_order(db: Session, company_id: str, company: Company, data: dict, user_id: str = None) -> SupplyOrder:
         calc_result = OrderService.calculate_order(db, company_id, company, data)
         
         order = SupplyOrder(
@@ -164,6 +166,26 @@ class OrderService:
             order.lines.append(line)
             
         db.add(order)
+        
+        # Handle Quotation linking
+        if data.get("quotation_id"):
+            quotation = db.query(Quotation).filter(Quotation.id == data["quotation_id"]).first()
+            if quotation:
+                quotation.fully_converted = True
+                
+                doc_link = DocumentLink(
+                    company_id=company_id,
+                    source_type="QUOTATION",
+                    source_id=quotation.id,
+                    source_revision=quotation.revision,
+                    target_type="SUPPLY_ORDER",
+                    target_id=order.id,
+                    target_revision=1,
+                    relationship_type="CONVERTED_TO_ORDER",
+                    created_by=user_id
+                )
+                db.add(doc_link)
+                
         db.commit()
         db.refresh(order)
         return order

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.dependencies.auth import get_current_company
+from app.dependencies.auth import get_current_company, get_current_user
 from app.schemas.common import ApiResponse
 from app.schemas.order import (
     SupplyOrderCreate, SupplyOrderResponse, SupplyOrderListResponse, 
@@ -20,8 +20,8 @@ def calculate_order(request: SupplyOrderCalculateRequest, company = Depends(get_
     return ApiResponse(success=True, data=SupplyOrderCalculateResponse(**result))
 
 @router.post("/", response_model=ApiResponse[SupplyOrderResponse])
-def create_order(request: SupplyOrderCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
-    order = OrderService.create_order(db, str(company.id), company, request.model_dump())
+def create_order(request: SupplyOrderCreate, company = Depends(get_current_company), user = Depends(get_current_user), db: Session = Depends(get_db)):
+    order = OrderService.create_order(db, str(company.id), company, request.model_dump(), str(user.id))
     return ApiResponse(success=True, data=_order_to_response(order))
 
 @router.get("/", response_model=ApiResponse[SupplyOrderListResponse])

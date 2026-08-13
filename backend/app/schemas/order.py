@@ -27,6 +27,7 @@ class SupplyOrderCreate(BaseModel):
     expected_date: Optional[date] = None
     place_of_supply: str
     lines: List[SupplyOrderLineCreate] = Field(..., min_length=1)
+    quotation_id: Optional[str] = None
     notes: Optional[str] = None
     terms: Optional[str] = None
 

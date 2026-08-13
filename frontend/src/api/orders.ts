@@ -24,6 +24,7 @@ export interface SupplyOrderCreateRequest {
   expected_date?: string | null;
   place_of_supply: string;
   lines: SupplyOrderLineCreate[];
+  quotation_id?: string;
   notes?: string | null;
   terms?: string | null;
 }

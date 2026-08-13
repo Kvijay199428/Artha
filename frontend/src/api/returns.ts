@@ -53,6 +53,7 @@ export interface ReturnOrderResponse {
   grand_total: number;
   created_at: string;
   lines: ReturnOrderLineResponse[];
+  settlements: any[];
 }
 
 export interface ReturnableLineResponse {
@@ -98,6 +99,10 @@ export const returnsApi = {
   },
   post: async (id: string) => {
     const response = await apiClient.post<ReturnOrderResponse>(`/returns/${id}/post`, {});
+    return response.data;
+  },
+  addSettlement: async (id: string, data: { settlement_type: string, amount: number, reference_number?: string, notes?: string }) => {
+    const response = await apiClient.post<any>(`/returns/${id}/settlements`, data);
     return response.data;
   }
 };
