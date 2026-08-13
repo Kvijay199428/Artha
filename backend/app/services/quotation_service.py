@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 from app.models.quotation import Quotation, QuotationLine, QuotationStatus, QuotationType
-from app.models.master import Item
+from app.models.item import Item
 from app.models.party import Party
 from app.core.exceptions import NotFoundException, ValidationException
 import uuid

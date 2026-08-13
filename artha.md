@@ -73,7 +73,7 @@ datefmt = %H:%M:%S
 ```python
 // File: backend/app/api/v1/__init__.py
 from fastapi import APIRouter
-from app.api.v1 import auth, company, units, items, parties, invoices, master, orders, returns
+from app.api.v1 import auth, company, units, items, parties, invoices, master, orders, returns, quotations, boq, estimates, gst
 
 api_router = APIRouter(prefix="/v1")
 api_router.include_router(auth.router)
@@ -85,6 +85,10 @@ api_router.include_router(invoices.router)
 api_router.include_router(master.router)
 api_router.include_router(orders.router)
 api_router.include_router(returns.router)
+api_router.include_router(quotations.router)
+api_router.include_router(boq.router)
+api_router.include_router(estimates.router)
+api_router.include_router(gst.router)
 ```
 
 ```python
@@ -175,6 +179,77 @@ def logout(
 ```
 
 ```python
+// File: backend/app/api/v1/boq.py
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from app.core.database import get_db
+from app.dependencies.auth import get_current_company
+from app.schemas.common import ApiResponse
+from app.schemas.boq import BOQCreate, BOQResponse, BOQListResponse
+from app.services.boq_service import BOQService
+
+router = APIRouter(prefix="/boqs", tags=["BOQ"])
+
+@router.post("/", response_model=ApiResponse[BOQResponse])
+def create_boq(request: BOQCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    boq = BOQService.create_boq(db, str(company.id), request.model_dump(), None)
+    return ApiResponse(success=True, data=_boq_to_response(boq))
+
+@router.get("/", response_model=ApiResponse[BOQListResponse])
+def list_boqs(company = Depends(get_current_company), db: Session = Depends(get_db)):
+    boqs = BOQService.list_boqs(db, str(company.id))
+    return ApiResponse(success=True, data=BOQListResponse(
+        items=[_boq_to_response(b) for b in boqs],
+        total=len(boqs)
+    ))
+
+@router.get("/{boq_id}", response_model=ApiResponse[BOQResponse])
+def get_boq(boq_id: str, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    boq = BOQService.get_boq(db, str(company.id), boq_id)
+    return ApiResponse(success=True, data=_boq_to_response(boq))
+
+@router.post("/{boq_id}/approve", response_model=ApiResponse[BOQResponse])
+def approve_boq(boq_id: str, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    boq = BOQService.approve_boq(db, str(company.id), boq_id)
+    return ApiResponse(success=True, data=_boq_to_response(boq))
+
+def _boq_to_response(boq) -> BOQResponse:
+    lines = []
+    for l in boq.lines:
+        lines.append({
+            "id": l.id,
+            "parent_line_id": l.parent_line_id,
+            "section": l.section,
+            "item_type": l.item_type.value,
+            "item_id": l.item_id,
+            "description": l.description,
+            "specification": l.specification,
+            "quantity": float(l.quantity),
+            "unit_id": l.unit_id,
+            "unit_snapshot": l.unit_snapshot,
+            "quantity_formula": l.quantity_formula,
+            "estimated_rate": float(l.estimated_rate),
+            "estimated_amount": float(l.estimated_amount),
+            "remarks": l.remarks,
+            "sort_order": l.sort_order
+        })
+        
+    return BOQResponse(
+        id=boq.id,
+        boq_number=boq.boq_number,
+        project_name=boq.project_name,
+        party_id=boq.party_id,
+        boq_date=boq.boq_date,
+        version=boq.version,
+        status=boq.status.value,
+        notes=boq.notes,
+        created_at=boq.created_at,
+        updated_at=boq.updated_at,
+        lines=lines
+    )
+```
+
+```python
 // File: backend/app/api/v1/company.py
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -224,9 +299,15 @@ def get_company(company = Depends(get_current_company), db: Session = Depends(ge
         trade_name=company.trade_name,
         ownership_type=company.ownership_type,
         status=company.status,
+        mobile_country_code=company.mobile_country_code,
         mobile=company.mobile,
+        mobile_e164=company.mobile_e164,
+        office_phone_country_code=company.office_phone_country_code,
         office_phone=company.office_phone,
+        office_phone_e164=company.office_phone_e164,
         email=company.email,
+        website=company.website,
+        logo_url=company.logo_url,
         authorized_person_name=company.authorized_person_name,
         authorized_person_designation=company.authorized_person_designation,
         gst_details={
@@ -235,6 +316,7 @@ def get_company(company = Depends(get_current_company), db: Session = Depends(ge
             "state_code": gst.state_code,
             "state_name": gst.state_name,
             "pan": gst.pan,
+            "tan": gst.tan,
             "gstin_validation_status": gst.gstin_validation_status,
         } if gst else None,
         addresses=addresses,
@@ -258,10 +340,10 @@ async def upload_company_logo(
     company = Depends(get_current_company),
     db: Session = Depends(get_db)
 ):
-    # Mock for now
-    url = f"https://storage.example.com/logos/{company.id}/{file.filename}"
-    CompanyService.update_company_logo(db, company.id, url)
-    return ApiResponse(success=True, data=CompanyLogoResponse(logo_url=url, asset_id="asset-123"))
+    from app.services.file_storage_service import FileStorageService
+    logo_metadata = await FileStorageService.save_company_logo(company.id, file)
+    company = CompanyService.update_company_logo(db, company.id, logo_metadata)
+    return ApiResponse(success=True, data=CompanyLogoResponse(logo_url=company.logo_url, asset_id=company.logo_asset_id))
 
 @router.delete("/logo", response_model=ApiResponse[bool])
 def delete_company_logo(
@@ -270,6 +352,126 @@ def delete_company_logo(
 ):
     CompanyService.update_company_logo(db, company.id, None)
     return ApiResponse(success=True, data=True)
+
+@router.get("/logo/{company_id}")
+def get_company_logo_public(company_id: str, db: Session = Depends(get_db)):
+    from fastapi.responses import FileResponse
+    from app.models.company import CompanyAsset
+    asset = db.query(CompanyAsset).filter(CompanyAsset.company_id == company_id, CompanyAsset.asset_type == "COMPANY_LOGO").order_by(CompanyAsset.created_at.desc()).first()
+    if not asset:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Logo not found")
+    from app.services.file_storage_service import FileStorageService
+    file_path = FileStorageService.get_file_path(asset.file_path)
+    return FileResponse(file_path, media_type=asset.mime_type)
+
+@router.get("/logo")
+def get_company_logo(company = Depends(get_current_company), db: Session = Depends(get_db)):
+    return get_company_logo_public(company.id, db)
+```
+
+```python
+// File: backend/app/api/v1/estimates.py
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from app.core.database import get_db
+from app.dependencies.auth import get_current_company
+from app.schemas.common import ApiResponse
+from app.schemas.estimate import EstimateCreate, EstimateResponse, EstimateListResponse
+from app.services.estimate_service import EstimateService
+
+router = APIRouter(prefix="/estimates", tags=["Estimates"])
+
+@router.post("/", response_model=ApiResponse[EstimateResponse])
+def create_estimate(request: EstimateCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    estimate = EstimateService.create_estimate(db, str(company.id), request.model_dump(), None)
+    return ApiResponse(success=True, data=_estimate_to_response(estimate))
+
+@router.get("/", response_model=ApiResponse[EstimateListResponse])
+def list_estimates(company = Depends(get_current_company), db: Session = Depends(get_db)):
+    estimates = EstimateService.list_estimates(db, str(company.id))
+    return ApiResponse(success=True, data=EstimateListResponse(
+        items=[_estimate_to_response(e) for e in estimates],
+        total=len(estimates)
+    ))
+
+@router.get("/{estimate_id}", response_model=ApiResponse[EstimateResponse])
+def get_estimate(estimate_id: str, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    estimate = EstimateService.get_estimate(db, str(company.id), estimate_id)
+    return ApiResponse(success=True, data=_estimate_to_response(estimate))
+
+@router.post("/{estimate_id}/approve", response_model=ApiResponse[EstimateResponse])
+def approve_estimate(estimate_id: str, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    estimate = EstimateService.approve_estimate(db, str(company.id), estimate_id)
+    return ApiResponse(success=True, data=_estimate_to_response(estimate))
+
+def _estimate_to_response(estimate) -> EstimateResponse:
+    lines = []
+    for l in estimate.lines:
+        lines.append({
+            "id": l.id,
+            "item_name_snapshot": l.item_name_snapshot,
+            "item_type": l.item_type,
+            "quantity": float(l.quantity),
+            "unit_snapshot": l.unit_snapshot,
+            "cost_rate": float(l.cost_rate),
+            "cost_amount": float(l.cost_amount),
+            "markup_percent": float(l.markup_percent),
+            "markup_amount": float(l.markup_amount),
+            "selling_rate": float(l.selling_rate),
+            "selling_amount": float(l.selling_amount)
+        })
+        
+    return EstimateResponse(
+        id=estimate.id,
+        estimate_number=estimate.estimate_number,
+        boq_id=estimate.boq_id,
+        party_id=estimate.party_id,
+        estimate_date=estimate.estimate_date,
+        valid_until=estimate.valid_until,
+        version=estimate.version,
+        status=estimate.status.value,
+        material_cost=float(estimate.material_cost),
+        labour_cost=float(estimate.labour_cost),
+        service_cost=float(estimate.service_cost),
+        other_cost=float(estimate.other_cost),
+        total_cost=float(estimate.total_cost),
+        markup_amount=float(estimate.markup_amount),
+        estimated_selling_value=float(estimate.estimated_selling_value),
+        gst_total=float(estimate.gst_total),
+        grand_total=float(estimate.grand_total),
+        created_at=estimate.created_at,
+        updated_at=estimate.updated_at,
+        lines=lines
+    )
+```
+
+```python
+// File: backend/app/api/v1/gst.py
+from fastapi import APIRouter
+from app.core.gst import GSTService
+from app.core.gst.schemas import GSTINValidationResult, GSTStateResponse
+from app.core.gst.state_codes import GSTStateMaster
+from app.schemas.common import ApiResponse
+
+router = APIRouter(prefix="/gst", tags=["GST"])
+
+@router.get("/validate/{gstin}")
+def validate_gstin(gstin: str) -> ApiResponse[GSTINValidationResult]:
+    result = GSTService.validate(gstin)
+    return ApiResponse(success=True, data=result)
+
+@router.get("/states")
+def list_states() -> ApiResponse[list[GSTStateResponse]]:
+    states = GSTStateMaster.all_states()
+    return ApiResponse(success=True, data=[GSTStateResponse(**s) for s in states])
+
+@router.get("/states/{code}")
+def get_state(code: str) -> ApiResponse[GSTStateResponse | None]:
+    state = GSTStateMaster.get_state(code)
+    if not state:
+        return ApiResponse(success=False, data=None)
+    return ApiResponse(success=True, data=GSTStateResponse(**state))
 ```
 
 ```python
@@ -473,7 +675,7 @@ def calculate_order(request: SupplyOrderCalculateRequest, company = Depends(get_
 
 @router.post("/", response_model=ApiResponse[SupplyOrderResponse])
 def create_order(request: SupplyOrderCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
-    order = OrderService.create_order(db, str(company.id), company, request.model_dump())
+    order = OrderService.create_order(db, str(company.id), company, request.model_dump(), None)
     return ApiResponse(success=True, data=_order_to_response(order))
 
 @router.get("/", response_model=ApiResponse[SupplyOrderListResponse])
@@ -649,11 +851,112 @@ def _party_to_response(party) -> PartyResponse:
 ```
 
 ```python
+// File: backend/app/api/v1/quotations.py
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
+from app.core.database import get_db
+from app.dependencies.auth import get_current_company
+from app.schemas.common import ApiResponse
+from app.schemas.quotation import (
+    QuotationCreate, QuotationResponse, QuotationListResponse, QuotationAcceptRequest
+)
+from app.services.quotation_service import QuotationService
+
+router = APIRouter(prefix="/quotations", tags=["Quotations"])
+
+@router.post("/", response_model=ApiResponse[QuotationResponse])
+def create_quotation(request: QuotationCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    q = QuotationService.create_quotation(db, str(company.id), request.model_dump(), None)
+    return ApiResponse(success=True, data=_quotation_to_response(q))
+
+@router.get("/", response_model=ApiResponse[QuotationListResponse])
+def list_quotations(quotation_type: str = Query(None), company = Depends(get_current_company), db: Session = Depends(get_db)):
+    quotations = QuotationService.list_quotations(db, str(company.id), quotation_type)
+    return ApiResponse(success=True, data=QuotationListResponse(
+        items=[_quotation_to_response(q) for q in quotations],
+        total=len(quotations)
+    ))
+
+@router.get("/{quotation_id}", response_model=ApiResponse[QuotationResponse])
+def get_quotation(quotation_id: str, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    q = QuotationService.get_quotation(db, str(company.id), quotation_id)
+    return ApiResponse(success=True, data=_quotation_to_response(q))
+
+@router.post("/{quotation_id}/approve", response_model=ApiResponse[QuotationResponse])
+def approve_quotation(quotation_id: str, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    q = QuotationService.approve_quotation(db, str(company.id), quotation_id)
+    return ApiResponse(success=True, data=_quotation_to_response(q))
+
+@router.post("/{quotation_id}/accept", response_model=ApiResponse[QuotationResponse])
+def accept_quotation(quotation_id: str, request: QuotationAcceptRequest, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    q = QuotationService.accept_quotation(db, str(company.id), quotation_id, None, request.acceptance_method)
+    return ApiResponse(success=True, data=_quotation_to_response(q))
+
+def _quotation_to_response(q) -> QuotationResponse:
+    lines = []
+    for l in q.lines:
+        lines.append({
+            "id": l.id,
+            "item_id": l.item_id,
+            "item_name_snapshot": l.item_name_snapshot,
+            "description": l.description,
+            "hsn_sac_snapshot": l.hsn_sac_snapshot,
+            "sku_snapshot": l.sku_snapshot,
+            "quantity": float(l.quantity),
+            "converted_quantity": float(l.converted_quantity),
+            "unit_id": l.unit_id,
+            "unit_snapshot": l.unit_snapshot,
+            "rate": float(l.rate),
+            "discount_type": l.discount_type,
+            "discount_value": float(l.discount_value),
+            "discount_amount": float(l.discount_amount),
+            "tax_treatment": l.tax_treatment,
+            "gst_rate": float(l.gst_rate),
+            "taxable_value": float(l.taxable_value),
+            "cgst_amount": float(l.cgst_amount),
+            "sgst_amount": float(l.sgst_amount),
+            "igst_amount": float(l.igst_amount),
+            "cess_amount": float(l.cess_amount),
+            "line_total": float(l.line_total)
+        })
+        
+    return QuotationResponse(
+        id=q.id,
+        quotation_number=q.quotation_number,
+        quotation_type=q.quotation_type.value,
+        tax_treatment=q.tax_treatment,
+        party_id=q.party_id,
+        quotation_date=q.quotation_date,
+        valid_until=q.valid_until,
+        status=q.status.value,
+        revision=q.revision,
+        place_of_supply=q.place_of_supply,
+        subtotal=float(q.subtotal),
+        discount_total=float(q.discount_total),
+        taxable_total=float(q.taxable_total),
+        cgst_total=float(q.cgst_total),
+        sgst_total=float(q.sgst_total),
+        igst_total=float(q.igst_total),
+        cess_total=float(q.cess_total),
+        round_off=float(q.round_off),
+        grand_total=float(q.grand_total),
+        notes=q.notes,
+        terms=q.terms,
+        accepted_at=q.accepted_at,
+        accepted_by=q.accepted_by,
+        acceptance_method=q.acceptance_method,
+        fully_converted=q.fully_converted,
+        created_at=q.created_at,
+        lines=lines
+    )
+```
+
+```python
 // File: backend/app/api/v1/returns.py
 from fastapi import APIRouter, Depends, Query, Path
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.dependencies.auth import get_current_company, get_current_user
+from app.dependencies.auth import get_current_company
 from app.schemas.common import ApiResponse
 from app.schemas.return_order import (
     ReturnOrderCreate, ReturnOrderResponse, ReturnOrderListResponse, 
@@ -669,8 +972,8 @@ def get_returnable_lines(order_id: str, company = Depends(get_current_company), 
     return ApiResponse(success=True, data=ReturnableLinesResponse(**data))
 
 @router.post("/", response_model=ApiResponse[ReturnOrderResponse])
-def create_return(request: ReturnOrderCreate, company = Depends(get_current_company), user = Depends(get_current_user), db: Session = Depends(get_db)):
-    ret = ReturnService.create_return(db, str(company.id), request.model_dump(), str(user.id))
+def create_return(request: ReturnOrderCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    ret = ReturnService.create_return(db, str(company.id), request.model_dump(), None)
     return ApiResponse(success=True, data=_return_to_response(ret))
 
 @router.get("/", response_model=ApiResponse[ReturnOrderListResponse])
@@ -687,8 +990,8 @@ def get_return(return_id: str, company = Depends(get_current_company), db: Sessi
     return ApiResponse(success=True, data=_return_to_response(ret))
 
 @router.post("/{return_id}/approve", response_model=ApiResponse[ReturnOrderResponse])
-def approve_return(return_id: str, company = Depends(get_current_company), user = Depends(get_current_user), db: Session = Depends(get_db)):
-    ret = ReturnService.approve_return(db, str(company.id), return_id, str(user.id))
+def approve_return(return_id: str, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    ret = ReturnService.approve_return(db, str(company.id), return_id, None)
     return ApiResponse(success=True, data=_return_to_response(ret))
 
 @router.post("/{return_id}/post", response_model=ApiResponse[ReturnOrderResponse])
@@ -696,9 +999,42 @@ def post_return(return_id: str, company = Depends(get_current_company), db: Sess
     ret = ReturnService.post_return(db, str(company.id), return_id)
     return ApiResponse(success=True, data=_return_to_response(ret))
 
+@router.post("/{return_id}/adjust-receivable", response_model=ApiResponse[ReturnSettlementResponse])
+def adjust_receivable(return_id: str, request: ReturnSettlementCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    request.settlement_type = "ADJUST_RECEIVABLE"
+    return _process_settlement(db, str(company.id), return_id, request)
+
+@router.post("/{return_id}/adjust-payable", response_model=ApiResponse[ReturnSettlementResponse])
+def adjust_payable(return_id: str, request: ReturnSettlementCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    request.settlement_type = "ADJUST_PAYABLE"
+    return _process_settlement(db, str(company.id), return_id, request)
+
+@router.post("/{return_id}/customer-refund", response_model=ApiResponse[ReturnSettlementResponse])
+def customer_refund(return_id: str, request: ReturnSettlementCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    request.settlement_type = "CUSTOMER_REFUND"
+    return _process_settlement(db, str(company.id), return_id, request)
+
+@router.post("/{return_id}/supplier-refund", response_model=ApiResponse[ReturnSettlementResponse])
+def supplier_refund(return_id: str, request: ReturnSettlementCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    request.settlement_type = "SUPPLIER_REFUND"
+    return _process_settlement(db, str(company.id), return_id, request)
+
+@router.post("/{return_id}/customer-credit", response_model=ApiResponse[ReturnSettlementResponse])
+def customer_credit(return_id: str, request: ReturnSettlementCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    request.settlement_type = "CUSTOMER_CREDIT"
+    return _process_settlement(db, str(company.id), return_id, request)
+
+@router.post("/{return_id}/supplier-credit", response_model=ApiResponse[ReturnSettlementResponse])
+def supplier_credit(return_id: str, request: ReturnSettlementCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
+    request.settlement_type = "SUPPLIER_CREDIT"
+    return _process_settlement(db, str(company.id), return_id, request)
+
 @router.post("/{return_id}/settlements", response_model=ApiResponse[ReturnSettlementResponse])
 def add_settlement(return_id: str, request: ReturnSettlementCreate, company = Depends(get_current_company), db: Session = Depends(get_db)):
-    settlement = ReturnService.add_settlement(db, str(company.id), return_id, request.model_dump())
+    return _process_settlement(db, str(company.id), return_id, request)
+
+def _process_settlement(db: Session, company_id: str, return_id: str, request: ReturnSettlementCreate):
+    settlement = ReturnService.add_settlement(db, company_id, return_id, request.model_dump())
     return ApiResponse(success=True, data=ReturnSettlementResponse(
         id=settlement.id,
         settlement_type=settlement.settlement_type.value,
@@ -954,6 +1290,385 @@ class InvoiceLockedException(AppException):
 ```
 
 ```python
+// File: backend/app/core/gst/__init__.py
+"""GST / Business Identity Module."""
+from .validator import GSTINValidator
+from .parser import GSTINParser
+from .state_codes import GSTStateMaster
+from .service import GSTService
+
+__all__ = ["GSTINValidator", "GSTINParser", "GSTStateMaster", "GSTService"]
+```
+
+```python
+// File: backend/app/core/gst/constants.py
+GSTIN_REGEX = r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$"
+GSTN_CHARSET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+GSTIN_LENGTH = 15
+PAN_TYPES = ["C", "P", "H", "F", "A", "T", "B", "L", "J", "G"]
+BANK_ACCOUNT_TYPES = {
+    "SAVINGS": "Savings Account",
+    "CURRENT": "Current Account",
+    "CASH_CREDIT": "Cash Credit Account",
+    "OVERDRAFT": "Overdraft Account",
+    "NRE": "NRE Account",
+    "NRO": "NRO Account",
+    "OTHER": "Other",
+}
+```
+
+```python
+// File: backend/app/core/gst/exceptions.py
+class GSTINValidationError(Exception):
+    def __init__(self, message: str, code: str = "VALIDATION_ERROR"):
+        self.message = message
+        self.code = code
+        super().__init__(self.message)
+
+class InvalidGSTINLength(GSTINValidationError):
+    def __init__(self, message: str = "GSTIN must be exactly 15 characters long"):
+        super().__init__(message, "INVALID_LENGTH")
+
+class InvalidGSTINFormat(GSTINValidationError):
+    def __init__(self, message: str = "Invalid GSTIN format"):
+        super().__init__(message, "INVALID_FORMAT")
+
+class InvalidGSTINChecksum(GSTINValidationError):
+    def __init__(self, message: str = "Invalid GSTIN checksum"):
+        super().__init__(message, "INVALID_CHECKSUM")
+
+class InvalidGSTStateCode(GSTINValidationError):
+    def __init__(self, message: str = "Invalid GST state code"):
+        super().__init__(message, "INVALID_STATE_CODE")
+```
+
+```python
+// File: backend/app/core/gst/parser.py
+from .state_codes import GSTStateMaster
+
+class GSTINParser:
+    @staticmethod
+    def parse(gstin: str) -> dict:
+        normalized = gstin.strip().upper()
+        state_code = normalized[:2] if len(normalized) >= 2 else ""
+        state_info = GSTStateMaster.get_state(state_code)
+        
+        return {
+            "raw": gstin,
+            "normalized": normalized,
+            "state_code": state_code,
+            "state": state_info["name"] if state_info else None,
+            "is_union_territory": state_info["is_union_territory"] if state_info else False,
+            "pan": normalized[2:12] if len(normalized) >= 12 else "",
+            "pan_holder_type": normalized[11] if len(normalized) >= 12 else "",
+            "entity_number": normalized[12] if len(normalized) >= 13 else "",
+            "default_character": normalized[13] if len(normalized) >= 14 else "",
+            "check_digit": normalized[14] if len(normalized) == 15 else "",
+        }
+
+    @staticmethod
+    def extract_state_code(gstin: str) -> str:
+        return gstin.strip().upper()[:2]
+
+    @staticmethod
+    def extract_state(gstin: str) -> str | None:
+        return GSTStateMaster.get_state_name(GSTINParser.extract_state_code(gstin))
+
+    @staticmethod
+    def extract_pan(gstin: str) -> str:
+        return gstin.strip().upper()[2:12]
+
+    @staticmethod
+    def extract_entity_number(gstin: str) -> str:
+        return gstin.strip().upper()[12:13]
+```
+
+```python
+// File: backend/app/core/gst/schemas.py
+from pydantic import BaseModel
+from typing import Optional
+
+class GSTINParseResult(BaseModel):
+    gstin: str
+    state_code: str
+    state: Optional[str]
+    is_union_territory: bool
+    pan: str
+    pan_holder_type: str
+    entity_number: str
+    default_character: str
+    check_digit: str
+
+class GSTINValidationResult(BaseModel):
+    gstin: str
+    valid: bool
+    valid_length: bool
+    valid_structure: bool
+    valid_state_code: bool
+    valid_checksum: bool
+    errors: list[str]
+    parsed: Optional[GSTINParseResult] = None
+    level: str
+
+class GSTStateResponse(BaseModel):
+    code: str
+    name: str
+    is_union_territory: bool
+
+class PhoneNumberInput(BaseModel):
+    country_code: str
+    number: str
+    e164: Optional[str] = None
+
+class BankAccountType(str):
+    pass
+```
+
+```python
+// File: backend/app/core/gst/service.py
+from .schemas import GSTINValidationResult, GSTINParseResult, GSTStateResponse
+from .validator import GSTINValidator
+from .parser import GSTINParser
+from .state_codes import GSTStateMaster
+
+class GSTService:
+    @staticmethod
+    def validate(gstin: str) -> GSTINValidationResult:
+        result = GSTINValidator.validate(gstin)
+        parsed = None
+        if result["valid_length"] and result["valid_structure"]:
+            parsed_dict = GSTINParser.parse(result["gstin"])
+            parsed = GSTINParseResult(
+                gstin=parsed_dict["normalized"],
+                state_code=parsed_dict["state_code"],
+                state=parsed_dict["state"],
+                is_union_territory=parsed_dict["is_union_territory"],
+                pan=parsed_dict["pan"],
+                pan_holder_type=parsed_dict["pan_holder_type"],
+                entity_number=parsed_dict["entity_number"],
+                default_character=parsed_dict["default_character"],
+                check_digit=parsed_dict["check_digit"]
+            )
+            
+        return GSTINValidationResult(
+            gstin=result["gstin"],
+            valid=result["valid"],
+            valid_length=result["valid_length"],
+            valid_structure=result["valid_structure"],
+            valid_state_code=result["valid_state_code"],
+            valid_checksum=result["valid_checksum"],
+            errors=result["errors"],
+            parsed=parsed,
+            level=result["level"]
+        )
+
+    @staticmethod
+    def parse(gstin: str) -> GSTINParseResult:
+        parsed_dict = GSTINParser.parse(gstin)
+        return GSTINParseResult(
+            gstin=parsed_dict["normalized"],
+            state_code=parsed_dict["state_code"],
+            state=parsed_dict["state"],
+            is_union_territory=parsed_dict["is_union_territory"],
+            pan=parsed_dict["pan"],
+            pan_holder_type=parsed_dict["pan_holder_type"],
+            entity_number=parsed_dict["entity_number"],
+            default_character=parsed_dict["default_character"],
+            check_digit=parsed_dict["check_digit"]
+        )
+
+    @staticmethod
+    def get_state(gstin: str) -> GSTStateResponse | None:
+        code = GSTINParser.extract_state_code(gstin)
+        state_data = GSTStateMaster.get_state(code)
+        if state_data:
+            return GSTStateResponse(**state_data)
+        return None
+
+    @staticmethod
+    def extract_pan(gstin: str) -> str:
+        return GSTINParser.extract_pan(gstin)
+
+    @staticmethod
+    def normalize(gstin: str) -> str:
+        return gstin.strip().upper()
+```
+
+```python
+// File: backend/app/core/gst/state_codes.py
+GST_STATE_CODES = {
+    "01": ("Jammu and Kashmir", False),
+    "02": ("Himachal Pradesh", False),
+    "03": ("Punjab", False),
+    "04": ("Chandigarh", True),
+    "05": ("Uttarakhand", False),
+    "06": ("Haryana", False),
+    "07": ("Delhi", True),
+    "08": ("Rajasthan", False),
+    "09": ("Uttar Pradesh", False),
+    "10": ("Bihar", False),
+    "11": ("Sikkim", False),
+    "12": ("Arunachal Pradesh", False),
+    "13": ("Nagaland", False),
+    "14": ("Manipur", False),
+    "15": ("Mizoram", False),
+    "16": ("Tripura", False),
+    "17": ("Meghalaya", False),
+    "18": ("Assam", False),
+    "19": ("West Bengal", False),
+    "20": ("Jharkhand", False),
+    "21": ("Odisha", False),
+    "22": ("Chhattisgarh", False),
+    "23": ("Madhya Pradesh", False),
+    "24": ("Gujarat", False),
+    "25": ("Daman and Diu", True),
+    "26": ("Dadra and Nagar Haveli and Daman and Diu", True),
+    "27": ("Maharashtra", False),
+    "29": ("Karnataka", False),
+    "30": ("Goa", False),
+    "31": ("Lakshadweep", True),
+    "32": ("Kerala", False),
+    "33": ("Tamil Nadu", False),
+    "34": ("Puducherry", True),
+    "35": ("Andaman and Nicobar Islands", True),
+    "36": ("Telangana", False),
+    "37": ("Andhra Pradesh", False),
+    "38": ("Ladakh", True),
+    "97": ("Other Territory", True),
+    "99": ("Centre Jurisdiction", True),
+}
+
+class GSTStateMaster:
+    @staticmethod
+    def get_state(code: str) -> dict | None:
+        state_data = GST_STATE_CODES.get(code)
+        if not state_data:
+            return None
+        return {
+            "code": code,
+            "name": state_data[0],
+            "is_union_territory": state_data[1]
+        }
+
+    @staticmethod
+    def get_state_name(code: str) -> str | None:
+        state_data = GST_STATE_CODES.get(code)
+        return state_data[0] if state_data else None
+
+    @staticmethod
+    def is_valid_state_code(code: str) -> bool:
+        return code in GST_STATE_CODES
+
+    @staticmethod
+    def all_states() -> list[dict]:
+        return [
+            {
+                "code": code,
+                "name": data[0],
+                "is_union_territory": data[1]
+            }
+            for code, data in sorted(GST_STATE_CODES.items())
+        ]
+
+    @staticmethod
+    def get_by_name(name: str) -> dict | None:
+        name_lower = name.lower()
+        for code, data in GST_STATE_CODES.items():
+            if data[0].lower() == name_lower:
+                return {
+                    "code": code,
+                    "name": data[0],
+                    "is_union_territory": data[1]
+                }
+        return None
+```
+
+```python
+// File: backend/app/core/gst/validator.py
+import re
+from .constants import GSTIN_REGEX, GSTN_CHARSET, GSTIN_LENGTH
+from .state_codes import GSTStateMaster
+from .parser import GSTINParser
+
+class GSTINValidator:
+    @staticmethod
+    def validate_length(gstin: str) -> bool:
+        return len(gstin.strip()) == GSTIN_LENGTH
+
+    @staticmethod
+    def validate_structure(gstin: str) -> bool:
+        return bool(re.match(GSTIN_REGEX, gstin.strip().upper()))
+
+    @staticmethod
+    def validate_state_code(gstin: str) -> bool:
+        code = GSTINParser.extract_state_code(gstin)
+        return GSTStateMaster.is_valid_state_code(code)
+
+    @staticmethod
+    def validate_checksum(gstin: str) -> bool:
+        gstin = gstin.strip().upper()
+        if len(gstin) != 15:
+            return False
+        
+        factor = 1
+        sum_val = 0
+        for i in range(14):
+            char = gstin[i]
+            if char not in GSTN_CHARSET:
+                return False
+            
+            val = GSTN_CHARSET.index(char)
+            val = val * factor
+            factor = 2 if factor == 1 else 1
+            
+            val = (val // 36) + (val % 36)
+            sum_val += val
+            
+        rem = sum_val % 36
+        check_digit = GSTN_CHARSET[(36 - rem) % 36]
+        
+        return gstin[14] == check_digit
+
+    @staticmethod
+    def validate(gstin: str) -> dict:
+        normalized = gstin.strip().upper()
+        valid_len = GSTINValidator.validate_length(normalized)
+        valid_struct = GSTINValidator.validate_structure(normalized)
+        valid_state = GSTINValidator.validate_state_code(normalized)
+        valid_check = GSTINValidator.validate_checksum(normalized)
+        
+        errors = []
+        if not valid_len:
+            errors.append("Invalid length")
+        if not valid_struct:
+            errors.append("Invalid structure")
+        if not valid_state:
+            errors.append("Invalid state code")
+        if valid_len and valid_struct and not valid_check:
+            errors.append("Invalid checksum")
+            
+        valid = valid_len and valid_struct and valid_state and valid_check
+        
+        if valid:
+            level = "VALID"
+        elif valid_struct and valid_state:
+            level = "STRUCTURAL"
+        else:
+            level = "INVALID"
+            
+        return {
+            "gstin": normalized,
+            "valid": valid,
+            "valid_length": valid_len,
+            "valid_structure": valid_struct,
+            "valid_state_code": valid_state,
+            "valid_checksum": valid_check,
+            "errors": errors,
+            "level": level
+        }
+```
+
+```python
 // File: backend/app/core/security.py
 import secrets
 import hashlib
@@ -1109,6 +1824,9 @@ from app.models.invoice import (
 )
 from app.models.order import SupplyOrder, SupplyOrderLine
 from app.models.return_order import ReturnOrder, ReturnOrderLine, ReturnSettlement
+from app.models.quotation import Quotation, QuotationLine, QuotationStatus, QuotationType
+from app.models.boq import BOQ, BOQLine, BOQStatus, BOQItemType, DocumentLink
+from app.models.estimate import Estimate, EstimateLine, EstimateStatus
 from app.models.audit import AuditLog
 from app.models.master import GSTStateCode, GSTRate, HSNSACCode
 
@@ -1121,6 +1839,10 @@ __all__ = [
     "Party", "PartyAddress", "PartyBankAccount", "PartyLedgerEntry", "PaymentAllocation",
     "Invoice", "InvoiceLine", "InvoiceSeries", "Payment", "CreditNote", "DebitNote",
     "SupplyOrder", "SupplyOrderLine",
+    "ReturnOrder", "ReturnOrderLine", "ReturnSettlement",
+    "Quotation", "QuotationLine", "QuotationStatus", "QuotationType",
+    "BOQ", "BOQLine", "BOQStatus", "BOQItemType", "DocumentLink",
+    "Estimate", "EstimateLine", "EstimateStatus",
     "AuditLog",
     "GSTStateCode", "GSTRate", "HSNSACCode",
 ]
@@ -1159,6 +1881,108 @@ class AuditLog(Base):
 ```
 
 ```python
+// File: backend/app/models/boq.py
+import uuid
+from datetime import datetime, timezone
+from sqlalchemy import Column, String, DateTime, Integer, ForeignKey, Numeric, Text, Enum
+from sqlalchemy.orm import relationship
+import enum
+from app.core.database import Base
+
+def utc_now():
+    return datetime.now(timezone.utc)
+
+class DocumentLink(Base):
+    __tablename__ = "document_links"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    company_id = Column(String(36), ForeignKey("companies.id"), nullable=False)
+    
+    source_type = Column(String(50), nullable=False)
+    source_id = Column(String(36), nullable=False)
+    source_revision = Column(Integer, nullable=True)
+    
+    target_type = Column(String(50), nullable=False)
+    target_id = Column(String(36), nullable=False)
+    target_revision = Column(Integer, nullable=True)
+    
+    relationship_type = Column(String(50), nullable=False) # e.g. "ESTIMATED_FROM_BOQ", "QUOTED_FROM_ESTIMATE", "CONVERTED_TO_ORDER"
+    
+    created_by = Column(String(36), nullable=True)
+    created_at = Column(DateTime, default=utc_now)
+
+class BOQStatus(enum.Enum):
+    DRAFT = "DRAFT"
+    REVIEW = "REVIEW"
+    APPROVED = "APPROVED"
+    PRICED = "PRICED"
+    FINALIZED = "FINALIZED"
+    CANCELLED = "CANCELLED"
+    ARCHIVED = "ARCHIVED"
+
+class BOQItemType(enum.Enum):
+    MATERIAL = "MATERIAL"
+    LABOUR = "LABOUR"
+    SERVICE = "SERVICE"
+    EQUIPMENT = "EQUIPMENT"
+    SUBCONTRACT = "SUBCONTRACT"
+    OTHER = "OTHER"
+
+class BOQ(Base):
+    __tablename__ = "boqs"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    company_id = Column(String(36), ForeignKey("companies.id"), nullable=False)
+    
+    boq_number = Column(String(50), nullable=True)
+    project_name = Column(String(200), nullable=True)
+    
+    party_id = Column(String(36), ForeignKey("parties.id"), nullable=True)
+    
+    boq_date = Column(DateTime, nullable=False, default=utc_now)
+    version = Column(Integer, default=1)
+    status = Column(Enum(BOQStatus), default=BOQStatus.DRAFT)
+    
+    notes = Column(Text, nullable=True)
+    
+    created_by = Column(String(36), nullable=True)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+    
+    lines = relationship("BOQLine", back_populates="boq", cascade="all, delete-orphan")
+
+class BOQLine(Base):
+    __tablename__ = "boq_lines"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    boq_id = Column(String(36), ForeignKey("boqs.id"), nullable=False)
+    
+    parent_line_id = Column(String(36), ForeignKey("boq_lines.id"), nullable=True)
+    
+    section = Column(String(100), nullable=True)
+    item_type = Column(Enum(BOQItemType), default=BOQItemType.MATERIAL)
+    
+    item_id = Column(String(36), nullable=True)
+    description = Column(String(255), nullable=False)
+    specification = Column(Text, nullable=True)
+    
+    quantity = Column(Numeric(15, 5), nullable=False)
+    unit_id = Column(String(36), nullable=True)
+    unit_snapshot = Column(String(50), nullable=True)
+    
+    quantity_formula = Column(String(255), nullable=True)
+    
+    estimated_rate = Column(Numeric(15, 4), default=0)
+    estimated_amount = Column(Numeric(15, 2), default=0)
+    
+    remarks = Column(Text, nullable=True)
+    sort_order = Column(Integer, default=0)
+    
+    boq = relationship("BOQ", back_populates="lines")
+    children = relationship("BOQLine")
+```
+
+```python
 // File: backend/app/models/company.py
 import uuid
 from datetime import datetime, timezone
@@ -1180,10 +2004,15 @@ class Company(Base):
     ownership_type = Column(String(50), nullable=False)
     status = Column(String(20), default="SETUP_IN_PROGRESS")  # SETUP_IN_PROGRESS, ACTIVE, LOCKED, SUSPENDED, DEACTIVATED
     
+    mobile_country_code = Column(String(5), default="+91", nullable=True)
     mobile = Column(String(20), nullable=False)
+    mobile_e164 = Column(String(20), nullable=True)
+    office_phone_country_code = Column(String(5), nullable=True)
     office_phone = Column(String(20), nullable=True)
+    office_phone_e164 = Column(String(20), nullable=True)
     email = Column(String(100), nullable=False)
-    website = Column(String(200), nullable=True)
+    website = Column(String(300), nullable=True)
+    logo_url = Column(String(500), nullable=True)
     
     authorized_person_name = Column(String(100), nullable=False)
     authorized_person_designation = Column(String(100), nullable=True)
@@ -1213,6 +2042,7 @@ class CompanyGSTDetail(Base):
     state_code = Column(String(2), nullable=True)
     state_name = Column(String(100), nullable=True)
     pan = Column(String(10), nullable=True)
+    tan = Column(String(10), nullable=True)
     registration_number = Column(String(1), nullable=True)
     gstin_character_14 = Column(String(1), nullable=True)
     checksum = Column(String(1), nullable=True)
@@ -1267,7 +2097,7 @@ class CompanyBankAccount(Base):
     bank_name = Column(String(100), nullable=True)
     branch = Column(String(100), nullable=False)
     branch_address = Column(String(200), nullable=True)
-    account_type = Column(String(20), default="Current")
+    account_type = Column(String(30), default="CURRENT")  # SAVINGS, CURRENT, CASH_CREDIT, OVERDRAFT, NRE, NRO, OTHER
     upi_id = Column(String(100), nullable=True)
     is_primary = Column(Boolean, default=True)
     status = Column(String(20), default="ACTIVE")
@@ -1285,6 +2115,9 @@ class CompanyAsset(Base):
     file_size = Column(Integer, nullable=False)
     width = Column(Integer, nullable=True)
     height = Column(Integer, nullable=True)
+    original_width = Column(Integer, nullable=True)
+    original_height = Column(Integer, nullable=True)
+    standardized = Column(Boolean, default=False)
     created_at = Column(DateTime, default=utc_now)
 
 class CompanyAuth(Base):
@@ -1317,6 +2150,83 @@ class CompanySession(Base):
     user_agent = Column(String(500), nullable=True)
     
     company = relationship("Company", back_populates="sessions")
+```
+
+```python
+// File: backend/app/models/estimate.py
+import uuid
+from datetime import datetime, timezone
+from sqlalchemy import Column, String, DateTime, Integer, ForeignKey, Numeric, Text, Enum
+from sqlalchemy.orm import relationship
+import enum
+from app.core.database import Base
+
+def utc_now():
+    return datetime.now(timezone.utc)
+
+class EstimateStatus(enum.Enum):
+    DRAFT = "DRAFT"
+    REVIEW = "REVIEW"
+    APPROVED = "APPROVED"
+    CANCELLED = "CANCELLED"
+    CONVERTED_TO_QUOTATION = "CONVERTED_TO_QUOTATION"
+
+class Estimate(Base):
+    __tablename__ = "estimates"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    company_id = Column(String(36), ForeignKey("companies.id"), nullable=False)
+    
+    estimate_number = Column(String(50), nullable=True)
+    boq_id = Column(String(36), ForeignKey("boqs.id"), nullable=True)
+    party_id = Column(String(36), ForeignKey("parties.id"), nullable=True)
+    
+    estimate_date = Column(DateTime, nullable=False, default=utc_now)
+    valid_until = Column(DateTime, nullable=True)
+    
+    version = Column(Integer, default=1)
+    status = Column(Enum(EstimateStatus), default=EstimateStatus.DRAFT)
+    
+    material_cost = Column(Numeric(15, 2), default=0)
+    labour_cost = Column(Numeric(15, 2), default=0)
+    service_cost = Column(Numeric(15, 2), default=0)
+    other_cost = Column(Numeric(15, 2), default=0)
+    
+    total_cost = Column(Numeric(15, 2), default=0)
+    markup_amount = Column(Numeric(15, 2), default=0)
+    estimated_selling_value = Column(Numeric(15, 2), default=0)
+    
+    gst_total = Column(Numeric(15, 2), default=0)
+    grand_total = Column(Numeric(15, 2), default=0)
+    
+    created_by = Column(String(36), nullable=True)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+    
+    lines = relationship("EstimateLine", back_populates="estimate", cascade="all, delete-orphan")
+
+class EstimateLine(Base):
+    __tablename__ = "estimate_lines"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    estimate_id = Column(String(36), ForeignKey("estimates.id"), nullable=False)
+    
+    item_name_snapshot = Column(String(255), nullable=False)
+    item_type = Column(String(50), nullable=True) # Matches BOQItemType
+    
+    quantity = Column(Numeric(15, 5), nullable=False)
+    unit_snapshot = Column(String(50), nullable=True)
+    
+    cost_rate = Column(Numeric(15, 4), default=0)
+    cost_amount = Column(Numeric(15, 2), default=0)
+    
+    markup_percent = Column(Numeric(5, 2), default=0)
+    markup_amount = Column(Numeric(15, 2), default=0)
+    
+    selling_rate = Column(Numeric(15, 4), default=0)
+    selling_amount = Column(Numeric(15, 2), default=0)
+    
+    estimate = relationship("Estimate", back_populates="lines")
 ```
 
 ```python
@@ -1591,7 +2501,7 @@ from sqlalchemy import Column, String, Date, Numeric, ForeignKey, Enum, Text, In
 from sqlalchemy.orm import relationship
 import enum
 from app.core.database import Base
-from app.models.audit import AuditableMixin
+
 
 class OrderType(str, enum.Enum):
     PURCHASE = "PURCHASE"
@@ -1609,7 +2519,7 @@ class OrderStatus(str, enum.Enum):
     CLOSED = "CLOSED"
     CANCELLED = "CANCELLED"
 
-class SupplyOrder(Base, AuditableMixin):
+class SupplyOrder(Base):
     __tablename__ = "supply_orders"
 
     id = Column(String(36), primary_key=True)
@@ -1710,14 +2620,20 @@ class Party(Base):
     party_type = Column(String(50), nullable=False)  # Individual, Proprietorship, Partnership, LLP, Company, Other
     account_type = Column(String(20), nullable=False)  # CUSTOMER, SUPPLIER, BOTH
     contact_person = Column(String(100), nullable=True)
+    mobile_country_code = Column(String(5), default="+91", nullable=True)
     mobile = Column(String(20), nullable=True)
+    mobile_e164 = Column(String(20), nullable=True)
     alternate_mobile = Column(String(20), nullable=True)
+    office_phone_country_code = Column(String(5), nullable=True)
+    office_phone = Column(String(20), nullable=True)
+    office_phone_e164 = Column(String(20), nullable=True)
     email = Column(String(100), nullable=True)
-    website = Column(String(200), nullable=True)
+    website = Column(String(300), nullable=True)
     gstin = Column(String(15), nullable=True)
     gst_registration_type = Column(String(30), default="Regular")  # Regular, Composition, Unregistered, SEZ
     gstin_status = Column(String(20), default="Unknown")  # Active, Cancelled, Suspended
     pan = Column(String(10), nullable=True)
+    tan = Column(String(10), nullable=True)
     state = Column(String(100), nullable=True)
     state_code = Column(String(2), nullable=True)
     place_of_supply = Column(String(100), nullable=True)
@@ -1763,6 +2679,7 @@ class PartyBankAccount(Base):
     branch_name = Column(String(100), nullable=True)
     account_number = Column(String(50), nullable=True)
     ifsc = Column(String(20), nullable=True)
+    account_type = Column(String(30), default="CURRENT", nullable=True)  # SAVINGS, CURRENT, CASH_CREDIT, OVERDRAFT, NRE, NRO, OTHER
     upi_id = Column(String(100), nullable=True)
     is_primary = Column(Boolean, default=True)
     status = Column(String(20), default="ACTIVE")
@@ -1800,6 +2717,126 @@ class PaymentAllocation(Base):
     invoice_id = Column(String(36), nullable=False)
     allocated_amount = Column(Numeric(15, 2), nullable=False)
     allocation_date = Column(DateTime, default=utc_now)
+```
+
+```python
+// File: backend/app/models/quotation.py
+import uuid
+from datetime import datetime, timezone
+from sqlalchemy import Column, String, DateTime, Integer, ForeignKey, Numeric, Text, Enum, Boolean
+from sqlalchemy.orm import relationship
+import enum
+from app.core.database import Base
+
+def utc_now():
+    return datetime.now(timezone.utc)
+
+class QuotationType(enum.Enum):
+    SALES = "SALES"
+    PURCHASE = "PURCHASE"
+
+class QuotationStatus(enum.Enum):
+    DRAFT = "DRAFT"
+    PENDING_REVIEW = "PENDING_REVIEW"
+    APPROVED = "APPROVED"
+    SENT = "SENT"
+    VIEWED = "VIEWED"
+    ACCEPTED = "ACCEPTED"
+    REJECTED = "REJECTED"
+    EXPIRED = "EXPIRED"
+    CANCELLED = "CANCELLED"
+    WITHDRAWN = "WITHDRAWN"
+
+class Quotation(Base):
+    __tablename__ = "quotations"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    company_id = Column(String(36), ForeignKey("companies.id"), nullable=False)
+    
+    quotation_number = Column(String(50), nullable=True)
+    quotation_type = Column(Enum(QuotationType), nullable=False)
+    tax_treatment = Column(String(20), nullable=False)
+    
+    quotation_date = Column(DateTime, nullable=False, default=utc_now)
+    valid_until = Column(DateTime, nullable=False)
+    
+    party_id = Column(String(36), ForeignKey("parties.id"), nullable=False)
+    
+    status = Column(Enum(QuotationStatus), default=QuotationStatus.DRAFT)
+    revision = Column(Integer, default=1)
+    
+    source_boq_id = Column(String(36), nullable=True)
+    source_estimate_id = Column(String(36), nullable=True)
+    
+    place_of_supply = Column(String(100), nullable=False)
+    
+    # Financial Totals
+    subtotal = Column(Numeric(15, 2), default=0)
+    discount_total = Column(Numeric(15, 2), default=0)
+    taxable_total = Column(Numeric(15, 2), default=0)
+    
+    cgst_total = Column(Numeric(15, 2), default=0)
+    sgst_total = Column(Numeric(15, 2), default=0)
+    igst_total = Column(Numeric(15, 2), default=0)
+    cess_total = Column(Numeric(15, 2), default=0)
+    
+    round_off = Column(Numeric(15, 2), default=0)
+    grand_total = Column(Numeric(15, 2), default=0)
+    amount_in_words = Column(String(500), nullable=True)
+    
+    notes = Column(Text, nullable=True)
+    terms = Column(Text, nullable=True)
+    
+    accepted_at = Column(DateTime, nullable=True)
+    accepted_by = Column(String(36), nullable=True)
+    acceptance_method = Column(String(50), nullable=True)
+    
+    created_by = Column(String(36), nullable=True)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+    
+    # Conversion Tracking
+    converted_quantity_total = Column(Numeric(15, 5), default=0)
+    fully_converted = Column(Boolean, default=False)
+    
+    lines = relationship("QuotationLine", back_populates="quotation", cascade="all, delete-orphan")
+
+class QuotationLine(Base):
+    __tablename__ = "quotation_lines"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    quotation_id = Column(String(36), ForeignKey("quotations.id"), nullable=False)
+    
+    item_id = Column(String(36), nullable=True)
+    item_name_snapshot = Column(String(200), nullable=False)
+    sku_snapshot = Column(String(100), nullable=True)
+    hsn_sac_snapshot = Column(String(20), nullable=True)
+    description = Column(Text, nullable=True)
+    
+    quantity = Column(Numeric(15, 5), nullable=False)
+    converted_quantity = Column(Numeric(15, 5), default=0)
+    
+    unit_id = Column(String(36), nullable=True)
+    unit_snapshot = Column(String(50), nullable=True)
+    
+    rate = Column(Numeric(15, 4), nullable=False)
+    
+    discount_type = Column(String(20), nullable=True)
+    discount_value = Column(Numeric(15, 4), default=0)
+    discount_amount = Column(Numeric(15, 2), default=0)
+    
+    tax_treatment = Column(String(20), nullable=False)
+    gst_rate = Column(Numeric(5, 2), default=0)
+    
+    taxable_value = Column(Numeric(15, 2), default=0)
+    cgst_amount = Column(Numeric(15, 2), default=0)
+    sgst_amount = Column(Numeric(15, 2), default=0)
+    igst_amount = Column(Numeric(15, 2), default=0)
+    cess_amount = Column(Numeric(15, 2), default=0)
+    
+    line_total = Column(Numeric(15, 2), default=0)
+    
+    quotation = relationship("Quotation", back_populates="lines")
 ```
 
 ```python
@@ -2048,6 +3085,7 @@ class CompanySetupRequest(BaseModel):
     ownership_type: str = Field(...)
     gst_registered: bool = True
     gstin: str | None = Field(None, max_length=15)
+    tan: str | None = Field(None, max_length=10)
     address_line_1: str = Field(..., min_length=1, max_length=200)
     address_line_2: str | None = Field(None, max_length=200)
     city: str = Field(..., min_length=1, max_length=100)
@@ -2056,7 +3094,9 @@ class CompanySetupRequest(BaseModel):
     state_code: str = Field(..., min_length=1, max_length=2)
     pincode: str = Field(..., min_length=4, max_length=10)
     country: str = Field(default="India")
+    mobile_country_code: str = Field(default="+91")
     mobile: str = Field(..., min_length=10, max_length=20)
+    office_phone_country_code: str | None = Field(None, max_length=5)
     office_phone: str | None = Field(None, max_length=20)
     email: str = Field(..., max_length=100)
     authorized_person_name: str = Field(..., min_length=1, max_length=100)
@@ -2088,6 +3128,71 @@ class CompanyProfileResponse(BaseModel):
     email: str
     authorized_person_name: str
     logo_url: str | None
+```
+
+```python
+// File: backend/app/schemas/boq.py
+from pydantic import BaseModel
+from typing import List, Optional
+from datetime import date, datetime
+from decimal import Decimal
+from app.models.boq import BOQStatus, BOQItemType
+
+class BOQLineCreate(BaseModel):
+    parent_line_id: Optional[str] = None
+    section: Optional[str] = None
+    item_type: BOQItemType = BOQItemType.MATERIAL
+    item_id: Optional[str] = None
+    description: str
+    specification: Optional[str] = None
+    quantity: Decimal
+    unit_id: Optional[str] = None
+    unit_snapshot: Optional[str] = None
+    quantity_formula: Optional[str] = None
+    estimated_rate: Optional[Decimal] = Decimal('0')
+    remarks: Optional[str] = None
+    sort_order: int = 0
+
+class BOQCreate(BaseModel):
+    project_name: Optional[str] = None
+    party_id: Optional[str] = None
+    boq_date: datetime
+    notes: Optional[str] = None
+    lines: List[BOQLineCreate]
+
+class BOQLineResponse(BaseModel):
+    id: str
+    parent_line_id: Optional[str]
+    section: Optional[str]
+    item_type: str
+    item_id: Optional[str]
+    description: str
+    specification: Optional[str]
+    quantity: float
+    unit_id: Optional[str]
+    unit_snapshot: Optional[str]
+    quantity_formula: Optional[str]
+    estimated_rate: float
+    estimated_amount: float
+    remarks: Optional[str]
+    sort_order: int
+
+class BOQResponse(BaseModel):
+    id: str
+    boq_number: Optional[str]
+    project_name: Optional[str]
+    party_id: Optional[str]
+    boq_date: datetime
+    version: int
+    status: str
+    notes: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+    lines: List[BOQLineResponse]
+
+class BOQListResponse(BaseModel):
+    items: List[BOQResponse]
+    total: int
 ```
 
 ```python
@@ -2143,6 +3248,7 @@ class CompanyGSTDetailSchema(BaseModel):
     state_code: Optional[str]
     state_name: Optional[str]
     pan: Optional[str]
+    tan: Optional[str]
     gstin_validation_status: str
 
 class CompanyDetailResponse(BaseModel):
@@ -2152,9 +3258,15 @@ class CompanyDetailResponse(BaseModel):
     trade_name: Optional[str]
     ownership_type: str
     status: str
+    mobile_country_code: Optional[str] = "+91"
     mobile: str
+    mobile_e164: Optional[str] = None
+    office_phone_country_code: Optional[str] = None
     office_phone: Optional[str]
+    office_phone_e164: Optional[str] = None
     email: str
+    website: Optional[str] = None
+    logo_url: Optional[str] = None
     authorized_person_name: str
     authorized_person_designation: Optional[str]
     gst_details: Optional[CompanyGSTDetailSchema]
@@ -2176,6 +3288,69 @@ class CompanyUpdate(BaseModel):
 class CompanyLogoResponse(BaseModel):
     logo_url: str
     asset_id: str
+```
+
+```python
+// File: backend/app/schemas/estimate.py
+from pydantic import BaseModel
+from typing import List, Optional
+from datetime import date, datetime
+from decimal import Decimal
+from app.models.estimate import EstimateStatus
+
+class EstimateLineCreate(BaseModel):
+    item_name_snapshot: str
+    item_type: Optional[str] = None
+    quantity: Decimal
+    unit_snapshot: Optional[str] = None
+    cost_rate: Optional[Decimal] = Decimal('0')
+    markup_percent: Optional[Decimal] = Decimal('0')
+
+class EstimateCreate(BaseModel):
+    boq_id: Optional[str] = None
+    party_id: Optional[str] = None
+    estimate_date: datetime
+    valid_until: Optional[datetime] = None
+    lines: List[EstimateLineCreate]
+
+class EstimateLineResponse(BaseModel):
+    id: str
+    item_name_snapshot: str
+    item_type: Optional[str]
+    quantity: float
+    unit_snapshot: Optional[str]
+    cost_rate: float
+    cost_amount: float
+    markup_percent: float
+    markup_amount: float
+    selling_rate: float
+    selling_amount: float
+
+class EstimateResponse(BaseModel):
+    id: str
+    estimate_number: Optional[str]
+    boq_id: Optional[str]
+    party_id: Optional[str]
+    estimate_date: datetime
+    valid_until: Optional[datetime]
+    version: int
+    status: str
+    material_cost: float
+    labour_cost: float
+    service_cost: float
+    other_cost: float
+    total_cost: float
+    markup_amount: float
+    estimated_selling_value: float
+    gst_total: float
+    grand_total: float
+    created_at: datetime
+    updated_at: datetime
+    lines: List[EstimateLineResponse]
+
+class EstimateListResponse(BaseModel):
+    items: List[EstimateResponse]
+    total: int
 ```
 
 ```python
@@ -2353,6 +3528,7 @@ class SupplyOrderCreate(BaseModel):
     expected_date: Optional[date] = None
     place_of_supply: str
     lines: List[SupplyOrderLineCreate] = Field(..., min_length=1)
+    quotation_id: Optional[str] = None
     notes: Optional[str] = None
     terms: Optional[str] = None
 
@@ -2454,6 +3630,7 @@ class PartyBankAccountCreate(BaseModel):
     branch_name: Optional[str] = Field(None, max_length=100)
     account_number: Optional[str] = Field(None, max_length=50)
     ifsc: Optional[str] = Field(None, max_length=20)
+    account_type: Optional[str] = Field("CURRENT", max_length=30)
     upi_id: Optional[str] = Field(None, max_length=100)
     is_primary: bool = True
 
@@ -2463,12 +3640,19 @@ class PartyCreate(BaseModel):
     party_type: str = Field(default="Proprietorship")
     account_type: str = Field(..., pattern="^(CUSTOMER|SUPPLIER|BOTH)$")
     contact_person: Optional[str] = Field(None, max_length=100)
+    mobile_country_code: Optional[str] = Field(default="+91", max_length=5)
     mobile: Optional[str] = Field(None, max_length=20)
+    mobile_e164: Optional[str] = Field(None, max_length=20)
     alternate_mobile: Optional[str] = Field(None, max_length=20)
+    office_phone_country_code: Optional[str] = Field(None, max_length=5)
+    office_phone: Optional[str] = Field(None, max_length=20)
+    office_phone_e164: Optional[str] = Field(None, max_length=20)
     email: Optional[str] = Field(None, max_length=100)
+    website: Optional[str] = Field(None, max_length=300)
     gstin: Optional[str] = Field(None, max_length=15)
     gst_registration_type: str = Field(default="Regular")
     pan: Optional[str] = Field(None, max_length=10)
+    tan: Optional[str] = Field(None, max_length=10)
     state: Optional[str] = Field(None, max_length=100)
     state_code: Optional[str] = Field(None, max_length=2)
     place_of_supply: Optional[str] = Field(None, max_length=100)
@@ -2485,11 +3669,19 @@ class PartyUpdate(BaseModel):
     party_type: Optional[str] = None
     account_type: Optional[str] = Field(None, pattern="^(CUSTOMER|SUPPLIER|BOTH)$")
     contact_person: Optional[str] = None
+    mobile_country_code: Optional[str] = None
     mobile: Optional[str] = None
+    mobile_e164: Optional[str] = None
+    alternate_mobile: Optional[str] = None
+    office_phone_country_code: Optional[str] = None
+    office_phone: Optional[str] = None
+    office_phone_e164: Optional[str] = None
     email: Optional[str] = None
+    website: Optional[str] = None
     gstin: Optional[str] = Field(None, max_length=15)
     gst_registration_type: Optional[str] = None
     pan: Optional[str] = Field(None, max_length=10)
+    tan: Optional[str] = Field(None, max_length=10)
     state: Optional[str] = None
     state_code: Optional[str] = None
     place_of_supply: Optional[str] = None
@@ -2508,11 +3700,19 @@ class PartyResponse(BaseModel):
     party_type: str
     account_type: str
     contact_person: Optional[str]
+    mobile_country_code: Optional[str]
     mobile: Optional[str]
+    mobile_e164: Optional[str]
+    alternate_mobile: Optional[str]
+    office_phone_country_code: Optional[str]
+    office_phone: Optional[str]
+    office_phone_e164: Optional[str]
     email: Optional[str]
+    website: Optional[str]
     gstin: Optional[str]
     gst_registration_type: str
     pan: Optional[str]
+    tan: Optional[str]
     state: Optional[str]
     state_code: Optional[str]
     place_of_supply: Optional[str]
@@ -2528,6 +3728,118 @@ class PartyResponse(BaseModel):
 
 class PartyListResponse(BaseModel):
     items: list[PartyResponse]
+```
+
+```python
+// File: backend/app/schemas/quotation.py
+from pydantic import BaseModel
+from typing import List, Optional
+from datetime import date, datetime
+from decimal import Decimal
+from app.models.quotation import QuotationStatus, QuotationType
+
+class QuotationLineCreate(BaseModel):
+    item_id: Optional[str] = None
+    item_name_snapshot: str
+    description: Optional[str] = None
+    hsn_sac_snapshot: Optional[str] = None
+    sku_snapshot: Optional[str] = None
+    
+    quantity: Decimal
+    unit_id: Optional[str] = None
+    unit_snapshot: Optional[str] = None
+    
+    rate: Decimal
+    discount_type: Optional[str] = None
+    discount_value: Optional[Decimal] = Decimal('0')
+    gst_rate: Optional[Decimal] = Decimal('0')
+
+class QuotationCreate(BaseModel):
+    quotation_type: QuotationType
+    tax_treatment: str
+    party_id: str
+    
+    valid_until: datetime
+    place_of_supply: str
+    
+    notes: Optional[str] = None
+    terms: Optional[str] = None
+    
+    lines: List[QuotationLineCreate]
+
+class QuotationLineResponse(BaseModel):
+    id: str
+    item_id: Optional[str]
+    item_name_snapshot: str
+    description: Optional[str]
+    hsn_sac_snapshot: Optional[str]
+    sku_snapshot: Optional[str]
+    
+    quantity: float
+    converted_quantity: float
+    unit_id: Optional[str]
+    unit_snapshot: Optional[str]
+    
+    rate: float
+    discount_type: Optional[str]
+    discount_value: float
+    discount_amount: float
+    
+    tax_treatment: str
+    gst_rate: float
+    
+    taxable_value: float
+    cgst_amount: float
+    sgst_amount: float
+    igst_amount: float
+    cess_amount: float
+    
+    line_total: float
+
+class QuotationResponse(BaseModel):
+    id: str
+    quotation_number: Optional[str]
+    quotation_type: str
+    tax_treatment: str
+    party_id: str
+    
+    quotation_date: datetime
+    valid_until: datetime
+    
+    status: str
+    revision: int
+    
+    place_of_supply: str
+    
+    subtotal: float
+    discount_total: float
+    taxable_total: float
+    cgst_total: float
+    sgst_total: float
+    igst_total: float
+    cess_total: float
+    round_off: float
+    grand_total: float
+    
+    notes: Optional[str]
+    terms: Optional[str]
+    
+    accepted_at: Optional[datetime]
+    accepted_by: Optional[str]
+    acceptance_method: Optional[str]
+    
+    fully_converted: bool
+    
+    created_at: datetime
+    
+    lines: List[QuotationLineResponse]
+
+class QuotationListResponse(BaseModel):
+    items: List[QuotationResponse]
+    total: int
+
+class QuotationAcceptRequest(BaseModel):
+    acceptance_method: str = "USER_ACCEPTED"
 ```
 
 ```python
@@ -2902,13 +4214,94 @@ class AuthService:
 ```
 
 ```python
+// File: backend/app/services/boq_service.py
+from sqlalchemy.orm import Session
+from app.models.boq import BOQ, BOQLine, BOQStatus, BOQItemType
+from app.core.exceptions import NotFoundException, ValidationException
+import uuid
+from datetime import datetime, timezone
+from decimal import Decimal
+
+def utc_now():
+    return datetime.now(timezone.utc)
+
+class BOQService:
+    @staticmethod
+    def create_boq(db: Session, company_id: str, data: dict, user_id: str = None) -> BOQ:
+        boq = BOQ(
+            id=str(uuid.uuid4()),
+            company_id=company_id,
+            boq_number=f"BOQ-{str(uuid.uuid4())[:6].upper()}",
+            project_name=data.get("project_name"),
+            party_id=data.get("party_id"),
+            boq_date=data["boq_date"],
+            notes=data.get("notes"),
+            status=BOQStatus.DRAFT,
+            created_by=user_id
+        )
+        
+        db.add(boq)
+        
+        for line_data in data["lines"]:
+            qty = Decimal(str(line_data["quantity"]))
+            rate = Decimal(str(line_data.get("estimated_rate") or '0'))
+            amount = qty * rate
+            
+            line = BOQLine(
+                id=str(uuid.uuid4()),
+                boq_id=boq.id,
+                parent_line_id=line_data.get("parent_line_id"),
+                section=line_data.get("section"),
+                item_type=BOQItemType(line_data.get("item_type", "MATERIAL")),
+                item_id=line_data.get("item_id"),
+                description=line_data["description"],
+                specification=line_data.get("specification"),
+                quantity=qty,
+                unit_id=line_data.get("unit_id"),
+                unit_snapshot=line_data.get("unit_snapshot"),
+                quantity_formula=line_data.get("quantity_formula"),
+                estimated_rate=rate,
+                estimated_amount=amount,
+                remarks=line_data.get("remarks"),
+                sort_order=line_data.get("sort_order", 0)
+            )
+            db.add(line)
+            
+        db.commit()
+        db.refresh(boq)
+        return boq
+
+    @staticmethod
+    def get_boq(db: Session, company_id: str, boq_id: str) -> BOQ:
+        boq = db.query(BOQ).filter(BOQ.id == boq_id, BOQ.company_id == company_id).first()
+        if not boq:
+            raise NotFoundException("BOQ not found")
+        return boq
+
+    @staticmethod
+    def list_boqs(db: Session, company_id: str) -> list[BOQ]:
+        return db.query(BOQ).filter(BOQ.company_id == company_id).order_by(BOQ.created_at.desc()).all()
+
+    @staticmethod
+    def approve_boq(db: Session, company_id: str, boq_id: str) -> BOQ:
+        boq = BOQService.get_boq(db, company_id, boq_id)
+        if boq.status != BOQStatus.DRAFT:
+            raise ValidationException("Only DRAFT BOQ can be approved")
+            
+        boq.status = BOQStatus.APPROVED
+        db.commit()
+        db.refresh(boq)
+        return boq
+```
+
+```python
 // File: backend/app/services/company_service.py
 from sqlalchemy.orm import Session
 from app.models.company import Company, CompanyGSTDetail, CompanyAddress, CompanyBankAccount, CompanyAuth
 from app.schemas.auth import CompanySetupRequest
 from app.core.security import hash_pin, generate_id
 from app.core.exceptions import ValidationException, ConflictException
-from app.utils.gstin import validate_gstin
+from app.core.gst import GSTService
 
 class CompanyService:
     @staticmethod
@@ -2927,7 +4320,9 @@ class CompanyService:
             ownership_type=data.ownership_type,
             status="ACTIVE",
             mobile=data.mobile,
+            mobile_country_code=data.mobile_country_code,
             office_phone=data.office_phone,
+            office_phone_country_code=data.office_phone_country_code,
             email=data.email,
             authorized_person_name=data.authorized_person_name,
             authorized_person_designation=data.authorized_person_designation,
@@ -2938,19 +4333,23 @@ class CompanyService:
         # GST details
         gst_detail = None
         if data.gst_registered and data.gstin:
-            gst_validation = validate_gstin(data.gstin)
-            if not gst_validation["valid"]:
+            gst_validation = GSTService.validate(data.gstin)
+            if not gst_validation.valid:
                 raise ValidationException("Invalid GSTIN. Please check the 15-character GST number.")
+            
+            parsed = GSTService.parse(data.gstin)
             
             gst_detail = CompanyGSTDetail(
                 company_id=company.id,
-                gstin=gst_validation["normalized"],
-                state_code=gst_validation["state_code"],
-                pan=gst_validation["pan"],
-                registration_number=gst_validation["registration_number"],
-                gstin_character_14=gst_validation["default_code"],
-                checksum=gst_validation["checksum"],
-                gstin_validation_status="VALID" if gst_validation["valid"] else "INVALID",
+                gstin=gst_validation.gstin,
+                state_code=parsed.state_code,
+                state_name=parsed.state,
+                pan=parsed.pan,
+                tan=data.tan,
+                registration_number=parsed.entity_number,
+                gstin_character_14=parsed.default_character,
+                checksum=parsed.check_digit,
+                gstin_validation_status="VALID",
             )
             db.add(gst_detail)
         
@@ -3021,11 +4420,41 @@ class CompanyService:
         return company
     
     @staticmethod
-    def update_company_logo(db: Session, company_id: str, logo_url: str):
-        # We will assume FileStorageService handles the physical upload and returns a URL or Asset ID
+    def update_company_logo(db: Session, company_id: str, logo_metadata: dict) -> Company:
         company = db.query(Company).filter(Company.id == company_id).first()
-        # You can store logo in Company model or CompanyAsset model. For now we will assume Company model has a logo_url (needs to be added if missing) or we just return success.
-        pass
+        if not company:
+            raise ValidationException("Company not found")
+        
+        if not logo_metadata:
+            company.logo_asset_id = None
+            company.logo_url = None
+            db.commit()
+            return company
+
+        from app.models.company import CompanyAsset
+        # Store in CompanyAsset
+        asset = CompanyAsset(
+            company_id=company_id,
+            asset_type="COMPANY_LOGO",
+            file_path=logo_metadata["file_path"],
+            mime_type=logo_metadata["mime_type"],
+            file_size=logo_metadata["file_size"],
+            width=logo_metadata.get("standardized_width"),
+            height=logo_metadata.get("standardized_height"),
+            original_width=logo_metadata.get("original_width"),
+            original_height=logo_metadata.get("original_height"),
+            standardized=True
+        )
+        db.add(asset)
+        db.flush()
+        
+        # Update logo reference on company
+        from app.services.file_storage_service import FileStorageService
+        company.logo_asset_id = asset.id
+        company.logo_url = FileStorageService.get_logo_serve_url(company_id)
+        db.commit()
+        db.refresh(company)
+        return company
         
     @staticmethod
     def change_pin(db: Session, company_id: str, old_pin: str, new_pin: str):
@@ -3036,6 +4465,135 @@ class CompanyService:
         
         auth.pin_hash = hash_pin(new_pin)
         db.commit()
+```
+
+```python
+// File: backend/app/services/estimate_service.py
+from sqlalchemy.orm import Session
+from app.models.estimate import Estimate, EstimateLine, EstimateStatus
+from app.models.boq import DocumentLink, BOQItemType
+from app.core.exceptions import NotFoundException, ValidationException
+import uuid
+from datetime import datetime, timezone
+from decimal import Decimal
+
+def utc_now():
+    return datetime.now(timezone.utc)
+
+class EstimateService:
+    @staticmethod
+    def create_estimate(db: Session, company_id: str, data: dict, user_id: str = None) -> Estimate:
+        estimate = Estimate(
+            id=str(uuid.uuid4()),
+            company_id=company_id,
+            estimate_number=f"EST-{str(uuid.uuid4())[:6].upper()}",
+            boq_id=data.get("boq_id"),
+            party_id=data.get("party_id"),
+            estimate_date=data["estimate_date"],
+            valid_until=data.get("valid_until"),
+            status=EstimateStatus.DRAFT,
+            created_by=user_id
+        )
+        
+        db.add(estimate)
+        
+        material_cost = Decimal('0')
+        labour_cost = Decimal('0')
+        service_cost = Decimal('0')
+        other_cost = Decimal('0')
+        
+        total_markup_amount = Decimal('0')
+        total_selling_value = Decimal('0')
+        
+        for line_data in data["lines"]:
+            qty = Decimal(str(line_data["quantity"]))
+            cost_rate = Decimal(str(line_data.get("cost_rate") or '0'))
+            markup_percent = Decimal(str(line_data.get("markup_percent") or '0'))
+            
+            cost_amount = qty * cost_rate
+            markup_amount = cost_amount * (markup_percent / Decimal('100'))
+            selling_amount = cost_amount + markup_amount
+            selling_rate = selling_amount / qty if qty > 0 else Decimal('0')
+            
+            item_type_val = line_data.get("item_type", "MATERIAL")
+            
+            if item_type_val == "MATERIAL":
+                material_cost += cost_amount
+            elif item_type_val == "LABOUR":
+                labour_cost += cost_amount
+            elif item_type_val == "SERVICE":
+                service_cost += cost_amount
+            else:
+                other_cost += cost_amount
+                
+            total_markup_amount += markup_amount
+            total_selling_value += selling_amount
+            
+            line = EstimateLine(
+                id=str(uuid.uuid4()),
+                estimate_id=estimate.id,
+                item_name_snapshot=line_data["item_name_snapshot"],
+                item_type=item_type_val,
+                quantity=qty,
+                unit_snapshot=line_data.get("unit_snapshot"),
+                cost_rate=cost_rate,
+                cost_amount=cost_amount,
+                markup_percent=markup_percent,
+                markup_amount=markup_amount,
+                selling_rate=selling_rate,
+                selling_amount=selling_amount
+            )
+            db.add(line)
+            
+        total_cost = material_cost + labour_cost + service_cost + other_cost
+        
+        estimate.material_cost = material_cost
+        estimate.labour_cost = labour_cost
+        estimate.service_cost = service_cost
+        estimate.other_cost = other_cost
+        estimate.total_cost = total_cost
+        estimate.markup_amount = total_markup_amount
+        estimate.estimated_selling_value = total_selling_value
+        estimate.grand_total = total_selling_value # Simplification, GST logic can be added later
+        
+        # Link BOQ if applicable
+        if data.get("boq_id"):
+            doc_link = DocumentLink(
+                company_id=company_id,
+                source_type="BOQ",
+                source_id=data["boq_id"],
+                target_type="ESTIMATE",
+                target_id=estimate.id,
+                relationship_type="ESTIMATED_FROM_BOQ",
+                created_by=user_id
+            )
+            db.add(doc_link)
+            
+        db.commit()
+        db.refresh(estimate)
+        return estimate
+
+    @staticmethod
+    def get_estimate(db: Session, company_id: str, estimate_id: str) -> Estimate:
+        estimate = db.query(Estimate).filter(Estimate.id == estimate_id, Estimate.company_id == company_id).first()
+        if not estimate:
+            raise NotFoundException("Estimate not found")
+        return estimate
+
+    @staticmethod
+    def list_estimates(db: Session, company_id: str) -> list[Estimate]:
+        return db.query(Estimate).filter(Estimate.company_id == company_id).order_by(Estimate.created_at.desc()).all()
+
+    @staticmethod
+    def approve_estimate(db: Session, company_id: str, estimate_id: str) -> Estimate:
+        estimate = EstimateService.get_estimate(db, company_id, estimate_id)
+        if estimate.status != EstimateStatus.DRAFT:
+            raise ValidationException("Only DRAFT Estimate can be approved")
+            
+        estimate.status = EstimateStatus.APPROVED
+        db.commit()
+        db.refresh(estimate)
+        return estimate
 ```
 
 ```python
@@ -3106,33 +4664,79 @@ class FileStorageService:
         return content_type, size
     
     @classmethod
-    def save_company_logo(cls, company_id: str, upload: UploadFile) -> dict:
-        """Save company logo to storage.
+    async def save_company_logo(cls, company_id: str, upload: UploadFile) -> dict:
+        """Save and process company logo. Returns metadata dict."""
+        from PIL import Image
+        import io
         
-        Returns metadata dict with path, mime_type, size.
-        """
-        mime_type, size = cls._validate_image(upload)
+        content_type = upload.content_type or ""
+        if content_type not in ALLOWED_LOGO_TYPES:
+            raise ValidationException(
+                f"Invalid file type. Allowed: PNG, JPEG, WebP"
+            )
         
+        # Read file content
+        data = await upload.read()
+        if len(data) > MAX_LOGO_SIZE:
+            raise ValidationException(f"File too large. Maximum: {MAX_LOGO_SIZE // 1024 // 1024}MB")
+        
+        # Open with Pillow
+        try:
+            img = Image.open(io.BytesIO(data))
+            img.verify()  # Check integrity
+            img = Image.open(io.BytesIO(data))  # Reopen after verify (verify closes it)
+        except Exception:
+            raise ValidationException("Invalid or corrupt image file")
+        
+        original_width, original_height = img.size
+        if original_width < 100 or original_height < 100:
+            raise ValidationException("Image too small. Minimum: 100x100 pixels")
+        
+        # Convert to RGB for WebP (handles RGBA/P mode)
+        if img.mode not in ("RGB", "RGBA"):
+            img = img.convert("RGBA" if img.mode in ("P", "LA") else "RGB")
+        
+        # Center crop to square
+        w, h = img.size
+        min_dim = min(w, h)
+        left = (w - min_dim) // 2
+        top = (h - min_dim) // 2
+        img = img.crop((left, top, left + min_dim, top + min_dim))
+        
+        # Resize to standard 600x600
+        TARGET_SIZE = 600
+        img = img.resize((TARGET_SIZE, TARGET_SIZE), Image.LANCZOS)
+        
+        # Convert RGBA to RGB for WebP saving (WebP supports RGBA, but keep as RGBA for transparency)
+        # Save as WebP
         storage = cls._get_storage_path()
         logo_dir = storage / "company-logos" / company_id
         logo_dir.mkdir(parents=True, exist_ok=True)
         
-        ext = mimetypes.guess_extension(mime_type) or ".png"
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        filename = f"logo_{timestamp}{ext}"
-        safe_name = cls._safe_filename(filename)
+        file_path = logo_dir / "company_logo.webp"
         
-        file_path = logo_dir / safe_name
-        
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(upload.file, buffer)
+        # Save
+        output = io.BytesIO()
+        img.save(output, format="WEBP", quality=95)
+        output.seek(0)
+        with open(file_path, "wb") as f:
+            f.write(output.getvalue())
         
         return {
             "file_path": str(file_path.relative_to(storage)),
-            "mime_type": mime_type,
-            "file_size": size,
-            "filename": safe_name,
+            "mime_type": "image/webp",
+            "file_size": len(output.getvalue()),
+            "filename": "company_logo.webp",
+            "original_width": original_width,
+            "original_height": original_height,
+            "standardized_width": TARGET_SIZE,
+            "standardized_height": TARGET_SIZE,
         }
+
+    @staticmethod
+    def get_logo_serve_url(company_id: str) -> str | None:
+        """Get the URL to serve the company logo."""
+        return f"/api/v1/company/logo/{company_id}"
     
     @classmethod
     def save_invoice_pdf(cls, company_id: str, invoice_id: str, pdf_bytes: bytes) -> Path:
@@ -3676,8 +5280,10 @@ from app.models.order import SupplyOrder, SupplyOrderLine, OrderStatus, TaxTreat
 from app.models.company import Company
 from app.models.invoice import Invoice, InvoiceLine
 from app.models.party import Party
+from app.models.quotation import Quotation, QuotationStatus
+from app.models.boq import DocumentLink
 from app.core.exceptions import NotFoundException, ValidationException
-from app.utils.currency import number_to_words
+from app.utils.currency import amount_in_words
 
 class OrderService:
     @staticmethod
@@ -3758,7 +5364,7 @@ class OrderService:
         grand_total_rounded = grand_total.quantize(Decimal("1."), rounding=ROUND_HALF_UP)
         round_off = grand_total_rounded - grand_total
         
-        amount_in_words_str = number_to_words(grand_total_rounded)
+        amount_in_words_str = amount_in_words(grand_total_rounded)
         
         return {
             "subtotal": float(subtotal),
@@ -3775,7 +5381,7 @@ class OrderService:
         }
 
     @staticmethod
-    def create_order(db: Session, company_id: str, company: Company, data: dict) -> SupplyOrder:
+    def create_order(db: Session, company_id: str, company: Company, data: dict, user_id: str = None) -> SupplyOrder:
         calc_result = OrderService.calculate_order(db, company_id, company, data)
         
         order = SupplyOrder(
@@ -3833,6 +5439,26 @@ class OrderService:
             order.lines.append(line)
             
         db.add(order)
+        
+        # Handle Quotation linking
+        if data.get("quotation_id"):
+            quotation = db.query(Quotation).filter(Quotation.id == data["quotation_id"]).first()
+            if quotation:
+                quotation.fully_converted = True
+                
+                doc_link = DocumentLink(
+                    company_id=company_id,
+                    source_type="QUOTATION",
+                    source_id=quotation.id,
+                    source_revision=quotation.revision,
+                    target_type="SUPPLY_ORDER",
+                    target_id=order.id,
+                    target_revision=1,
+                    relationship_type="CONVERTED_TO_ORDER",
+                    created_by=user_id
+                )
+                db.add(doc_link)
+                
         db.commit()
         db.refresh(order)
         return order
@@ -3966,10 +5592,23 @@ from sqlalchemy.orm import Session
 from app.models.party import Party, PartyAddress, PartyBankAccount
 from app.core.exceptions import NotFoundException, ValidationException
 from app.services.audit_service import AuditService
+from app.core.gst import GSTService
 
 class PartyService:
     @staticmethod
     def create_party(db: Session, company_id: str, data: dict) -> Party:
+        if data.get("gstin"):
+            gst_result = GSTService.validate(data["gstin"])
+            if not gst_result.valid:
+                raise ValidationException("Invalid GSTIN format")
+            parsed = GSTService.parse(data["gstin"])
+            data["gstin"] = gst_result.gstin
+            data["pan"] = parsed.pan
+            if not data.get("state_code"):
+                data["state_code"] = parsed.state_code
+            if not data.get("state"):
+                data["state"] = parsed.state
+
         party = Party(
             company_id=company_id,
             legal_name=data["legal_name"],
@@ -3977,12 +5616,19 @@ class PartyService:
             party_type=data.get("party_type", "Proprietorship"),
             account_type=data["account_type"],
             contact_person=data.get("contact_person"),
+            mobile_country_code=data.get("mobile_country_code"),
             mobile=data.get("mobile"),
+            mobile_e164=data.get("mobile_e164"),
             alternate_mobile=data.get("alternate_mobile"),
+            office_phone_country_code=data.get("office_phone_country_code"),
+            office_phone=data.get("office_phone"),
+            office_phone_e164=data.get("office_phone_e164"),
             email=data.get("email"),
+            website=data.get("website"),
             gstin=data.get("gstin"),
             gst_registration_type=data.get("gst_registration_type", "Regular"),
             pan=data.get("pan"),
+            tan=data.get("tan"),
             state=data.get("state"),
             state_code=data.get("state_code"),
             place_of_supply=data.get("place_of_supply"),
@@ -4013,8 +5659,23 @@ class PartyService:
         if not party:
             raise NotFoundException("Party not found")
         
+        if data.get("gstin") and data.get("gstin") != party.gstin:
+            gst_result = GSTService.validate(data["gstin"])
+            if not gst_result.valid:
+                raise ValidationException("Invalid GSTIN format")
+            parsed = GSTService.parse(data["gstin"])
+            data["gstin"] = gst_result.gstin
+            if not data.get("pan"):
+                data["pan"] = parsed.pan
+            if not data.get("state_code"):
+                data["state_code"] = parsed.state_code
+            if not data.get("state"):
+                data["state"] = parsed.state
+
         for field in ["legal_name", "trade_name", "party_type", "account_type", "contact_person",
-                      "mobile", "email", "gstin", "gst_registration_type", "pan", "state", 
+                      "mobile_country_code", "mobile", "mobile_e164", "alternate_mobile",
+                      "office_phone_country_code", "office_phone", "office_phone_e164",
+                      "email", "website", "gstin", "gst_registration_type", "pan", "tan", "state", 
                       "state_code", "place_of_supply", "credit_limit", "credit_days", 
                       "payment_terms", "notes", "status"]:
             if field in data:
@@ -4202,6 +5863,185 @@ class PdfService:
         doc.build(elements)
         buffer.seek(0)
         return buffer.getvalue()
+```
+
+```python
+// File: backend/app/services/quotation_service.py
+from sqlalchemy.orm import Session
+from sqlalchemy.sql import func
+from app.models.quotation import Quotation, QuotationLine, QuotationStatus, QuotationType
+from app.models.item import Item
+from app.models.party import Party
+from app.core.exceptions import NotFoundException, ValidationException
+import uuid
+from datetime import datetime, timezone
+from decimal import Decimal
+
+def utc_now():
+    return datetime.now(timezone.utc)
+
+class QuotationService:
+    @staticmethod
+    def create_quotation(db: Session, company_id: str, data: dict, user_id: str = None) -> Quotation:
+        party = db.query(Party).filter(Party.id == data["party_id"], Party.company_id == company_id).first()
+        if not party:
+            raise NotFoundException("Party not found")
+            
+        quotation = Quotation(
+            id=str(uuid.uuid4()),
+            company_id=company_id,
+            quotation_number=f"QT-DRAFT-{str(uuid.uuid4())[:8].upper()}",
+            quotation_type=QuotationType(data["quotation_type"]),
+            tax_treatment=data["tax_treatment"],
+            party_id=party.id,
+            valid_until=data["valid_until"],
+            place_of_supply=data["place_of_supply"],
+            notes=data.get("notes"),
+            terms=data.get("terms"),
+            status=QuotationStatus.DRAFT,
+            created_by=user_id
+        )
+        
+        db.add(quotation)
+        db.flush()
+        
+        subtotal = Decimal('0')
+        discount_total = Decimal('0')
+        taxable_total = Decimal('0')
+        cgst_total = Decimal('0')
+        sgst_total = Decimal('0')
+        igst_total = Decimal('0')
+        
+        is_inter_state = False # In a real implementation, determine this based on Place of Supply vs Company State
+        if data["tax_treatment"] == "GST":
+            # Just a stub logic, usually you check states
+            is_inter_state = False 
+            
+        for line_data in data["lines"]:
+            qty = Decimal(str(line_data["quantity"]))
+            rate = Decimal(str(line_data["rate"]))
+            discount_val = Decimal(str(line_data.get("discount_value", 0)))
+            discount_type = line_data.get("discount_type")
+            
+            line_subtotal = qty * rate
+            line_discount_amount = Decimal('0')
+            
+            if discount_type == "PERCENTAGE":
+                line_discount_amount = line_subtotal * (discount_val / Decimal('100'))
+            elif discount_type == "FIXED":
+                line_discount_amount = discount_val
+                
+            line_taxable = line_subtotal - line_discount_amount
+            
+            line_cgst = Decimal('0')
+            line_sgst = Decimal('0')
+            line_igst = Decimal('0')
+            
+            gst_rate = Decimal(str(line_data.get("gst_rate", 0)))
+            
+            if data["tax_treatment"] == "GST" and gst_rate > 0:
+                if is_inter_state:
+                    line_igst = line_taxable * (gst_rate / Decimal('100'))
+                else:
+                    line_cgst = line_taxable * (gst_rate / Decimal('200'))
+                    line_sgst = line_taxable * (gst_rate / Decimal('200'))
+                    
+            line_total = line_taxable + line_cgst + line_sgst + line_igst
+            
+            q_line = QuotationLine(
+                id=str(uuid.uuid4()),
+                quotation_id=quotation.id,
+                item_id=line_data.get("item_id"),
+                item_name_snapshot=line_data["item_name_snapshot"],
+                description=line_data.get("description"),
+                sku_snapshot=line_data.get("sku_snapshot"),
+                hsn_sac_snapshot=line_data.get("hsn_sac_snapshot"),
+                quantity=qty,
+                unit_id=line_data.get("unit_id"),
+                unit_snapshot=line_data.get("unit_snapshot"),
+                rate=rate,
+                discount_type=discount_type,
+                discount_value=discount_val,
+                discount_amount=line_discount_amount,
+                tax_treatment=data["tax_treatment"],
+                gst_rate=gst_rate,
+                taxable_value=line_taxable,
+                cgst_amount=line_cgst,
+                sgst_amount=line_sgst,
+                igst_amount=line_igst,
+                cess_amount=0,
+                line_total=line_total
+            )
+            
+            db.add(q_line)
+            
+            subtotal += line_subtotal
+            discount_total += line_discount_amount
+            taxable_total += line_taxable
+            cgst_total += line_cgst
+            sgst_total += line_sgst
+            igst_total += line_igst
+            
+        quotation.subtotal = subtotal
+        quotation.discount_total = discount_total
+        quotation.taxable_total = taxable_total
+        quotation.cgst_total = cgst_total
+        quotation.sgst_total = sgst_total
+        quotation.igst_total = igst_total
+        quotation.grand_total = taxable_total + cgst_total + sgst_total + igst_total
+        
+        db.commit()
+        db.refresh(quotation)
+        return quotation
+
+    @staticmethod
+    def list_quotations(db: Session, company_id: str, q_type: str = None) -> list[Quotation]:
+        query = db.query(Quotation).filter(Quotation.company_id == company_id)
+        if q_type:
+            query = query.filter(Quotation.quotation_type == q_type)
+        return query.order_by(Quotation.created_at.desc()).all()
+
+    @staticmethod
+    def get_quotation(db: Session, company_id: str, quotation_id: str) -> Quotation:
+        q = db.query(Quotation).filter(Quotation.id == quotation_id, Quotation.company_id == company_id).first()
+        if not q:
+            raise NotFoundException("Quotation not found")
+        return q
+        
+    @staticmethod
+    def approve_quotation(db: Session, company_id: str, quotation_id: str) -> Quotation:
+        q = QuotationService.get_quotation(db, company_id, quotation_id)
+        if q.status != QuotationStatus.DRAFT:
+            raise ValidationException("Only DRAFT quotations can be approved")
+            
+        q.status = QuotationStatus.APPROVED
+        q.quotation_number = f"QT-{str(uuid.uuid4())[:6].upper()}"
+        
+        db.commit()
+        db.refresh(q)
+        return q
+        
+    @staticmethod
+    def accept_quotation(db: Session, company_id: str, quotation_id: str, user_id: str, acceptance_method: str = "USER_ACCEPTED") -> Quotation:
+        q = QuotationService.get_quotation(db, company_id, quotation_id)
+        
+        # Validations
+        if q.status not in [QuotationStatus.APPROVED, QuotationStatus.SENT, QuotationStatus.VIEWED]:
+            raise ValidationException("Quotation is not in a valid state to be accepted")
+            
+        if q.valid_until and q.valid_until < utc_now():
+            q.status = QuotationStatus.EXPIRED
+            db.commit()
+            raise ValidationException("Quotation has expired")
+            
+        q.status = QuotationStatus.ACCEPTED
+        q.accepted_at = utc_now()
+        q.accepted_by = user_id
+        q.acceptance_method = acceptance_method
+        
+        db.commit()
+        db.refresh(q)
+        return q
 ```
 
 ```python
@@ -4983,6 +6823,36 @@ def extract_pan_from_gstin(gstin: str) -> str:
     return ""
 ```
 
+```sql
+// File: backend/migrations/add_phase10_columns.sql
+-- Phase 10: Business Identity & GST Validation
+-- Run this if you have an existing database
+
+ALTER TABLE companies ADD COLUMN mobile_country_code VARCHAR(5) DEFAULT '+91';
+ALTER TABLE companies ADD COLUMN mobile_e164 VARCHAR(20);
+ALTER TABLE companies ADD COLUMN office_phone_country_code VARCHAR(5);
+ALTER TABLE companies ADD COLUMN office_phone_e164 VARCHAR(20);
+ALTER TABLE companies ADD COLUMN logo_url VARCHAR(500);
+
+ALTER TABLE company_gst_details ADD COLUMN tan VARCHAR(10);
+
+ALTER TABLE company_bank_accounts RENAME COLUMN account_type TO account_type_old;
+ALTER TABLE company_bank_accounts ADD COLUMN account_type VARCHAR(30) DEFAULT 'CURRENT';
+
+ALTER TABLE company_assets ADD COLUMN original_width INTEGER;
+ALTER TABLE company_assets ADD COLUMN original_height INTEGER;
+ALTER TABLE company_assets ADD COLUMN standardized BOOLEAN DEFAULT 0;
+
+ALTER TABLE parties ADD COLUMN tan VARCHAR(10);
+ALTER TABLE parties ADD COLUMN mobile_country_code VARCHAR(5) DEFAULT '+91';
+ALTER TABLE parties ADD COLUMN mobile_e164 VARCHAR(20);
+ALTER TABLE parties ADD COLUMN office_phone VARCHAR(20);
+ALTER TABLE parties ADD COLUMN office_phone_country_code VARCHAR(5);
+ALTER TABLE parties ADD COLUMN office_phone_e164 VARCHAR(20);
+
+ALTER TABLE party_bank_accounts ADD COLUMN account_type VARCHAR(30) DEFAULT 'CURRENT';
+```
+
 ```toml
 // File: backend/pyproject.toml
 [build-system]
@@ -5382,6 +7252,7 @@ export default {
 // File: frontend/src/App.tsx
 import { Outlet } from 'react-router-dom';
 
+
 function App() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -5462,10 +7333,90 @@ export const authApi = {
 ```
 
 ```typescript
+// File: frontend/src/api/boqs.ts
+import { apiClient } from './client';
+
+export interface BOQLineCreate {
+  parent_line_id?: string | null;
+  section?: string | null;
+  item_type: string;
+  item_id?: string | null;
+  description: string;
+  specification?: string | null;
+  quantity: number;
+  unit_id?: string | null;
+  unit_snapshot?: string | null;
+  quantity_formula?: string | null;
+  estimated_rate?: number;
+  remarks?: string | null;
+  sort_order?: number;
+}
+
+export interface BOQCreateRequest {
+  project_name?: string | null;
+  party_id?: string | null;
+  boq_date: string;
+  notes?: string | null;
+  lines: BOQLineCreate[];
+}
+
+export interface BOQLineResponse {
+  id: string;
+  parent_line_id: string | null;
+  section: string | null;
+  item_type: string;
+  item_id: string | null;
+  description: string;
+  specification: string | null;
+  quantity: number;
+  unit_id: string | null;
+  unit_snapshot: string | null;
+  quantity_formula: string | null;
+  estimated_rate: number;
+  estimated_amount: number;
+  remarks: string | null;
+  sort_order: number;
+}
+
+export interface BOQResponse {
+  id: string;
+  boq_number: string | null;
+  project_name: string | null;
+  party_id: string | null;
+  boq_date: string;
+  version: number;
+  status: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  lines: BOQLineResponse[];
+}
+
+export const boqsApi = {
+  create: async (data: BOQCreateRequest) => {
+    const response = await apiClient.post<BOQResponse>('/boqs', data);
+    return response.data;
+  },
+  getAll: async () => {
+    const response = await apiClient.get<{items: BOQResponse[], total: number}>('/boqs');
+    return response.data;
+  },
+  getById: async (id: string) => {
+    const response = await apiClient.get<BOQResponse>(`/boqs/${id}`);
+    return response.data;
+  },
+  approve: async (id: string) => {
+    const response = await apiClient.post<BOQResponse>(`/boqs/${id}/approve`, {});
+    return response.data;
+  }
+};
+```
+
+```typescript
 // File: frontend/src/api/client.ts
 import axios, { AxiosError } from 'axios';
 
-const API_BASE_URL = 'http://localhost:8000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:28030/api/v1`;
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -5516,6 +7467,185 @@ apiClient.interceptors.response.use(
     return Promise.reject(customError);
   }
 );
+```
+
+```typescript
+// File: frontend/src/api/company.ts
+import { apiClient } from './client';
+
+export interface CompanyDetail {
+  id: string;
+  company_name: string;
+  legal_name?: string;
+  trade_name?: string;
+  ownership_type: string;
+  status: string;
+  mobile: string;
+  mobile_country_code?: string;
+  office_phone?: string;
+  office_phone_country_code?: string;
+  email: string;
+  website?: string;
+  authorized_person_name: string;
+  logo_url?: string;
+  gst_details?: {
+    id: string;
+    gstin?: string;
+    state_code?: string;
+    state_name?: string;
+    pan?: string;
+    tan?: string;
+    gstin_validation_status: string;
+  };
+  bank_accounts: Array<{
+    id: string;
+    account_holder_name: string;
+    account_number: string;
+    ifsc: string;
+    bank_name?: string;
+    branch: string;
+    account_type: string;
+    is_primary: boolean;
+  }>;
+}
+
+export const companyApi = {
+  get: async (): Promise<CompanyDetail> => {
+    const response = await apiClient.get<{ data: CompanyDetail }>('/company/');
+    return (response.data as any).data;
+  },
+  update: async (data: Partial<CompanyDetail>): Promise<CompanyDetail> => {
+    const response = await apiClient.put<{ data: CompanyDetail }>('/company/', data);
+    return (response.data as any).data;
+  },
+  uploadLogo: async (file: File): Promise<{ logo_url: string; asset_id: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await apiClient.post<{ data: { logo_url: string; asset_id: string } }>('/company/logo', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return (response.data as any).data;
+  },
+};
+```
+
+```typescript
+// File: frontend/src/api/estimates.ts
+import { apiClient } from './client';
+
+export interface EstimateLineCreate {
+  item_name_snapshot: string;
+  item_type?: string;
+  quantity: number;
+  unit_snapshot?: string;
+  cost_rate?: number;
+  markup_percent?: number;
+}
+
+export interface EstimateCreateRequest {
+  boq_id?: string | null;
+  party_id?: string | null;
+  estimate_date: string;
+  valid_until?: string | null;
+  lines: EstimateLineCreate[];
+}
+
+export interface EstimateLineResponse {
+  id: string;
+  item_name_snapshot: string;
+  item_type: string;
+  quantity: number;
+  unit_snapshot: string | null;
+  cost_rate: number;
+  cost_amount: number;
+  markup_percent: number;
+  markup_amount: number;
+  selling_rate: number;
+  selling_amount: number;
+}
+
+export interface EstimateResponse {
+  id: string;
+  estimate_number: string | null;
+  boq_id: string | null;
+  party_id: string | null;
+  estimate_date: string;
+  valid_until: string | null;
+  version: number;
+  status: string;
+  material_cost: number;
+  labour_cost: number;
+  service_cost: number;
+  other_cost: number;
+  total_cost: number;
+  markup_amount: number;
+  estimated_selling_value: number;
+  gst_total: number;
+  grand_total: number;
+  created_at: string;
+  updated_at: string;
+  lines: EstimateLineResponse[];
+}
+
+export const estimatesApi = {
+  create: async (data: EstimateCreateRequest) => {
+    const response = await apiClient.post<EstimateResponse>('/estimates', data);
+    return response.data;
+  },
+  getAll: async () => {
+    const response = await apiClient.get<{items: EstimateResponse[], total: number}>('/estimates');
+    return response.data;
+  },
+  getById: async (id: string) => {
+    const response = await apiClient.get<EstimateResponse>(`/estimates/${id}`);
+    return response.data;
+  },
+  approve: async (id: string) => {
+    const response = await apiClient.post<EstimateResponse>(`/estimates/${id}/approve`, {});
+    return response.data;
+  }
+};
+```
+
+```typescript
+// File: frontend/src/api/gst.ts
+import { apiClient } from './client';
+
+export interface GSTINValidationResponse {
+  gstin: string;
+  valid: boolean;
+  validLength: boolean;
+  validStructure: boolean;
+  validStateCode: boolean;
+  validChecksum: boolean;
+  errors: string[];
+  level: string;
+  parsed?: {
+    stateCode: string;
+    stateName: string | null;
+    pan: string;
+    entityNumber: string;
+    defaultCharacter: string;
+    checkDigit: string;
+  };
+}
+
+export interface GSTState {
+  code: string;
+  name: string;
+  isUnionTerritory: boolean;
+}
+
+export const gstApi = {
+  validate: async (gstin: string): Promise<GSTINValidationResponse> => {
+    const response = await apiClient.get<{ data: GSTINValidationResponse }>(`/gst/validate/${encodeURIComponent(gstin)}`);
+    return (response.data as any).data;
+  },
+  getStates: async (): Promise<GSTState[]> => {
+    const response = await apiClient.get<{ data: GSTState[] }>('/gst/states');
+    return (response.data as any).data;
+  },
+};
 ```
 
 ```typescript
@@ -5704,6 +7834,7 @@ export interface SupplyOrderCreateRequest {
   expected_date?: string | null;
   place_of_supply: string;
   lines: SupplyOrderLineCreate[];
+  quotation_id?: string;
   notes?: string | null;
   terms?: string | null;
 }
@@ -5849,6 +7980,119 @@ export const partiesApi = {
 ```
 
 ```typescript
+// File: frontend/src/api/quotations.ts
+import { apiClient } from './client';
+
+export interface QuotationLineCreate {
+  item_id?: string;
+  item_name_snapshot: string;
+  description?: string;
+  hsn_sac_snapshot?: string;
+  sku_snapshot?: string;
+  quantity: number;
+  unit_id?: string;
+  unit_snapshot?: string;
+  rate: number;
+  discount_type?: string;
+  discount_value?: number;
+  gst_rate?: number;
+}
+
+export interface QuotationCreateRequest {
+  quotation_type: string;
+  tax_treatment: string;
+  party_id: string;
+  valid_until: string;
+  place_of_supply: string;
+  notes?: string;
+  terms?: string;
+  lines: QuotationLineCreate[];
+}
+
+export interface QuotationLineResponse {
+  id: string;
+  item_id: string | null;
+  item_name_snapshot: string;
+  description: string | null;
+  hsn_sac_snapshot: string | null;
+  sku_snapshot: string | null;
+  quantity: number;
+  converted_quantity: number;
+  unit_id: string | null;
+  unit_snapshot: string | null;
+  rate: number;
+  discount_type: string | null;
+  discount_value: number;
+  discount_amount: number;
+  tax_treatment: string;
+  gst_rate: number;
+  taxable_value: number;
+  cgst_amount: number;
+  sgst_amount: number;
+  igst_amount: number;
+  cess_amount: number;
+  line_total: number;
+}
+
+export interface QuotationResponse {
+  id: string;
+  quotation_number: string | null;
+  quotation_type: string;
+  tax_treatment: string;
+  party_id: string;
+  quotation_date: string;
+  valid_until: string;
+  status: string;
+  revision: number;
+  place_of_supply: string;
+  subtotal: number;
+  discount_total: number;
+  taxable_total: number;
+  cgst_total: number;
+  sgst_total: number;
+  igst_total: number;
+  cess_total: number;
+  round_off: number;
+  grand_total: number;
+  notes: string | null;
+  terms: string | null;
+  accepted_at: string | null;
+  accepted_by: string | null;
+  acceptance_method: string | null;
+  fully_converted: boolean;
+  created_at: string;
+  lines: QuotationLineResponse[];
+}
+
+export const quotationsApi = {
+  create: async (data: QuotationCreateRequest) => {
+    const response = await apiClient.post<QuotationResponse>('/quotations', data);
+    return response.data;
+  },
+  getAll: async (quotationType?: string) => {
+    const params = new URLSearchParams();
+    if (quotationType) params.append('quotation_type', quotationType);
+    const response = await apiClient.get<{items: QuotationResponse[], total: number}>(`/quotations?${params.toString()}`);
+    return response.data;
+  },
+  getById: async (id: string) => {
+    const response = await apiClient.get<QuotationResponse>(`/quotations/${id}`);
+    return response.data;
+  },
+  approve: async (id: string) => {
+    const response = await apiClient.post<QuotationResponse>(`/quotations/${id}/approve`, {});
+    return response.data;
+  },
+  accept: async (id: string, acceptanceMethod: string = "USER_ACCEPTED") => {
+    const response = await apiClient.post<QuotationResponse>(`/quotations/${id}/accept`, {
+      acceptance_method: acceptanceMethod
+    });
+    return response.data;
+  }
+};
+```
+
+```typescript
 // File: frontend/src/api/returns.ts
 import { apiClient } from './client';
 
@@ -5905,6 +8149,7 @@ export interface ReturnOrderResponse {
   grand_total: number;
   created_at: string;
   lines: ReturnOrderLineResponse[];
+  settlements: any[];
 }
 
 export interface ReturnableLineResponse {
@@ -5950,6 +8195,10 @@ export const returnsApi = {
   },
   post: async (id: string) => {
     const response = await apiClient.post<ReturnOrderResponse>(`/returns/${id}/post`, {});
+    return response.data;
+  },
+  addSettlement: async (id: string, data: { settlement_type: string, amount: number, reference_number?: string, notes?: string }) => {
+    const response = await apiClient.post<any>(`/returns/${id}/settlements`, data);
     return response.data;
   }
 };
@@ -6080,6 +8329,10 @@ import OrderListPage from '../features/orders/OrderListPage';
 import OrderBuilderPage from '../features/orders/OrderBuilderPage';
 import ReturnListPage from '../features/returns/ReturnListPage';
 import ReturnBuilderPage from '../features/returns/ReturnBuilderPage';
+import QuotationListPage from '../features/quotations/QuotationListPage';
+import QuotationBuilderPage from '../features/quotations/QuotationBuilderPage';
+import BOQListPage from '../features/boqs/BOQListPage';
+import EstimateListPage from '../features/estimates/EstimateListPage';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -6104,9 +8357,13 @@ const DashboardShell = ({ children }: { children: React.ReactNode }) => {
           <Link to="/invoices" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Sales Invoices</Link>
           <Link to="/purchase-bills" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Purchase Bills</Link>
           <Link to="/supply-in" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Supply In</Link>
+          <Link to="/supply-in/quotations" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md pl-8">↳ Quotations</Link>
           <Link to="/supply-in/returns" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md pl-8">↳ Returns</Link>
           <Link to="/supply-out" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Supply Out</Link>
+          <Link to="/supply-out/quotations" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md pl-8">↳ Quotations</Link>
           <Link to="/supply-out/returns" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md pl-8">↳ Returns</Link>
+          <Link to="/boqs" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">BOQ</Link>
+          <Link to="/estimates" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Estimates</Link>
           <Link to="/parties" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Customers & Vendors</Link>
           <Link to="/items" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Items & Products</Link>
           <Link to="/units" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Units</Link>
@@ -6190,6 +8447,26 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'supply-in/quotations',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <QuotationListPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'supply-in/quotations/new',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <QuotationBuilderPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'supply-in/returns',
         element: (
           <ProtectedRoute>
@@ -6230,6 +8507,26 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'supply-out/quotations',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <QuotationListPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'supply-out/quotations/new',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <QuotationBuilderPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'supply-out/returns',
         element: (
           <ProtectedRoute>
@@ -6245,6 +8542,26 @@ export const router = createBrowserRouter([
           <ProtectedRoute>
             <DashboardShell>
               <ReturnBuilderPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'boqs',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <BOQListPage />
+            </DashboardShell>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'estimates',
+        element: (
+          <ProtectedRoute>
+            <DashboardShell>
+              <EstimateListPage />
             </DashboardShell>
           </ProtectedRoute>
         ),
@@ -6401,6 +8718,496 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   }
 );
 Input.displayName = 'Input';
+```
+
+```tsx
+// File: frontend/src/components/gst/BankAccountTypeSelect.tsx
+import { BANK_ACCOUNT_TYPES } from '../../lib/gst/constants';
+import React from 'react';
+import type { SelectHTMLAttributes } from 'react';
+
+interface BankAccountTypeSelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
+  label?: string;
+  error?: string;
+}
+
+export const BankAccountTypeSelect = React.forwardRef<
+  HTMLSelectElement,
+  BankAccountTypeSelectProps
+>(({ label, error, className = '', id, required, ...props }, ref) => {
+  const selectId = id || `bank-account-type-${Math.random().toString(36).substring(7)}`;
+
+  return (
+    <div className="w-full">
+      {label && (
+        <label htmlFor={selectId} className="block text-sm font-medium text-gray-700 mb-1">
+          {label}{required && <span className="text-red-500 ml-0.5">*</span>}
+        </label>
+      )}
+      <select
+        ref={ref}
+        id={selectId}
+        required={required}
+        className={`block w-full rounded-md border shadow-sm sm:text-sm px-3 py-2 outline-none transition-colors ${
+          error ? 'border-red-400 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
+        } ${props.disabled ? 'bg-gray-50 text-gray-500' : 'bg-white text-gray-900'} ${className}`}
+        {...props}
+      >
+        <option value="">Select Account Type</option>
+        {BANK_ACCOUNT_TYPES.map((type) => (
+          <option key={type.value} value={type.value}>
+            {type.label}
+          </option>
+        ))}
+      </select>
+      {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+    </div>
+  );
+});
+BankAccountTypeSelect.displayName = 'BankAccountTypeSelect';
+```
+
+```tsx
+// File: frontend/src/components/gst/GSTINInput.tsx
+import { useState, useCallback } from 'react';
+import { validateGSTIN, parseGSTIN } from '../../lib/gst/validator';
+import type { GSTINParseResult } from '../../lib/gst/validator';
+
+interface GSTINInputProps {
+  value?: string;
+  onChange?: (value: string) => void;
+  onValidated?: (result: GSTINParseResult | null, isValid: boolean) => void;
+  name?: string;
+  error?: string;
+  disabled?: boolean;
+  label?: string;
+  showBreakdown?: boolean;
+  className?: string;
+}
+
+export function GSTINInput({
+  value = '',
+  onChange,
+  onValidated,
+  name,
+  error,
+  disabled,
+  label = 'GSTIN',
+  showBreakdown = true,
+  className = '',
+}: GSTINInputProps) {
+  const [internalValue, setInternalValue] = useState(value);
+
+  // Sync with controlled value
+  const currentValue = onChange !== undefined ? value : internalValue;
+
+  const handleInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    // Normalize: uppercase, no spaces, only valid GSTIN chars
+    const raw = e.target.value;
+    const normalized = raw.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 15);
+    
+    if (onChange) {
+      onChange(normalized);
+    } else {
+      setInternalValue(normalized);
+    }
+
+    if (normalized.length === 15) {
+      const validation = validateGSTIN(normalized);
+      if (validation.valid) {
+        const parsed = parseGSTIN(normalized);
+        onValidated?.(parsed, true);
+      } else {
+        onValidated?.(null, false);
+      }
+    } else {
+      onValidated?.(null, false);
+    }
+  }, [onChange, onValidated]);
+
+  const validation = currentValue.length > 0 ? validateGSTIN(currentValue) : null;
+  const parsed = validation?.valid ? parseGSTIN(currentValue) : null;
+
+  // Determine border color
+  const borderClass = (() => {
+    if (error) return 'border-red-400 focus:border-red-500 focus:ring-red-500';
+    if (!validation) return 'border-gray-300 focus:border-blue-500 focus:ring-blue-500';
+    if (currentValue.length === 15 && validation.valid) return 'border-green-400 focus:border-green-500 focus:ring-green-500';
+    if (currentValue.length === 15 && !validation.valid) return 'border-red-400 focus:border-red-500 focus:ring-red-500';
+    return 'border-gray-300 focus:border-blue-500 focus:ring-blue-500';
+  })();
+
+  return (
+    <div className={`w-full ${className}`}>
+      {label && (
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          {label}
+        </label>
+      )}
+      
+      {/* Input */}
+      <div className="relative">
+        <input
+          name={name}
+          type="text"
+          value={currentValue}
+          onChange={handleInput}
+          disabled={disabled}
+          maxLength={15}
+          placeholder="e.g. 29ABCDE1234F1Z5"
+          className={`block w-full rounded-md border shadow-sm sm:text-sm px-3 py-2 outline-none font-mono tracking-wider transition-colors ${
+            disabled ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'
+          } ${borderClass}`}
+          spellCheck={false}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="characters"
+        />
+        {/* Valid checkmark */}
+        {validation?.valid && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+          </div>
+        )}
+        {/* Invalid X */}
+        {currentValue.length === 15 && !validation?.valid && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+          </div>
+        )}
+      </div>
+
+      {/* Character count + status */}
+      <div className="mt-1 flex items-center justify-between">
+        <div className="text-xs">
+          {error ? (
+            <span className="text-red-600">{error}</span>
+          ) : currentValue.length === 0 ? (
+            <span className="text-gray-400">GSTIN format: 15 characters — State Code (2) + PAN (10) + Entity (1) + Z + Check digit</span>
+          ) : currentValue.length < 15 ? (
+            <span className="text-gray-500">Enter a valid 15-character GSTIN</span>
+          ) : validation?.valid ? (
+            <span className="text-green-600 font-medium">✓ Valid GSTIN format</span>
+          ) : (
+            <span className="text-red-600">{validation?.errors[0] || '✕ Invalid GSTIN format'}</span>
+          )}
+        </div>
+        <div className={`text-xs font-mono ${
+          currentValue.length === 15 ? 'text-gray-700' : 'text-gray-400'
+        }`}>
+          {currentValue.length} / 15
+        </div>
+      </div>
+
+      {/* GSTIN Breakdown when valid */}
+      {showBreakdown && parsed && (
+        <div className="mt-2 bg-green-50 border border-green-200 rounded-md p-3">
+          <div className="font-mono text-sm text-gray-800 flex items-center gap-1 flex-wrap">
+            <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-bold">{parsed.stateCode}</span>
+            <span className="text-gray-400">|</span>
+            <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-bold">{parsed.pan}</span>
+            <span className="text-gray-400">|</span>
+            <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded font-bold">{parsed.entityNumber}</span>
+            <span className="text-gray-400">|</span>
+            <span className="bg-gray-100 text-gray-800 px-2 py-0.5 rounded font-bold">{parsed.defaultCharacter}</span>
+            <span className="text-gray-400">|</span>
+            <span className="bg-orange-100 text-orange-800 px-2 py-0.5 rounded font-bold">{parsed.checkDigit}</span>
+          </div>
+          <div className="font-mono text-xs text-gray-500 mt-1 flex items-center gap-1 flex-wrap">
+            <span className="w-[28px] text-center">State</span>
+            <span className="text-transparent">|</span>
+            <span className="w-[80px] text-center">PAN</span>
+            <span className="text-transparent">|</span>
+            <span className="w-[16px] text-center">Ent</span>
+            <span className="text-transparent">|</span>
+            <span className="w-[16px] text-center">Dflt</span>
+            <span className="text-transparent">|</span>
+            <span className="w-[16px] text-center">Chk</span>
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-600">
+            <span><span className="font-medium">State:</span> {parsed.stateName || parsed.stateCode}</span>
+            <span><span className="font-medium">PAN:</span> {parsed.pan}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+```tsx
+// File: frontend/src/components/gst/LogoUpload.tsx
+import { useState, useRef } from 'react';
+
+interface LogoUploadProps {
+  currentLogoUrl?: string | null;
+  onFileSelect?: (file: File) => void;
+  onRemove?: () => void;
+  disabled?: boolean;
+  companyName?: string;
+}
+
+export function LogoUpload({ currentLogoUrl, onFileSelect, onRemove, disabled }: LogoUploadProps) {
+  const [preview, setPreview] = useState<string | null>(currentLogoUrl || null);
+  const [dragOver, setDragOver] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = (file: File) => {
+    setError(null);
+    
+    // Validate type
+    const allowed = ['image/png', 'image/jpeg', 'image/webp'];
+    if (!allowed.includes(file.type)) {
+      setError('Please upload a PNG, JPEG, or WebP image');
+      return;
+    }
+    
+    // Validate size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image must be less than 5MB');
+      return;
+    }
+    
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        if (img.width < 100 || img.height < 100) {
+          setError('Image must be at least 100×100 pixels');
+          return;
+        }
+        setPreview(e.target?.result as string);
+        onFileSelect?.(file);
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  };
+
+  return (
+    <div className="flex flex-col items-start gap-3">
+      {/* Preview box */}
+      <div
+        className={`relative w-24 h-24 rounded-lg border-2 border-dashed flex items-center justify-center overflow-hidden transition-colors cursor-pointer ${
+          dragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-300 bg-gray-50 hover:border-gray-400'
+        } ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
+        onClick={() => !disabled && inputRef.current?.click()}
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
+      >
+        {preview ? (
+          <img src={preview} alt="Company logo" className="w-full h-full object-cover" />
+        ) : (
+          <div className="text-center p-2">
+            <svg className="w-8 h-8 text-gray-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span className="text-xs text-gray-400 mt-1 block">Logo</span>
+          </div>
+        )}
+      </div>
+      
+      <div className="flex flex-col gap-1.5">
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => !disabled && inputRef.current?.click()}
+          className="text-sm text-blue-600 hover:text-blue-700 font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {preview ? 'Change Logo' : 'Upload Logo'}
+        </button>
+        {preview && onRemove && (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => { setPreview(null); onRemove(); }}
+            className="text-sm text-red-500 hover:text-red-600 disabled:opacity-60"
+          >
+            Remove Logo
+          </button>
+        )}
+        <p className="text-xs text-gray-400">
+          Square image recommended<br />
+          PNG, JPEG or WebP · Min 100×100px · Max 5MB<br />
+          Will be standardized to 600×600px
+        </p>
+      </div>
+      
+      {error && (
+        <p className="text-sm text-red-600">{error}</p>
+      )}
+      
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleFile(file);
+        }}
+      />
+    </div>
+  );
+}
+```
+
+```tsx
+// File: frontend/src/components/gst/PhoneInput.tsx
+import { useState } from 'react';
+import { COMMON_COUNTRY_CODES } from '../../lib/gst/constants';
+
+interface PhoneInputProps {
+  value?: string; // The local phone number
+  countryCode?: string; // e.g. "+91"
+  onValueChange?: (phone: string, countryCode: string, e164: string) => void;
+  label?: string;
+  placeholder?: string;
+  required?: boolean;
+  error?: string;
+  disabled?: boolean;
+  optional?: boolean;
+  name?: string;
+  countryCodeName?: string;
+}
+
+export function PhoneInput({
+  value = '',
+  countryCode = '+91',
+  onValueChange,
+  label,
+  placeholder = 'Phone number',
+  required,
+  error,
+  disabled,
+  optional,
+  name,
+  countryCodeName,
+}: PhoneInputProps) {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const selectedCountry = COMMON_COUNTRY_CODES.find(c => c.code === countryCode) ?? COMMON_COUNTRY_CODES[0];
+
+  const filteredCountries = COMMON_COUNTRY_CODES.filter(c =>
+    c.name.toLowerCase().includes(search.toLowerCase()) ||
+    c.code.includes(search) ||
+    c.country.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleCountrySelect = (country: typeof COMMON_COUNTRY_CODES[number]) => {
+    setIsDropdownOpen(false);
+    setSearch('');
+    const e164 = `${country.code}${value.replace(/^0/, '')}`.replace(/\s+/g, '');
+    onValueChange?.(value, country.code, e164);
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const phone = e.target.value;
+    const e164 = `${countryCode}${phone.replace(/^0/, '')}`.replace(/\s+/g, '');
+    onValueChange?.(phone, countryCode, e164);
+  };
+
+  return (
+    <div className="w-full">
+      {label && (
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          {label}{optional && <span className="text-gray-400 font-normal ml-1">(Optional)</span>}
+          {required && <span className="text-red-500 ml-0.5">*</span>}
+        </label>
+      )}
+      <div className={`flex rounded-md shadow-sm border transition-colors ${
+        error ? 'border-red-400' : 'border-gray-300'
+      } ${disabled ? 'bg-gray-50' : 'bg-white'}`}>
+        {/* Country Code Selector */}
+        <div className="relative">
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className={`flex items-center gap-1.5 px-3 py-2 border-r border-gray-300 rounded-l-md text-sm font-medium text-gray-700 hover:bg-gray-50 whitespace-nowrap ${
+              disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+            }`}
+          >
+            <span className="text-base">{selectedCountry.flag}</span>
+            <span className="text-gray-600">{selectedCountry.code}</span>
+            <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          
+          {isDropdownOpen && (
+            <div className="absolute top-full left-0 z-50 mt-1 w-64 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden">
+              <div className="p-2 border-b border-gray-100">
+                <input
+                  type="text"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search country..."
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded outline-none focus:border-blue-500"
+                  autoFocus
+                />
+              </div>
+              <div className="max-h-48 overflow-y-auto">
+                {filteredCountries.map((country) => (
+                  <button
+                    key={country.code}
+                    type="button"
+                    onClick={() => handleCountrySelect(country)}
+                    className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-blue-50 text-left transition-colors ${
+                      country.code === countryCode ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'
+                    }`}
+                  >
+                    <span className="text-base">{country.flag}</span>
+                    <span>{country.name}</span>
+                    <span className="ml-auto text-gray-400">{country.code}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Phone Number Input */}
+        <input
+          name={name}
+          type="tel"
+          value={value}
+          onChange={handlePhoneChange}
+          disabled={disabled}
+          placeholder={placeholder}
+          className={`flex-1 px-3 py-2 text-sm rounded-r-md outline-none border-0 bg-transparent ${
+            disabled ? 'text-gray-500' : 'text-gray-900'
+          } w-full min-w-0`}
+        />
+      </div>
+      {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+      {/* Hidden field for country code - for form libraries */}
+      {countryCodeName && <input type="hidden" name={countryCodeName} value={countryCode} />}
+    </div>
+  );
+}
+```
+
+```typescript
+// File: frontend/src/components/gst/index.ts
+export { GSTINInput } from './GSTINInput';
+export { PhoneInput } from './PhoneInput';
+export { LogoUpload } from './LogoUpload';
+export { BankAccountTypeSelect } from './BankAccountTypeSelect';
 ```
 
 ```tsx
@@ -6625,18 +9432,21 @@ export default function PinChangePage() {
 // File: frontend/src/features/auth/SetupPage.tsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation } from '@tanstack/react-query';
 import { authApi } from '../../api/auth';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
+import { GSTINInput, PhoneInput, BankAccountTypeSelect } from '../../components/gst';
 
 const setupSchema = z.object({
   company_name: z.string().min(1, 'Company Name is required'),
   ownership_type: z.string().min(1, 'Ownership Type is required'),
-  mobile: z.string().length(10, 'Mobile must be 10 digits'),
+  mobile: z.string().min(1, 'Mobile is required'),
+  mobile_country_code: z.string().optional(),
+  mobile_e164: z.string().optional(),
   email: z.string().email('Invalid email address'),
   authorized_person_name: z.string().min(1, 'Authorized Person is required'),
   gst_registered: z.boolean(),
@@ -6672,14 +9482,16 @@ type SetupForm = z.infer<typeof setupSchema>;
 export default function SetupPage() {
   const navigate = useNavigate();
   const [apiError, setApiError] = useState<string | null>(null);
+  const [gstinValid, setGstinValid] = useState(false);
 
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<any>({
+  const { register, handleSubmit, watch, setValue, control, formState: { errors } } = useForm<any>({
     resolver: zodResolver(setupSchema),
     defaultValues: {
       gst_registered: true,
       country: 'India',
       ownership_type: 'Proprietorship',
-      bank_account_type: 'Current'
+      bank_account_type: 'CURRENT',
+      mobile_country_code: '+91'
     }
   });
 
@@ -6723,11 +9535,23 @@ export default function SetupPage() {
             <div className="space-y-6 md:col-span-2">
               <h3 className="text-lg font-medium border-b pb-2 text-gray-800">Basic Details</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Input label="Company Name" {...register('company_name')} error={errors.company_name?.message} />
-                <Input label="Ownership Type" {...register('ownership_type')} error={errors.ownership_type?.message} />
-                <Input label="Mobile" {...register('mobile')} error={errors.mobile?.message} />
-                <Input label="Email" type="email" {...register('email')} error={errors.email?.message} />
-                <Input label="Authorized Person" {...register('authorized_person_name')} error={errors.authorized_person_name?.message} />
+                <Input label="Company Name" {...register('company_name')} error={errors.company_name?.message as string} />
+                <Input label="Ownership Type" {...register('ownership_type')} error={errors.ownership_type?.message as string} />
+                
+                <PhoneInput 
+                  label="Mobile" 
+                  value={watch('mobile') || ''} 
+                  countryCode={watch('mobile_country_code') || '+91'} 
+                  onValueChange={(phone, cc, e164) => { 
+                    setValue('mobile', phone); 
+                    setValue('mobile_country_code', cc); 
+                    setValue('mobile_e164', e164); 
+                  }} 
+                  error={errors.mobile?.message as string}
+                />
+
+                <Input label="Email" type="email" {...register('email')} error={errors.email?.message as string} />
+                <Input label="Authorized Person" {...register('authorized_person_name')} error={errors.authorized_person_name?.message as string} />
               </div>
             </div>
 
@@ -6739,7 +9563,27 @@ export default function SetupPage() {
                   <label htmlFor="gst_registered" className="ml-2 block text-sm text-gray-900">GST Registered</label>
                 </div>
                 {isGstRegistered && (
-                  <Input label="GSTIN (15 characters)" {...register('gstin')} error={errors.gstin?.message} />
+                  <Controller
+                    name="gstin"
+                    control={control}
+                    render={({ field }) => (
+                      <GSTINInput
+                        label="GSTIN"
+                        value={field.value || ''}
+                        onChange={(v) => field.onChange(v)}
+                        error={errors.gstin?.message as string}
+                        onValidated={(parsed, valid) => {
+                          if (valid && parsed) {
+                            setValue('state_code', parsed.stateCode, { shouldValidate: true });
+                            setValue('state', parsed.stateName || '', { shouldValidate: true });
+                            setGstinValid(true);
+                          } else {
+                            setGstinValid(false);
+                          }
+                        }}
+                      />
+                    )}
+                  />
                 )}
               </div>
             </div>
@@ -6747,32 +9591,49 @@ export default function SetupPage() {
             <div className="space-y-6 md:col-span-2">
               <h3 className="text-lg font-medium border-b pb-2 text-gray-800">Address</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Input label="Address Line 1" className="md:col-span-2" {...register('address_line_1')} error={errors.address_line_1?.message} />
-                <Input label="City" {...register('city')} error={errors.city?.message} />
-                <Input label="District" {...register('district')} error={errors.district?.message} />
-                <Input label="State" {...register('state')} error={errors.state?.message} />
-                <Input label="State Code (e.g. 27 for MH)" {...register('state_code')} error={errors.state_code?.message} />
-                <Input label="Pincode" {...register('pincode')} error={errors.pincode?.message} />
+                <Input label="Address Line 1" className="md:col-span-2" {...register('address_line_1')} error={errors.address_line_1?.message as string} />
+                <Input label="City" {...register('city')} error={errors.city?.message as string} />
+                <Input label="District" {...register('district')} error={errors.district?.message as string} />
+                <Input 
+                  label="State" 
+                  {...register('state')} 
+                  error={errors.state?.message as string} 
+                  readOnly={isGstRegistered && gstinValid}
+                  className={isGstRegistered && gstinValid ? "bg-gray-100 cursor-not-allowed" : ""}
+                />
+                <Input 
+                  label="State Code (e.g. 27 for MH)" 
+                  {...register('state_code')} 
+                  error={errors.state_code?.message as string} 
+                  readOnly={isGstRegistered && gstinValid}
+                  className={isGstRegistered && gstinValid ? "bg-gray-100 cursor-not-allowed" : ""}
+                />
+                <Input label="Pincode" {...register('pincode')} error={errors.pincode?.message as string} />
               </div>
             </div>
 
             <div className="space-y-6 md:col-span-2">
               <h3 className="text-lg font-medium border-b pb-2 text-gray-800">Bank Details</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Input label="Account Holder Name" {...register('bank_account_holder_name')} error={errors.bank_account_holder_name?.message} />
-                <Input label="Account Number" {...register('bank_account_number')} error={errors.bank_account_number?.message} />
-                <Input label="IFSC Code" {...register('bank_ifsc')} error={errors.bank_ifsc?.message} />
-                <Input label="Bank Name" {...register('bank_name')} error={errors.bank_name?.message} />
-                <Input label="Branch" {...register('bank_branch')} error={errors.bank_branch?.message} />
-                <Input label="Account Type" {...register('bank_account_type')} error={errors.bank_account_type?.message} />
+                <Input label="Account Holder Name" {...register('bank_account_holder_name')} error={errors.bank_account_holder_name?.message as string} />
+                <Input label="Account Number" {...register('bank_account_number')} error={errors.bank_account_number?.message as string} />
+                <Input label="IFSC Code" {...register('bank_ifsc')} error={errors.bank_ifsc?.message as string} />
+                <Input label="Bank Name" {...register('bank_name')} error={errors.bank_name?.message as string} />
+                <Input label="Branch" {...register('bank_branch')} error={errors.bank_branch?.message as string} />
+                
+                <BankAccountTypeSelect 
+                  label="Account Type" 
+                  {...register('bank_account_type')} 
+                  error={errors.bank_account_type?.message as string} 
+                />
               </div>
             </div>
 
             <div className="space-y-6 md:col-span-2">
               <h3 className="text-lg font-medium border-b pb-2 text-gray-800">Security</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Input label="Create 4-Digit Login PIN" type="password" maxLength={4} {...register('pin')} error={errors.pin?.message} />
-                <Input label="Confirm PIN" type="password" maxLength={4} {...register('confirm_pin')} error={errors.confirm_pin?.message} />
+                <Input label="Create 4-Digit Login PIN" type="password" maxLength={4} {...register('pin')} error={errors.pin?.message as string} />
+                <Input label="Confirm PIN" type="password" maxLength={4} {...register('confirm_pin')} error={errors.confirm_pin?.message as string} />
               </div>
             </div>
 
@@ -6789,6 +9650,332 @@ export default function SetupPage() {
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+```
+
+```tsx
+// File: frontend/src/features/boqs/BOQListPage.tsx
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { boqsApi, type BOQResponse } from '../../api/boqs';
+import { Button } from '../../components/common/Button';
+
+export default function BOQListPage() {
+  const queryClient = useQueryClient();
+  const [selectedBOQ, setSelectedBOQ] = useState<BOQResponse | null>(null);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['boqs'],
+    queryFn: boqsApi.getAll
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: boqsApi.approve,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['boqs'] });
+      setSelectedBOQ(null);
+    }
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Bills of Quantities (BOQ)</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Manage your project BOQs and structural estimates.
+          </p>
+        </div>
+        <Link to="/boqs/new">
+          <Button>+ Create BOQ</Button>
+        </Link>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BOQ No</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project Name</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {isLoading ? (
+              <tr><td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">Loading BOQs...</td></tr>
+            ) : data?.items.length === 0 ? (
+              <tr><td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">No BOQs found.</td></tr>
+            ) : (
+              data?.items.map((b) => (
+                <tr key={b.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{new Date(b.boq_date).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{b.boq_number || 'DRAFT'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{b.project_name || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                      ${b.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' : 'bg-blue-100 text-blue-800'}`}>
+                      {b.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button onClick={() => setSelectedBOQ(b)} className="text-primary-600 hover:text-primary-900">View</button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {selectedBOQ && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">
+                  {selectedBOQ.boq_number || 'Draft BOQ'}
+                </h3>
+                <p className="text-sm text-gray-500">Project: {selectedBOQ.project_name} | Rev: {selectedBOQ.version}</p>
+              </div>
+              <button onClick={() => setSelectedBOQ(null)} className="text-gray-400 hover:text-gray-500 text-2xl font-bold">&times;</button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1">
+              <table className="min-w-full divide-y divide-gray-200 border text-sm mb-6">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-gray-500 font-medium">Type</th>
+                    <th className="px-4 py-2 text-left text-gray-500 font-medium">Description</th>
+                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Qty</th>
+                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Est. Rate</th>
+                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Est. Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {selectedBOQ.lines.map((line: any) => (
+                    <tr key={line.id}>
+                      <td className="px-4 py-2 text-xs font-semibold text-gray-500">{line.item_type}</td>
+                      <td className="px-4 py-2">
+                        {line.description}
+                        {line.quantity_formula && <div className="text-xs text-blue-500">Formula: {line.quantity_formula}</div>}
+                      </td>
+                      <td className="px-4 py-2 text-right">{line.quantity} {line.unit_snapshot}</td>
+                      <td className="px-4 py-2 text-right text-gray-500">₹{line.estimated_rate.toFixed(2)}</td>
+                      <td className="px-4 py-2 text-right font-medium">₹{line.estimated_amount.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-gray-50">
+                  <tr>
+                    <td colSpan={4} className="px-4 py-2 text-right font-bold">Total Estimated Value</td>
+                    <td className="px-4 py-2 text-right font-bold text-lg">
+                      ₹{selectedBOQ.lines.reduce((sum, l) => sum + l.estimated_amount, 0).toFixed(2)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+              {selectedBOQ.notes && (
+                <div className="mt-4 p-4 bg-gray-50 text-gray-800 text-sm rounded">
+                  <strong>Notes:</strong> {selectedBOQ.notes}
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t bg-gray-50 flex justify-end space-x-3 rounded-b-lg">
+              <Button variant="secondary" onClick={() => setSelectedBOQ(null)}>Close</Button>
+              {selectedBOQ.status === 'DRAFT' && (
+                <Button 
+                  onClick={() => approveMutation.mutate(selectedBOQ.id)}
+                  isLoading={approveMutation.isPending}
+                >
+                  Approve BOQ
+                </Button>
+              )}
+              {selectedBOQ.status === 'APPROVED' && (
+                <Link to={`/estimates/new?boq_id=${selectedBOQ.id}`}>
+                  <Button variant="primary">Create Estimate</Button>
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+```tsx
+// File: frontend/src/features/estimates/EstimateListPage.tsx
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { estimatesApi, type EstimateResponse } from '../../api/estimates';
+import { Button } from '../../components/common/Button';
+
+export default function EstimateListPage() {
+  const queryClient = useQueryClient();
+  const [selectedEstimate, setSelectedEstimate] = useState<EstimateResponse | null>(null);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['estimates'],
+    queryFn: estimatesApi.getAll
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: estimatesApi.approve,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['estimates'] });
+      setSelectedEstimate(null);
+    }
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Cost Estimates</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Internal cost estimations and markup pricing.
+          </p>
+        </div>
+        <Link to="/estimates/new">
+          <Button>+ Create Estimate</Button>
+        </Link>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estimate No</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Cost</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Selling Value</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {isLoading ? (
+              <tr><td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">Loading Estimates...</td></tr>
+            ) : data?.items.length === 0 ? (
+              <tr><td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">No Estimates found.</td></tr>
+            ) : (
+              data?.items.map((e) => (
+                <tr key={e.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{new Date(e.estimate_date).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{e.estimate_number || 'DRAFT'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                      ${e.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' : 'bg-blue-100 text-blue-800'}`}>
+                      {e.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-500">₹{e.total_cost.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-gray-900">₹{e.estimated_selling_value.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button onClick={() => setSelectedEstimate(e)} className="text-primary-600 hover:text-primary-900">View</button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {selectedEstimate && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">
+                  {selectedEstimate.estimate_number || 'Draft Estimate'}
+                </h3>
+                <p className="text-sm text-gray-500">Rev: {selectedEstimate.version}</p>
+              </div>
+              <button onClick={() => setSelectedEstimate(null)} className="text-gray-400 hover:text-gray-500 text-2xl font-bold">&times;</button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1">
+              <table className="min-w-full divide-y divide-gray-200 border text-sm mb-6">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-gray-500 font-medium">Item Name</th>
+                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Qty</th>
+                    <th className="px-4 py-2 text-right text-gray-500 font-medium bg-red-50">Cost Rate</th>
+                    <th className="px-4 py-2 text-right text-gray-500 font-medium bg-red-50">Cost Amt</th>
+                    <th className="px-4 py-2 text-right text-gray-500 font-medium bg-blue-50">Markup %</th>
+                    <th className="px-4 py-2 text-right text-gray-500 font-medium bg-blue-50">Markup Amt</th>
+                    <th className="px-4 py-2 text-right text-gray-500 font-medium bg-green-50">Sell Rate</th>
+                    <th className="px-4 py-2 text-right text-gray-500 font-medium bg-green-50">Sell Amt</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {selectedEstimate.lines.map((line: any) => (
+                    <tr key={line.id}>
+                      <td className="px-4 py-2">
+                        {line.item_name_snapshot}
+                        <div className="text-xs text-gray-400">{line.item_type}</div>
+                      </td>
+                      <td className="px-4 py-2 text-right">{line.quantity} {line.unit_snapshot}</td>
+                      <td className="px-4 py-2 text-right text-red-700 bg-red-50">₹{line.cost_rate.toFixed(2)}</td>
+                      <td className="px-4 py-2 text-right font-medium text-red-700 bg-red-50">₹{line.cost_amount.toFixed(2)}</td>
+                      <td className="px-4 py-2 text-right text-blue-700 bg-blue-50">{line.markup_percent}%</td>
+                      <td className="px-4 py-2 text-right text-blue-700 bg-blue-50">₹{line.markup_amount.toFixed(2)}</td>
+                      <td className="px-4 py-2 text-right text-green-700 bg-green-50">₹{line.selling_rate.toFixed(2)}</td>
+                      <td className="px-4 py-2 text-right font-medium text-green-700 bg-green-50">₹{line.selling_amount.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div className="grid grid-cols-2 gap-8 text-sm">
+                <div className="border rounded p-4 bg-gray-50">
+                  <h4 className="font-semibold mb-2">Cost Breakdown</h4>
+                  <div className="flex justify-between"><span>Material</span><span>₹{selectedEstimate.material_cost.toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span>Labour</span><span>₹{selectedEstimate.labour_cost.toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span>Service</span><span>₹{selectedEstimate.service_cost.toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span>Other</span><span>₹{selectedEstimate.other_cost.toFixed(2)}</span></div>
+                  <div className="flex justify-between font-bold pt-2 border-t mt-2"><span>Total Cost</span><span>₹{selectedEstimate.total_cost.toFixed(2)}</span></div>
+                </div>
+                
+                <div className="border rounded p-4 bg-green-50">
+                  <h4 className="font-semibold mb-2">Selling Breakdown</h4>
+                  <div className="flex justify-between"><span>Total Cost</span><span>₹{selectedEstimate.total_cost.toFixed(2)}</span></div>
+                  <div className="flex justify-between text-blue-700"><span>Total Markup</span><span>+ ₹{selectedEstimate.markup_amount.toFixed(2)}</span></div>
+                  <div className="flex justify-between font-bold pt-2 border-t mt-2 text-green-800 text-lg">
+                    <span>Estimated Selling Value</span>
+                    <span>₹{selectedEstimate.estimated_selling_value.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t bg-gray-50 flex justify-end space-x-3 rounded-b-lg">
+              <Button variant="secondary" onClick={() => setSelectedEstimate(null)}>Close</Button>
+              {selectedEstimate.status === 'DRAFT' && (
+                <Button 
+                  onClick={() => approveMutation.mutate(selectedEstimate.id)}
+                  isLoading={approveMutation.isPending}
+                >
+                  Approve Estimate
+                </Button>
+              )}
+              {selectedEstimate.status === 'APPROVED' && (
+                <Link to={`/supply-out/quotations/new?estimate_id=${selectedEstimate.id}`}>
+                  <Button variant="primary">Create Quotation</Button>
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -7646,12 +10833,13 @@ export default function ItemsPage() {
 // File: frontend/src/features/master/PartiesPage.tsx
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { partiesApi } from '../../api/parties';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
+import { GSTINInput, PhoneInput, BankAccountTypeSelect } from '../../components/gst';
 
 const partySchema = z.object({
   legal_name: z.string().min(1, 'Legal name is required'),
@@ -7660,12 +10848,20 @@ const partySchema = z.object({
   account_type: z.string().min(1, 'Account type is required'),
   contact_person: z.string().optional(),
   mobile: z.string().optional(),
+  mobile_country_code: z.string().optional(),
+  mobile_e164: z.string().optional(),
+  office_phone: z.string().optional(),
+  office_phone_country_code: z.string().optional(),
+  office_phone_e164: z.string().optional(),
   email: z.string().email('Invalid email').optional().or(z.literal('')),
+  website: z.string().optional(),
   gstin: z.string().optional(),
   gst_registration_type: z.string().optional(),
   pan: z.string().optional(),
+  tan: z.string().optional(),
   state: z.string().min(1, 'State is required'),
   state_code: z.string().min(1, 'State code is required'),
+  bank_account_type: z.string().optional(),
 });
 
 type PartyForm = z.infer<typeof partySchema>;
@@ -7675,19 +10871,23 @@ export default function PartiesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
+  const [gstinValid, setGstinValid] = useState(false);
+
   const { data: parties = [], isLoading } = useQuery({
     queryKey: ['parties'],
     queryFn: () => partiesApi.getAll()
   });
 
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<PartyForm>({
+  const { register, handleSubmit, watch, setValue, control, formState: { errors }, reset } = useForm<PartyForm>({
     resolver: zodResolver(partySchema),
     defaultValues: {
       party_type: 'BUSINESS',
       account_type: 'CUSTOMER',
       gst_registration_type: 'UNREGISTERED',
       state: 'Karnataka',
-      state_code: '29'
+      state_code: '29',
+      mobile_country_code: '+91',
+      office_phone_country_code: '+91',
     }
   });
 
@@ -7697,6 +10897,7 @@ export default function PartiesPage() {
       queryClient.invalidateQueries({ queryKey: ['parties'] });
       setIsModalOpen(false);
       reset();
+      setGstinValid(false);
     },
     onError: (error: any) => {
       setApiError(error.message || 'Failed to create party');
@@ -7715,7 +10916,7 @@ export default function PartiesPage() {
           <h2 className="text-2xl font-bold text-gray-900">Customers & Suppliers</h2>
           <p className="mt-1 text-sm text-gray-500">Manage your sundry debtors and creditors.</p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)}>Add New Party</Button>
+        <Button onClick={() => { setIsModalOpen(true); reset(); setGstinValid(false); }}>Add New Party</Button>
       </div>
 
       {isLoading ? (
@@ -7819,23 +11020,107 @@ export default function PartiesPage() {
                           <option value="CONSUMER">Consumer</option>
                         </select>
                       </div>
-                      <Input label="GSTIN" {...register('gstin')} error={errors.gstin?.message} />
-                      <Input label="PAN" {...register('pan')} error={errors.pan?.message} />
                       
-                      <div className="grid grid-cols-2 gap-2">
-                        <Input label="State" {...register('state')} error={errors.state?.message} placeholder="e.g. Karnataka" />
-                        <Input label="State Code" {...register('state_code')} error={errors.state_code?.message} placeholder="e.g. 29" />
+                      <Controller
+                        name="gstin"
+                        control={control}
+                        render={({ field }) => (
+                          <GSTINInput
+                            label="GSTIN"
+                            value={field.value || ''}
+                            onChange={(v) => field.onChange(v)}
+                            error={errors.gstin?.message}
+                            onValidated={(parsed, valid) => {
+                              if (valid && parsed) {
+                                setValue('state_code', parsed.stateCode, { shouldValidate: true });
+                                setValue('state', parsed.stateName || '', { shouldValidate: true });
+                                setValue('pan', parsed.pan, { shouldValidate: true });
+                                setGstinValid(true);
+                              } else {
+                                setGstinValid(false);
+                              }
+                            }}
+                          />
+                        )}
+                      />
+                      
+                      <Input 
+                        label="PAN" 
+                        {...register('pan')} 
+                        error={errors.pan?.message}
+                        disabled={gstinValid}
+                        className={gstinValid ? "bg-gray-100" : ""}
+                      />
+
+                      <Input label="TAN" {...register('tan')} error={errors.tan?.message} />
+                      
+                      <div className="grid grid-cols-2 gap-2 col-span-2 md:col-span-1">
+                        <Input 
+                          label="State" 
+                          {...register('state')} 
+                          error={errors.state?.message} 
+                          placeholder="e.g. Karnataka"
+                          readOnly={gstinValid}
+                          className={gstinValid ? "bg-gray-100 cursor-not-allowed" : ""}
+                        />
+                        <Input 
+                          label="State Code" 
+                          {...register('state_code')} 
+                          error={errors.state_code?.message} 
+                          placeholder="e.g. 29"
+                          readOnly={gstinValid}
+                          className={gstinValid ? "bg-gray-100 cursor-not-allowed" : ""}
+                        />
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Bank Details */}
+                  <div className="md:col-span-2">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Bank Information</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <BankAccountTypeSelect 
+                        label="Bank Account Type" 
+                        {...register('bank_account_type')} 
+                        error={errors.bank_account_type?.message} 
+                      />
                     </div>
                   </div>
 
                   {/* Contact Details */}
                   <div className="md:col-span-2">
                     <h4 className="text-sm font-semibold text-gray-700 mb-3">Contact Information</h4>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Input label="Contact Person" {...register('contact_person')} error={errors.contact_person?.message} />
-                      <Input label="Mobile Number" {...register('mobile')} error={errors.mobile?.message} />
+                      
+                      <PhoneInput 
+                        label="Mobile Number" 
+                        value={watch('mobile') || ''} 
+                        countryCode={watch('mobile_country_code') || '+91'} 
+                        onValueChange={(phone, cc, e164) => { 
+                          setValue('mobile', phone); 
+                          setValue('mobile_country_code', cc); 
+                          setValue('mobile_e164', e164); 
+                        }} 
+                        error={errors.mobile?.message}
+                      />
+
+                      <PhoneInput 
+                        label="Office Contact" 
+                        optional 
+                        value={watch('office_phone') || ''} 
+                        countryCode={watch('office_phone_country_code') || '+91'} 
+                        onValueChange={(phone, cc, e164) => { 
+                          setValue('office_phone', phone); 
+                          setValue('office_phone_country_code', cc); 
+                          setValue('office_phone_e164', e164); 
+                        }} 
+                        error={errors.office_phone?.message}
+                      />
+
                       <Input label="Email Address" type="email" {...register('email')} error={errors.email?.message} />
+                      
+                      <Input label="Website" type="url" {...register('website')} placeholder="https://..." error={errors.website?.message} />
                     </div>
                   </div>
                 </div>
@@ -8059,6 +11344,7 @@ import { ordersApi, type SupplyOrderCalculateRequest, type SupplyOrderCreateRequ
 import { itemsApi } from '../../api/items';
 import { unitsApi } from '../../api/units';
 import { partiesApi } from '../../api/parties';
+import { quotationsApi } from '../../api/quotations';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 
@@ -8109,7 +11395,16 @@ export default function OrderBuilderPage() {
     queryFn: () => partiesApi.getAll(isPurchase ? 'VENDOR' : 'CUSTOMER') 
   });
 
-  const { register, control, handleSubmit, watch, setValue, formState: { errors } } = useForm<any>({
+  const searchParams = new URLSearchParams(location.search);
+  const quotationId = searchParams.get('quotation_id');
+
+  const { data: quotation } = useQuery({
+    queryKey: ['quotations', quotationId],
+    queryFn: () => quotationsApi.getById(quotationId!),
+    enabled: !!quotationId
+  });
+
+  const { register, control, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<any>({
     resolver: zodResolver(orderSchema),
     defaultValues: {
       order_type: defaultOrderType,
@@ -8128,6 +11423,41 @@ export default function OrderBuilderPage() {
 
   const watchAll = watch();
   const taxTreatment = watchAll.tax_treatment;
+
+  // Pre-fill form if quotation is loaded
+  useEffect(() => {
+    if (quotation && units.length > 0) {
+      reset({
+        quotation_id: quotation.id,
+        order_type: quotation.quotation_type,
+        tax_treatment: quotation.tax_treatment,
+        order_date: new Date().toISOString().split('T')[0],
+        expected_date: '',
+        party_id: quotation.party_id,
+        place_of_supply: quotation.place_of_supply,
+        notes: quotation.notes || '',
+        terms: quotation.terms || '',
+        lines: quotation.lines.map((l: any) => {
+          const unit = units.find((u: any) => String(u.id) === String(l.unit_id));
+          return {
+            item_id: l.item_id || '',
+            item_name: l.item_name_snapshot,
+            sku: l.sku_snapshot || '',
+            hsn_sac: l.hsn_sac_snapshot || '',
+            description: l.description || '',
+            quantity: l.quantity,
+            unit_id: l.unit_id || '',
+            unit_name: unit?.name || l.unit_snapshot || '',
+            unit_symbol: unit?.abbreviation || l.unit_snapshot || '',
+            rate: l.rate,
+            discount_type: l.discount_type || 'NONE',
+            discount_value: l.discount_value || 0,
+            gst_rate: l.gst_rate || 0
+          };
+        })
+      });
+    }
+  }, [quotation, units, reset]);
 
   const calculateMutation = useMutation({
     mutationFn: ordersApi.calculate,
@@ -8232,7 +11562,9 @@ export default function OrderBuilderPage() {
           <h2 className="text-2xl font-bold text-gray-900">
             {isPurchase ? 'Create Supply In (Purchase Order)' : 'Create Supply Out (Sales Order)'}
           </h2>
-          <p className="mt-1 text-sm text-gray-500">Draft a new {isPurchase ? 'purchase' : 'sales'} order.</p>
+          <p className="mt-1 text-sm text-gray-500">
+            {quotationId ? 'Draft a new order from accepted quotation.' : `Draft a new ${isPurchase ? 'purchase' : 'sales'} order.`}
+          </p>
         </div>
       </div>
 
@@ -8677,6 +12009,526 @@ export default function OrderListPage() {
 ```
 
 ```tsx
+// File: frontend/src/features/quotations/QuotationBuilderPage.tsx
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useForm, useFieldArray } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { quotationsApi, type QuotationCreateRequest } from '../../api/quotations';
+import { partiesApi } from '../../api/parties';
+import { itemsApi } from '../../api/items';
+import { Button } from '../../components/common/Button';
+import { Input } from '../../components/common/Input';
+
+const quotationLineSchema = z.object({
+  item_id: z.string().optional(),
+  item_name_snapshot: z.string().min(1, 'Item name is required'),
+  description: z.string().optional(),
+  quantity: z.number().min(0.001, 'Quantity must be greater than 0'),
+  rate: z.number().min(0, 'Rate must be >= 0'),
+  discount_type: z.string().optional(),
+  discount_value: z.number().optional().default(0),
+  gst_rate: z.number().optional().default(0),
+});
+
+const quotationSchema = z.object({
+  party_id: z.string().min(1, 'Party is required'),
+  tax_treatment: z.enum(['GST', 'WITHOUT_GST']),
+  valid_until: z.string().min(1, 'Valid until date is required'),
+  place_of_supply: z.string().min(1, 'Place of supply is required'),
+  notes: z.string().optional(),
+  terms: z.string().optional(),
+  lines: z.array(quotationLineSchema).min(1, 'At least one item is required'),
+});
+
+export default function QuotationBuilderPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isSupplyIn = location.pathname.includes('supply-in');
+  const quotationType = isSupplyIn ? 'PURCHASE' : 'SALES';
+  
+  const { data: parties } = useQuery({
+    queryKey: ['parties'],
+    queryFn: () => partiesApi.getAll()
+  });
+
+  const { data: items } = useQuery({
+    queryKey: ['items'],
+    queryFn: () => itemsApi.getAll()
+  });
+
+  const { register, control, handleSubmit, watch, setValue, formState: { errors } } = useForm<any>({
+    resolver: zodResolver(quotationSchema),
+    defaultValues: {
+      tax_treatment: 'GST',
+      valid_until: new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0],
+      place_of_supply: 'State',
+      lines: [{ item_name_snapshot: '', quantity: 1, rate: 0, discount_value: 0, gst_rate: 18 }]
+    }
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'lines'
+  });
+
+  const watchTaxTreatment = watch('tax_treatment');
+
+  const createMutation = useMutation({
+    mutationFn: quotationsApi.create,
+    onSuccess: () => {
+      navigate(`${isSupplyIn ? '/supply-in' : '/supply-out'}/quotations`);
+    },
+    onError: (err: any) => {
+      alert(err?.response?.data?.detail || "Failed to create quotation");
+    }
+  });
+
+  const handleItemSelect = (index: number, itemId: string) => {
+    const item = items?.find((i: any) => i.id === itemId || String(i.id) === itemId);
+    if (item) {
+      setValue(`lines.${index}.item_id`, String(item.id));
+      setValue(`lines.${index}.item_name_snapshot`, item.name);
+      setValue(`lines.${index}.rate`, isSupplyIn ? (item.purchase_price || 0) : (item.sale_price || 0));
+      if (watchTaxTreatment === 'GST') {
+        setValue(`lines.${index}.gst_rate`, item.gst_rate || 18);
+      }
+    }
+  };
+
+  const onSubmit = (data: any) => {
+    const request: QuotationCreateRequest = {
+      ...data,
+      quotation_type: quotationType,
+      lines: data.lines.map((l: any) => ({
+        ...l,
+        discount_type: l.discount_value > 0 ? 'FIXED' : null
+      }))
+    };
+    createMutation.mutate(request);
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900">
+          Create {isSupplyIn ? 'Purchase Quotation' : 'Sales Quotation'}
+        </h2>
+        <p className="mt-1 text-sm text-gray-500">
+          Create a non-binding quotation for your {isSupplyIn ? 'supplier' : 'customer'}.
+        </p>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm border p-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {isSupplyIn ? 'Supplier' : 'Customer'} *
+              </label>
+              <select
+                className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                {...register('party_id')}
+              >
+                <option value="">-- Select Party --</option>
+                {parties?.map((p: any) => (
+                  <option key={p.id} value={p.id}>{p.legal_name || p.name}</option>
+                ))}
+              </select>
+              {errors.party_id && <p className="text-red-500 text-xs mt-1">{errors.party_id.message as string}</p>}
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tax Treatment</label>
+              <select
+                className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                {...register('tax_treatment')}
+              >
+                <option value="GST">GST</option>
+                <option value="WITHOUT_GST">Without GST</option>
+              </select>
+            </div>
+
+            <Input
+              label="Valid Until *"
+              type="date"
+              {...register('valid_until')}
+              error={errors.valid_until?.message as string}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Input
+              label="Place of Supply *"
+              {...register('place_of_supply')}
+              error={errors.place_of_supply?.message as string}
+            />
+          </div>
+
+          <div className="mt-8 border-t pt-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Quotation Items</h3>
+              <Button type="button" variant="secondary" onClick={() => append({ item_name_snapshot: '', quantity: 1, rate: 0, discount_value: 0, gst_rate: 18 })}>
+                + Add Row
+              </Button>
+            </div>
+            
+            <div className="overflow-x-auto border rounded-lg">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item Selection</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-48">Item Name *</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-24">Qty *</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-32">Rate *</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-32">Disc (₹)</th>
+                    {watchTaxTreatment === 'GST' && (
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-24">GST %</th>
+                    )}
+                    <th className="px-4 py-3"></th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {fields.map((field, index) => (
+                    <tr key={field.id}>
+                      <td className="px-4 py-2">
+                        <select 
+                          className="w-full text-sm rounded border-gray-300"
+                          onChange={(e) => handleItemSelect(index, e.target.value)}
+                        >
+                          <option value="">-- Catalog --</option>
+                          {items?.map((i: any) => (
+                            <option key={i.id} value={i.id}>{i.name}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          {...register(`lines.${index}.item_name_snapshot`)}
+                          className="w-full text-sm rounded border-gray-300"
+                          placeholder="Manual name"
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          type="number" step="any" min="0"
+                          {...register(`lines.${index}.quantity`, { valueAsNumber: true })}
+                          className="w-full text-sm rounded border-gray-300"
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          type="number" step="any" min="0"
+                          {...register(`lines.${index}.rate`, { valueAsNumber: true })}
+                          className="w-full text-sm rounded border-gray-300"
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          type="number" step="any" min="0"
+                          {...register(`lines.${index}.discount_value`, { valueAsNumber: true })}
+                          className="w-full text-sm rounded border-gray-300"
+                        />
+                      </td>
+                      {watchTaxTreatment === 'GST' && (
+                        <td className="px-4 py-2">
+                          <input
+                            type="number" step="any" min="0"
+                            {...register(`lines.${index}.gst_rate`, { valueAsNumber: true })}
+                            className="w-full text-sm rounded border-gray-300"
+                          />
+                        </td>
+                      )}
+                      <td className="px-4 py-2 text-right">
+                        <button type="button" onClick={() => remove(index)} className="text-red-500 hover:text-red-700 text-xl font-bold">&times;</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {errors.lines && <p className="text-red-500 text-xs p-4">{errors.lines.message as string}</p>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Notes / Remarks</label>
+              <textarea
+                {...register('notes')}
+                rows={3}
+                className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Terms & Conditions</label>
+              <textarea
+                {...register('terms')}
+                rows={3}
+                className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-4 pt-6 border-t">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => navigate(-1)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              isLoading={createMutation.isPending}
+            >
+              Create Quotation
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+```
+
+```tsx
+// File: frontend/src/features/quotations/QuotationListPage.tsx
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLocation, Link } from 'react-router-dom';
+import { quotationsApi, type QuotationResponse } from '../../api/quotations';
+import { Button } from '../../components/common/Button';
+
+export default function QuotationListPage() {
+  const location = useLocation();
+  const queryClient = useQueryClient();
+  const [selectedQuotation, setSelectedQuotation] = useState<QuotationResponse | null>(null);
+
+  const isSupplyIn = location.pathname.includes('supply-in');
+  const quotationType = isSupplyIn ? 'PURCHASE' : 'SALES';
+  const pageTitle = isSupplyIn ? 'Purchase Quotations' : 'Sales Quotations';
+  const partyLabel = isSupplyIn ? 'Supplier' : 'Customer';
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['quotations', quotationType],
+    queryFn: () => quotationsApi.getAll(quotationType)
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: quotationsApi.approve,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quotations'] });
+      setSelectedQuotation(null);
+    }
+  });
+
+  const acceptMutation = useMutation({
+    mutationFn: (id: string) => quotationsApi.accept(id, "USER_ACCEPTED"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quotations'] });
+      setSelectedQuotation(null);
+    }
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">{pageTitle}</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Manage your {quotationType.toLowerCase()} quotations.
+          </p>
+        </div>
+        <Link to={`${isSupplyIn ? '/supply-in' : '/supply-out'}/quotations/new`}>
+          <Button>+ Create Quotation</Button>
+        </Link>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quotation No</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{partyLabel}</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Valid Until</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {isLoading ? (
+              <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">Loading quotations...</td></tr>
+            ) : data?.items.length === 0 ? (
+              <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">No quotations found.</td></tr>
+            ) : (
+              data?.items.map((q) => (
+                <tr key={q.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{new Date(q.quotation_date).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{q.quotation_number || 'DRAFT'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{q.party_id.substring(0,8)}...</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                    {new Date(q.valid_until).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                      ${q.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' : 
+                        q.status === 'APPROVED' ? 'bg-blue-100 text-blue-800' : 
+                        q.status === 'ACCEPTED' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                      {q.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-bold">₹{q.grand_total.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button onClick={() => setSelectedQuotation(q)} className="text-primary-600 hover:text-primary-900">View</button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* View Modal */}
+      {selectedQuotation && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">
+                  {selectedQuotation.quotation_number || 'Draft Quotation'}
+                </h3>
+                <p className="text-sm text-gray-500">Rev: {selectedQuotation.revision} | Valid Until: {new Date(selectedQuotation.valid_until).toLocaleDateString()}</p>
+              </div>
+              <button onClick={() => setSelectedQuotation(null)} className="text-gray-400 hover:text-gray-500 text-2xl font-bold">&times;</button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1">
+              <table className="min-w-full divide-y divide-gray-200 border mb-6 text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-gray-500 font-medium">Item</th>
+                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Qty</th>
+                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Rate</th>
+                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Discount</th>
+                    <th className="px-4 py-2 text-right text-gray-500 font-medium">GST</th>
+                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {selectedQuotation.lines.map((line: any) => (
+                    <tr key={line.id}>
+                      <td className="px-4 py-2">
+                        {line.item_name_snapshot}
+                        {line.description && <div className="text-xs text-gray-500">{line.description}</div>}
+                      </td>
+                      <td className="px-4 py-2 text-right">
+                        {line.quantity} {line.unit_snapshot}
+                      </td>
+                      <td className="px-4 py-2 text-right">₹{line.rate.toFixed(2)}</td>
+                      <td className="px-4 py-2 text-right text-red-500">
+                        {line.discount_amount > 0 ? `-₹${line.discount_amount.toFixed(2)}` : '-'}
+                      </td>
+                      <td className="px-4 py-2 text-right">{line.gst_rate}%</td>
+                      <td className="px-4 py-2 text-right font-medium">₹{line.line_total.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div className="flex justify-end">
+                <div className="w-64 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Subtotal</span>
+                    <span>₹{selectedQuotation.subtotal.toFixed(2)}</span>
+                  </div>
+                  {selectedQuotation.discount_total > 0 && (
+                    <div className="flex justify-between text-red-600">
+                      <span>Total Discount</span>
+                      <span>-₹{selectedQuotation.discount_total.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Taxable Value</span>
+                    <span>₹{selectedQuotation.taxable_total.toFixed(2)}</span>
+                  </div>
+                  {selectedQuotation.tax_treatment === 'GST' && (
+                    <>
+                      {selectedQuotation.cgst_total > 0 && (
+                        <div className="flex justify-between text-gray-500 text-xs">
+                          <span>CGST</span>
+                          <span>₹{selectedQuotation.cgst_total.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {selectedQuotation.sgst_total > 0 && (
+                        <div className="flex justify-between text-gray-500 text-xs">
+                          <span>SGST</span>
+                          <span>₹{selectedQuotation.sgst_total.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {selectedQuotation.igst_total > 0 && (
+                        <div className="flex justify-between text-gray-500 text-xs">
+                          <span>IGST</span>
+                          <span>₹{selectedQuotation.igst_total.toFixed(2)}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  <div className="flex justify-between font-bold text-lg pt-2 border-t mt-2">
+                    <span>Grand Total</span>
+                    <span>₹{selectedQuotation.grand_total.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {selectedQuotation.notes && (
+                <div className="mt-6 p-4 bg-yellow-50 text-yellow-800 text-sm rounded">
+                  <strong>Notes:</strong> {selectedQuotation.notes}
+                </div>
+              )}
+              {selectedQuotation.terms && (
+                <div className="mt-4 p-4 bg-gray-50 text-gray-800 text-sm rounded">
+                  <strong>Terms & Conditions:</strong>
+                  <pre className="whitespace-pre-wrap font-sans mt-2">{selectedQuotation.terms}</pre>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t bg-gray-50 flex justify-end space-x-3 rounded-b-lg">
+              <Button variant="secondary" onClick={() => setSelectedQuotation(null)}>Close</Button>
+              {selectedQuotation.status === 'DRAFT' && (
+                <Button 
+                  onClick={() => approveMutation.mutate(selectedQuotation.id)}
+                  isLoading={approveMutation.isPending}
+                >
+                  Approve Quotation
+                </Button>
+              )}
+              {selectedQuotation.status === 'APPROVED' && (
+                <Button 
+                  onClick={() => acceptMutation.mutate(selectedQuotation.id)}
+                  isLoading={acceptMutation.isPending}
+                >
+                  Accept Quotation
+                </Button>
+              )}
+              {selectedQuotation.status === 'ACCEPTED' && !selectedQuotation.fully_converted && (
+                <Link to={`${isSupplyIn ? '/supply-in' : '/supply-out'}/new?quotation_id=${selectedQuotation.id}`}>
+                  <Button variant="primary">Convert to Order</Button>
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+```tsx
 // File: frontend/src/features/returns/ReturnBuilderPage.tsx
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -8970,6 +12822,13 @@ export default function ReturnListPage() {
   const location = useLocation();
   const queryClient = useQueryClient();
   const [selectedReturn, setSelectedReturn] = useState<ReturnOrderResponse | null>(null);
+  const [showSettlementModal, setShowSettlementModal] = useState(false);
+  const [settlementForm, setSettlementForm] = useState({
+    settlement_type: 'ADJUST_RECEIVABLE',
+    amount: 0,
+    reference_number: '',
+    notes: ''
+  });
 
   const isSupplyIn = location.pathname.includes('supply-in');
   const returnType = isSupplyIn ? 'SUPPLY_IN_RETURN' : 'SUPPLY_OUT_RETURN';
@@ -8996,6 +12855,28 @@ export default function ReturnListPage() {
       setSelectedReturn(null);
     }
   });
+
+  const settlementMutation = useMutation({
+    mutationFn: (data: { id: string, payload: any }) => returnsApi.addSettlement(data.id, data.payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['returns'] });
+      setShowSettlementModal(false);
+      setSelectedReturn(null);
+    },
+    onError: (err: any) => {
+      alert(err?.response?.data?.detail || "Failed to process settlement");
+    }
+  });
+
+  const handleSettlementSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedReturn) {
+      settlementMutation.mutate({
+        id: selectedReturn.id,
+        payload: settlementForm
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -9102,8 +12983,30 @@ export default function ReturnListPage() {
                 </tbody>
               </table>
 
-              <div className="flex justify-end">
-                <div className="w-64 space-y-2 text-sm">
+              <div className="flex flex-col md:flex-row justify-between mt-6 pt-4 border-t gap-6">
+                <div className="w-full md:w-1/2">
+                  <h4 className="font-semibold text-gray-900 mb-2">Settlements</h4>
+                  {selectedReturn.settlements.length > 0 ? (
+                    <div className="space-y-2">
+                      {selectedReturn.settlements.map((s: any) => (
+                        <div key={s.id} className="bg-white border rounded p-3 text-sm flex justify-between items-center shadow-sm">
+                          <div>
+                            <div className="font-medium text-gray-900">{s.settlement_type.replace(/_/g, ' ')}</div>
+                            <div className="text-gray-500 text-xs">{new Date(s.settlement_date).toLocaleDateString()} {s.reference_number ? `| Ref: ${s.reference_number}` : ''}</div>
+                            {s.notes && <div className="text-gray-500 text-xs italic">Note: {s.notes}</div>}
+                          </div>
+                          <div className="font-bold text-green-600">
+                            ₹{s.amount.toFixed(2)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500 italic">No settlements recorded yet.</div>
+                  )}
+                </div>
+                
+                <div className="w-full md:w-64 space-y-2 text-sm bg-gray-50 p-4 rounded-lg self-start border">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Subtotal</span>
                     <span>₹{selectedReturn.subtotal.toFixed(2)}</span>
@@ -9111,6 +13014,14 @@ export default function ReturnListPage() {
                   <div className="flex justify-between font-bold text-lg pt-2 border-t mt-2">
                     <span>Grand Total</span>
                     <span>₹{selectedReturn.grand_total.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-green-600 font-semibold pt-1">
+                    <span>Settled</span>
+                    <span>₹{selectedReturn.settlements.reduce((sum: number, s: any) => sum + s.amount, 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-red-600 font-bold pt-2 border-t mt-2">
+                    <span>Balance</span>
+                    <span>₹{(selectedReturn.grand_total - selectedReturn.settlements.reduce((sum: number, s: any) => sum + s.amount, 0)).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -9134,7 +13045,97 @@ export default function ReturnListPage() {
                   Post Return (Process)
                 </Button>
               )}
+              {selectedReturn.status === 'COMPLETED' && selectedReturn.financial_status !== 'REFUNDED' && (
+                <Button 
+                  onClick={() => {
+                    setSettlementForm({
+                      settlement_type: isSupplyIn ? 'ADJUST_PAYABLE' : 'ADJUST_RECEIVABLE',
+                      amount: selectedReturn.grand_total - selectedReturn.settlements.reduce((sum: number, s: any) => sum + s.amount, 0),
+                      reference_number: '',
+                      notes: ''
+                    });
+                    setShowSettlementModal(true);
+                  }}
+                >
+                  Process Settlement
+                </Button>
+              )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Settlement Modal */}
+      {showSettlementModal && selectedReturn && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6 border-b flex justify-between items-center">
+              <h3 className="text-xl font-bold text-gray-900">Process Settlement</h3>
+              <button onClick={() => setShowSettlementModal(false)} className="text-gray-400 hover:text-gray-500 text-2xl font-bold">&times;</button>
+            </div>
+            <form onSubmit={handleSettlementSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Settlement Type</label>
+                <select 
+                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                  value={settlementForm.settlement_type}
+                  onChange={(e) => setSettlementForm({...settlementForm, settlement_type: e.target.value})}
+                  required
+                >
+                  {isSupplyIn ? (
+                    <>
+                      <option value="ADJUST_PAYABLE">Adjust Payable (Reduce what we owe)</option>
+                      <option value="SUPPLIER_REFUND">Supplier Refund (Cash/Bank received)</option>
+                      <option value="SUPPLIER_CREDIT">Supplier Credit (Credit Note)</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="ADJUST_RECEIVABLE">Adjust Receivable (Reduce what they owe)</option>
+                      <option value="CUSTOMER_REFUND">Customer Refund (Cash/Bank paid)</option>
+                      <option value="CUSTOMER_CREDIT">Customer Credit (Credit Note)</option>
+                    </>
+                  )}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Amount (₹)</label>
+                <input 
+                  type="number" 
+                  step="0.01"
+                  min="0.01"
+                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                  value={settlementForm.amount}
+                  onChange={(e) => setSettlementForm({...settlementForm, amount: parseFloat(e.target.value)})}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Reference Number</label>
+                <input 
+                  type="text" 
+                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                  value={settlementForm.reference_number}
+                  onChange={(e) => setSettlementForm({...settlementForm, reference_number: e.target.value})}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Notes</label>
+                <textarea 
+                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                  value={settlementForm.notes}
+                  onChange={(e) => setSettlementForm({...settlementForm, notes: e.target.value})}
+                  rows={2}
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <Button type="button" variant="secondary" onClick={() => setShowSettlementModal(false)}>Cancel</Button>
+                <Button type="submit" isLoading={settlementMutation.isPending}>Confirm Settlement</Button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -9151,6 +13152,214 @@ export default function ReturnListPage() {
   body {
     @apply bg-gray-50 text-gray-900;
   }
+}
+```
+
+```typescript
+// File: frontend/src/lib/gst/constants.ts
+export const BANK_ACCOUNT_TYPES = [
+  { value: 'CURRENT', label: 'Current Account' },
+  { value: 'SAVINGS', label: 'Savings Account' },
+  { value: 'CASH_CREDIT', label: 'Cash Credit Account' },
+  { value: 'OVERDRAFT', label: 'Overdraft Account' },
+  { value: 'NRE', label: 'NRE Account' },
+  { value: 'NRO', label: 'NRO Account' },
+  { value: 'OTHER', label: 'Other' },
+] as const;
+
+export const COMMON_COUNTRY_CODES = [
+  { code: '+91', country: 'IN', name: 'India', flag: '🇮🇳' },
+  { code: '+1', country: 'US', name: 'United States', flag: '🇺🇸' },
+  { code: '+44', country: 'GB', name: 'United Kingdom', flag: '🇬🇧' },
+  { code: '+971', country: 'AE', name: 'UAE', flag: '🇦🇪' },
+  { code: '+65', country: 'SG', name: 'Singapore', flag: '🇸🇬' },
+  { code: '+60', country: 'MY', name: 'Malaysia', flag: '🇲🇾' },
+  { code: '+61', country: 'AU', name: 'Australia', flag: '🇦🇺' },
+  { code: '+49', country: 'DE', name: 'Germany', flag: '🇩🇪' },
+  { code: '+33', country: 'FR', name: 'France', flag: '🇫🇷' },
+  { code: '+81', country: 'JP', name: 'Japan', flag: '🇯🇵' },
+  { code: '+86', country: 'CN', name: 'China', flag: '🇨🇳' },
+  { code: '+880', country: 'BD', name: 'Bangladesh', flag: '🇧🇩' },
+  { code: '+94', country: 'LK', name: 'Sri Lanka', flag: '🇱🇰' },
+  { code: '+977', country: 'NP', name: 'Nepal', flag: '🇳🇵' },
+  { code: '+92', country: 'PK', name: 'Pakistan', flag: '🇵🇰' },
+] as const;
+
+export type CountryCode = typeof COMMON_COUNTRY_CODES[number];
+```
+
+```typescript
+// File: frontend/src/lib/gst/index.ts
+export * from './stateCodes';
+export * from './validator';
+export * from './constants';
+```
+
+```typescript
+// File: frontend/src/lib/gst/stateCodes.ts
+export interface GSTState {
+  code: string;
+  name: string;
+  isUnionTerritory: boolean;
+}
+
+export const GST_STATE_CODES: Record<string, GSTState> = {
+  "01": { code: "01", name: "Jammu and Kashmir", isUnionTerritory: false },
+  "02": { code: "02", name: "Himachal Pradesh", isUnionTerritory: false },
+  "03": { code: "03", name: "Punjab", isUnionTerritory: false },
+  "04": { code: "04", name: "Chandigarh", isUnionTerritory: true },
+  "05": { code: "05", name: "Uttarakhand", isUnionTerritory: false },
+  "06": { code: "06", name: "Haryana", isUnionTerritory: false },
+  "07": { code: "07", name: "Delhi", isUnionTerritory: true },
+  "08": { code: "08", name: "Rajasthan", isUnionTerritory: false },
+  "09": { code: "09", name: "Uttar Pradesh", isUnionTerritory: false },
+  "10": { code: "10", name: "Bihar", isUnionTerritory: false },
+  "11": { code: "11", name: "Sikkim", isUnionTerritory: false },
+  "12": { code: "12", name: "Arunachal Pradesh", isUnionTerritory: false },
+  "13": { code: "13", name: "Nagaland", isUnionTerritory: false },
+  "14": { code: "14", name: "Manipur", isUnionTerritory: false },
+  "15": { code: "15", name: "Mizoram", isUnionTerritory: false },
+  "16": { code: "16", name: "Tripura", isUnionTerritory: false },
+  "17": { code: "17", name: "Meghalaya", isUnionTerritory: false },
+  "18": { code: "18", name: "Assam", isUnionTerritory: false },
+  "19": { code: "19", name: "West Bengal", isUnionTerritory: false },
+  "20": { code: "20", name: "Jharkhand", isUnionTerritory: false },
+  "21": { code: "21", name: "Odisha", isUnionTerritory: false },
+  "22": { code: "22", name: "Chhattisgarh", isUnionTerritory: false },
+  "23": { code: "23", name: "Madhya Pradesh", isUnionTerritory: false },
+  "24": { code: "24", name: "Gujarat", isUnionTerritory: false },
+  "25": { code: "25", name: "Daman and Diu", isUnionTerritory: true },
+  "26": { code: "26", name: "Dadra and Nagar Haveli and Daman and Diu", isUnionTerritory: true },
+  "27": { code: "27", name: "Maharashtra", isUnionTerritory: false },
+  "29": { code: "29", name: "Karnataka", isUnionTerritory: false },
+  "30": { code: "30", name: "Goa", isUnionTerritory: false },
+  "31": { code: "31", name: "Lakshadweep", isUnionTerritory: true },
+  "32": { code: "32", name: "Kerala", isUnionTerritory: false },
+  "33": { code: "33", name: "Tamil Nadu", isUnionTerritory: false },
+  "34": { code: "34", name: "Puducherry", isUnionTerritory: true },
+  "35": { code: "35", name: "Andaman and Nicobar Islands", isUnionTerritory: true },
+  "36": { code: "36", name: "Telangana", isUnionTerritory: false },
+  "37": { code: "37", name: "Andhra Pradesh", isUnionTerritory: false },
+  "38": { code: "38", name: "Ladakh", isUnionTerritory: true },
+  "97": { code: "97", name: "Other Territory", isUnionTerritory: true },
+  "99": { code: "99", name: "Centre Jurisdiction", isUnionTerritory: true },
+};
+
+export function getStateByCode(code: string): GSTState | null {
+  return GST_STATE_CODES[code] ?? null;
+}
+
+export function getAllStates(): GSTState[] {
+  return Object.values(GST_STATE_CODES).sort((a, b) =>
+    a.code.localeCompare(b.code)
+  );
+}
+```
+
+```typescript
+// File: frontend/src/lib/gst/validator.ts
+import { GST_STATE_CODES } from './stateCodes';
+
+const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+
+
+export interface GSTINValidation {
+  valid: boolean;
+  validLength: boolean;
+  validStructure: boolean;
+  validStateCode: boolean;
+  validChecksum: boolean;
+  errors: string[];
+  normalized: string;
+}
+
+export interface GSTINParseResult {
+  gstin: string;
+  stateCode: string;
+  stateName: string | null;
+  isUnionTerritory: boolean;
+  pan: string;
+  panHolderType: string;
+  entityNumber: string;
+  defaultCharacter: string;
+  checkDigit: string;
+}
+
+function computeChecksum(gstin: string): string {
+  const body = gstin.slice(0, 14);
+  const vals = body.split('').map((c) =>
+    c >= '0' && c <= '9' ? parseInt(c) : c.charCodeAt(0) - 55
+  );
+  const weighted = vals.map((v, i) => v * ((i % 2) + 1));
+  const reduced = weighted.map((x) => Math.floor(x / 36) + (x % 36));
+  const sum = reduced.reduce((a, b) => a + b, 0);
+  const csum = 36 - (sum % 36);
+  if (csum >= 36) return '0';
+  return csum < 10 ? String(csum) : String.fromCharCode(csum + 55);
+}
+
+export function validateGSTIN(raw: string): GSTINValidation {
+  const normalized = raw.toUpperCase().replace(/\s+/g, '');
+  const errors: string[] = [];
+  let validLength = false;
+  let validStructure = false;
+  let validStateCode = false;
+  let validChecksum = false;
+
+  if (normalized.length !== 15) {
+    errors.push(`GSTIN must be exactly 15 characters (currently ${normalized.length})`);
+  } else {
+    validLength = true;
+  }
+
+  if (validLength) {
+    if (!GSTIN_REGEX.test(normalized)) {
+      errors.push('GSTIN format is invalid. Expected: SSAAAAANNNNAS(Z)D');
+    } else {
+      validStructure = true;
+    }
+  }
+
+  if (validLength) {
+    const stateCode = normalized.slice(0, 2);
+    if (!GST_STATE_CODES[stateCode]) {
+      errors.push(`Invalid state code: ${stateCode}`);
+    } else {
+      validStateCode = true;
+    }
+  }
+
+  if (validLength) {
+    const expected = computeChecksum(normalized);
+    if (normalized[14] !== expected) {
+      errors.push(`Invalid checksum digit. Expected: ${expected}`);
+    } else {
+      validChecksum = true;
+    }
+  }
+
+  const valid = validLength && validStructure && validStateCode && validChecksum;
+
+  return { valid, validLength, validStructure, validStateCode, validChecksum, errors, normalized };
+}
+
+export function parseGSTIN(raw: string): GSTINParseResult | null {
+  const validation = validateGSTIN(raw);
+  if (!validation.validLength) return null;
+  const gstin = validation.normalized;
+  const stateCode = gstin.slice(0, 2);
+  const state = GST_STATE_CODES[stateCode] ?? null;
+  return {
+    gstin,
+    stateCode,
+    stateName: state?.name ?? null,
+    isUnionTerritory: state?.isUnionTerritory ?? false,
+    pan: gstin.slice(2, 12),
+    panHolderType: gstin[11],
+    entityNumber: gstin[12],
+    defaultCharacter: gstin[13],
+    checkDigit: gstin[14],
+  };
 }
 ```
 

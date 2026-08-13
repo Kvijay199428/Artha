@@ -64,33 +64,79 @@ class FileStorageService:
         return content_type, size
     
     @classmethod
-    def save_company_logo(cls, company_id: str, upload: UploadFile) -> dict:
-        """Save company logo to storage.
+    async def save_company_logo(cls, company_id: str, upload: UploadFile) -> dict:
+        """Save and process company logo. Returns metadata dict."""
+        from PIL import Image
+        import io
         
-        Returns metadata dict with path, mime_type, size.
-        """
-        mime_type, size = cls._validate_image(upload)
+        content_type = upload.content_type or ""
+        if content_type not in ALLOWED_LOGO_TYPES:
+            raise ValidationException(
+                f"Invalid file type. Allowed: PNG, JPEG, WebP"
+            )
         
+        # Read file content
+        data = await upload.read()
+        if len(data) > MAX_LOGO_SIZE:
+            raise ValidationException(f"File too large. Maximum: {MAX_LOGO_SIZE // 1024 // 1024}MB")
+        
+        # Open with Pillow
+        try:
+            img = Image.open(io.BytesIO(data))
+            img.verify()  # Check integrity
+            img = Image.open(io.BytesIO(data))  # Reopen after verify (verify closes it)
+        except Exception:
+            raise ValidationException("Invalid or corrupt image file")
+        
+        original_width, original_height = img.size
+        if original_width < 100 or original_height < 100:
+            raise ValidationException("Image too small. Minimum: 100x100 pixels")
+        
+        # Convert to RGB for WebP (handles RGBA/P mode)
+        if img.mode not in ("RGB", "RGBA"):
+            img = img.convert("RGBA" if img.mode in ("P", "LA") else "RGB")
+        
+        # Center crop to square
+        w, h = img.size
+        min_dim = min(w, h)
+        left = (w - min_dim) // 2
+        top = (h - min_dim) // 2
+        img = img.crop((left, top, left + min_dim, top + min_dim))
+        
+        # Resize to standard 600x600
+        TARGET_SIZE = 600
+        img = img.resize((TARGET_SIZE, TARGET_SIZE), Image.LANCZOS)
+        
+        # Convert RGBA to RGB for WebP saving (WebP supports RGBA, but keep as RGBA for transparency)
+        # Save as WebP
         storage = cls._get_storage_path()
         logo_dir = storage / "company-logos" / company_id
         logo_dir.mkdir(parents=True, exist_ok=True)
         
-        ext = mimetypes.guess_extension(mime_type) or ".png"
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        filename = f"logo_{timestamp}{ext}"
-        safe_name = cls._safe_filename(filename)
+        file_path = logo_dir / "company_logo.webp"
         
-        file_path = logo_dir / safe_name
-        
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(upload.file, buffer)
+        # Save
+        output = io.BytesIO()
+        img.save(output, format="WEBP", quality=95)
+        output.seek(0)
+        with open(file_path, "wb") as f:
+            f.write(output.getvalue())
         
         return {
             "file_path": str(file_path.relative_to(storage)),
-            "mime_type": mime_type,
-            "file_size": size,
-            "filename": safe_name,
+            "mime_type": "image/webp",
+            "file_size": len(output.getvalue()),
+            "filename": "company_logo.webp",
+            "original_width": original_width,
+            "original_height": original_height,
+            "standardized_width": TARGET_SIZE,
+            "standardized_height": TARGET_SIZE,
         }
+
+    @staticmethod
+    def get_logo_serve_url(company_id: str) -> str | None:
+        """Get the URL to serve the company logo."""
+        return f"/api/v1/company/logo/{company_id}"
     
     @classmethod
     def save_invoice_pdf(cls, company_id: str, invoice_id: str, pdf_bytes: bytes) -> Path:

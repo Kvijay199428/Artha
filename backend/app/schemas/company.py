@@ -31,6 +31,7 @@ class CompanyGSTDetailSchema(BaseModel):
     state_code: Optional[str]
     state_name: Optional[str]
     pan: Optional[str]
+    tan: Optional[str]
     gstin_validation_status: str
 
 class CompanyDetailResponse(BaseModel):
@@ -40,9 +41,15 @@ class CompanyDetailResponse(BaseModel):
     trade_name: Optional[str]
     ownership_type: str
     status: str
+    mobile_country_code: Optional[str] = "+91"
     mobile: str
+    mobile_e164: Optional[str] = None
+    office_phone_country_code: Optional[str] = None
     office_phone: Optional[str]
+    office_phone_e164: Optional[str] = None
     email: str
+    website: Optional[str] = None
+    logo_url: Optional[str] = None
     authorized_person_name: str
     authorized_person_designation: Optional[str]
     gst_details: Optional[CompanyGSTDetailSchema]

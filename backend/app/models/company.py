@@ -18,10 +18,15 @@ class Company(Base):
     ownership_type = Column(String(50), nullable=False)
     status = Column(String(20), default="SETUP_IN_PROGRESS")  # SETUP_IN_PROGRESS, ACTIVE, LOCKED, SUSPENDED, DEACTIVATED
     
+    mobile_country_code = Column(String(5), default="+91", nullable=True)
     mobile = Column(String(20), nullable=False)
+    mobile_e164 = Column(String(20), nullable=True)
+    office_phone_country_code = Column(String(5), nullable=True)
     office_phone = Column(String(20), nullable=True)
+    office_phone_e164 = Column(String(20), nullable=True)
     email = Column(String(100), nullable=False)
-    website = Column(String(200), nullable=True)
+    website = Column(String(300), nullable=True)
+    logo_url = Column(String(500), nullable=True)
     
     authorized_person_name = Column(String(100), nullable=False)
     authorized_person_designation = Column(String(100), nullable=True)
@@ -51,6 +56,7 @@ class CompanyGSTDetail(Base):
     state_code = Column(String(2), nullable=True)
     state_name = Column(String(100), nullable=True)
     pan = Column(String(10), nullable=True)
+    tan = Column(String(10), nullable=True)
     registration_number = Column(String(1), nullable=True)
     gstin_character_14 = Column(String(1), nullable=True)
     checksum = Column(String(1), nullable=True)
@@ -105,7 +111,7 @@ class CompanyBankAccount(Base):
     bank_name = Column(String(100), nullable=True)
     branch = Column(String(100), nullable=False)
     branch_address = Column(String(200), nullable=True)
-    account_type = Column(String(20), default="Current")
+    account_type = Column(String(30), default="CURRENT")  # SAVINGS, CURRENT, CASH_CREDIT, OVERDRAFT, NRE, NRO, OTHER
     upi_id = Column(String(100), nullable=True)
     is_primary = Column(Boolean, default=True)
     status = Column(String(20), default="ACTIVE")
@@ -123,6 +129,9 @@ class CompanyAsset(Base):
     file_size = Column(Integer, nullable=False)
     width = Column(Integer, nullable=True)
     height = Column(Integer, nullable=True)
+    original_width = Column(Integer, nullable=True)
+    original_height = Column(Integer, nullable=True)
+    standardized = Column(Boolean, default=False)
     created_at = Column(DateTime, default=utc_now)
 
 class CompanyAuth(Base):

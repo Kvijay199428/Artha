@@ -21,6 +21,7 @@ class PartyBankAccountCreate(BaseModel):
     branch_name: Optional[str] = Field(None, max_length=100)
     account_number: Optional[str] = Field(None, max_length=50)
     ifsc: Optional[str] = Field(None, max_length=20)
+    account_type: Optional[str] = Field("CURRENT", max_length=30)
     upi_id: Optional[str] = Field(None, max_length=100)
     is_primary: bool = True
 
@@ -30,12 +31,19 @@ class PartyCreate(BaseModel):
     party_type: str = Field(default="Proprietorship")
     account_type: str = Field(..., pattern="^(CUSTOMER|SUPPLIER|BOTH)$")
     contact_person: Optional[str] = Field(None, max_length=100)
+    mobile_country_code: Optional[str] = Field(default="+91", max_length=5)
     mobile: Optional[str] = Field(None, max_length=20)
+    mobile_e164: Optional[str] = Field(None, max_length=20)
     alternate_mobile: Optional[str] = Field(None, max_length=20)
+    office_phone_country_code: Optional[str] = Field(None, max_length=5)
+    office_phone: Optional[str] = Field(None, max_length=20)
+    office_phone_e164: Optional[str] = Field(None, max_length=20)
     email: Optional[str] = Field(None, max_length=100)
+    website: Optional[str] = Field(None, max_length=300)
     gstin: Optional[str] = Field(None, max_length=15)
     gst_registration_type: str = Field(default="Regular")
     pan: Optional[str] = Field(None, max_length=10)
+    tan: Optional[str] = Field(None, max_length=10)
     state: Optional[str] = Field(None, max_length=100)
     state_code: Optional[str] = Field(None, max_length=2)
     place_of_supply: Optional[str] = Field(None, max_length=100)
@@ -52,11 +60,19 @@ class PartyUpdate(BaseModel):
     party_type: Optional[str] = None
     account_type: Optional[str] = Field(None, pattern="^(CUSTOMER|SUPPLIER|BOTH)$")
     contact_person: Optional[str] = None
+    mobile_country_code: Optional[str] = None
     mobile: Optional[str] = None
+    mobile_e164: Optional[str] = None
+    alternate_mobile: Optional[str] = None
+    office_phone_country_code: Optional[str] = None
+    office_phone: Optional[str] = None
+    office_phone_e164: Optional[str] = None
     email: Optional[str] = None
+    website: Optional[str] = None
     gstin: Optional[str] = Field(None, max_length=15)
     gst_registration_type: Optional[str] = None
     pan: Optional[str] = Field(None, max_length=10)
+    tan: Optional[str] = Field(None, max_length=10)
     state: Optional[str] = None
     state_code: Optional[str] = None
     place_of_supply: Optional[str] = None
@@ -75,11 +91,19 @@ class PartyResponse(BaseModel):
     party_type: str
     account_type: str
     contact_person: Optional[str]
+    mobile_country_code: Optional[str]
     mobile: Optional[str]
+    mobile_e164: Optional[str]
+    alternate_mobile: Optional[str]
+    office_phone_country_code: Optional[str]
+    office_phone: Optional[str]
+    office_phone_e164: Optional[str]
     email: Optional[str]
+    website: Optional[str]
     gstin: Optional[str]
     gst_registration_type: str
     pan: Optional[str]
+    tan: Optional[str]
     state: Optional[str]
     state_code: Optional[str]
     place_of_supply: Optional[str]

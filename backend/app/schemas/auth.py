@@ -5,6 +5,7 @@ class CompanySetupRequest(BaseModel):
     ownership_type: str = Field(...)
     gst_registered: bool = True
     gstin: str | None = Field(None, max_length=15)
+    tan: str | None = Field(None, max_length=10)
     address_line_1: str = Field(..., min_length=1, max_length=200)
     address_line_2: str | None = Field(None, max_length=200)
     city: str = Field(..., min_length=1, max_length=100)
@@ -13,7 +14,9 @@ class CompanySetupRequest(BaseModel):
     state_code: str = Field(..., min_length=1, max_length=2)
     pincode: str = Field(..., min_length=4, max_length=10)
     country: str = Field(default="India")
+    mobile_country_code: str = Field(default="+91")
     mobile: str = Field(..., min_length=10, max_length=20)
+    office_phone_country_code: str | None = Field(None, max_length=5)
     office_phone: str | None = Field(None, max_length=20)
     email: str = Field(..., max_length=100)
     authorized_person_name: str = Field(..., min_length=1, max_length=100)

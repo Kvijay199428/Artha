@@ -18,14 +18,20 @@ class Party(Base):
     party_type = Column(String(50), nullable=False)  # Individual, Proprietorship, Partnership, LLP, Company, Other
     account_type = Column(String(20), nullable=False)  # CUSTOMER, SUPPLIER, BOTH
     contact_person = Column(String(100), nullable=True)
+    mobile_country_code = Column(String(5), default="+91", nullable=True)
     mobile = Column(String(20), nullable=True)
+    mobile_e164 = Column(String(20), nullable=True)
     alternate_mobile = Column(String(20), nullable=True)
+    office_phone_country_code = Column(String(5), nullable=True)
+    office_phone = Column(String(20), nullable=True)
+    office_phone_e164 = Column(String(20), nullable=True)
     email = Column(String(100), nullable=True)
-    website = Column(String(200), nullable=True)
+    website = Column(String(300), nullable=True)
     gstin = Column(String(15), nullable=True)
     gst_registration_type = Column(String(30), default="Regular")  # Regular, Composition, Unregistered, SEZ
     gstin_status = Column(String(20), default="Unknown")  # Active, Cancelled, Suspended
     pan = Column(String(10), nullable=True)
+    tan = Column(String(10), nullable=True)
     state = Column(String(100), nullable=True)
     state_code = Column(String(2), nullable=True)
     place_of_supply = Column(String(100), nullable=True)
@@ -71,6 +77,7 @@ class PartyBankAccount(Base):
     branch_name = Column(String(100), nullable=True)
     account_number = Column(String(50), nullable=True)
     ifsc = Column(String(20), nullable=True)
+    account_type = Column(String(30), default="CURRENT", nullable=True)  # SAVINGS, CURRENT, CASH_CREDIT, OVERDRAFT, NRE, NRO, OTHER
     upi_id = Column(String(100), nullable=True)
     is_primary = Column(Boolean, default=True)
     status = Column(String(20), default="ACTIVE")

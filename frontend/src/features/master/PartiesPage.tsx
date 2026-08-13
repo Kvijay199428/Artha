@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { partiesApi } from '../../api/parties';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
+import { GSTINInput, PhoneInput, BankAccountTypeSelect } from '../../components/gst';
 
 const partySchema = z.object({
   legal_name: z.string().min(1, 'Legal name is required'),
@@ -14,12 +15,20 @@ const partySchema = z.object({
   account_type: z.string().min(1, 'Account type is required'),
   contact_person: z.string().optional(),
   mobile: z.string().optional(),
+  mobile_country_code: z.string().optional(),
+  mobile_e164: z.string().optional(),
+  office_phone: z.string().optional(),
+  office_phone_country_code: z.string().optional(),
+  office_phone_e164: z.string().optional(),
   email: z.string().email('Invalid email').optional().or(z.literal('')),
+  website: z.string().optional(),
   gstin: z.string().optional(),
   gst_registration_type: z.string().optional(),
   pan: z.string().optional(),
+  tan: z.string().optional(),
   state: z.string().min(1, 'State is required'),
   state_code: z.string().min(1, 'State code is required'),
+  bank_account_type: z.string().optional(),
 });
 
 type PartyForm = z.infer<typeof partySchema>;
@@ -29,19 +38,23 @@ export default function PartiesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
+  const [gstinValid, setGstinValid] = useState(false);
+
   const { data: parties = [], isLoading } = useQuery({
     queryKey: ['parties'],
     queryFn: () => partiesApi.getAll()
   });
 
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<PartyForm>({
+  const { register, handleSubmit, watch, setValue, control, formState: { errors }, reset } = useForm<PartyForm>({
     resolver: zodResolver(partySchema),
     defaultValues: {
       party_type: 'BUSINESS',
       account_type: 'CUSTOMER',
       gst_registration_type: 'UNREGISTERED',
       state: 'Karnataka',
-      state_code: '29'
+      state_code: '29',
+      mobile_country_code: '+91',
+      office_phone_country_code: '+91',
     }
   });
 
@@ -51,6 +64,7 @@ export default function PartiesPage() {
       queryClient.invalidateQueries({ queryKey: ['parties'] });
       setIsModalOpen(false);
       reset();
+      setGstinValid(false);
     },
     onError: (error: any) => {
       setApiError(error.message || 'Failed to create party');
@@ -69,7 +83,7 @@ export default function PartiesPage() {
           <h2 className="text-2xl font-bold text-gray-900">Customers & Suppliers</h2>
           <p className="mt-1 text-sm text-gray-500">Manage your sundry debtors and creditors.</p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)}>Add New Party</Button>
+        <Button onClick={() => { setIsModalOpen(true); reset(); setGstinValid(false); }}>Add New Party</Button>
       </div>
 
       {isLoading ? (
@@ -173,23 +187,107 @@ export default function PartiesPage() {
                           <option value="CONSUMER">Consumer</option>
                         </select>
                       </div>
-                      <Input label="GSTIN" {...register('gstin')} error={errors.gstin?.message} />
-                      <Input label="PAN" {...register('pan')} error={errors.pan?.message} />
                       
-                      <div className="grid grid-cols-2 gap-2">
-                        <Input label="State" {...register('state')} error={errors.state?.message} placeholder="e.g. Karnataka" />
-                        <Input label="State Code" {...register('state_code')} error={errors.state_code?.message} placeholder="e.g. 29" />
+                      <Controller
+                        name="gstin"
+                        control={control}
+                        render={({ field }) => (
+                          <GSTINInput
+                            label="GSTIN"
+                            value={field.value || ''}
+                            onChange={(v) => field.onChange(v)}
+                            error={errors.gstin?.message}
+                            onValidated={(parsed, valid) => {
+                              if (valid && parsed) {
+                                setValue('state_code', parsed.stateCode, { shouldValidate: true });
+                                setValue('state', parsed.stateName || '', { shouldValidate: true });
+                                setValue('pan', parsed.pan, { shouldValidate: true });
+                                setGstinValid(true);
+                              } else {
+                                setGstinValid(false);
+                              }
+                            }}
+                          />
+                        )}
+                      />
+                      
+                      <Input 
+                        label="PAN" 
+                        {...register('pan')} 
+                        error={errors.pan?.message}
+                        disabled={gstinValid}
+                        className={gstinValid ? "bg-gray-100" : ""}
+                      />
+
+                      <Input label="TAN" {...register('tan')} error={errors.tan?.message} />
+                      
+                      <div className="grid grid-cols-2 gap-2 col-span-2 md:col-span-1">
+                        <Input 
+                          label="State" 
+                          {...register('state')} 
+                          error={errors.state?.message} 
+                          placeholder="e.g. Karnataka"
+                          readOnly={gstinValid}
+                          className={gstinValid ? "bg-gray-100 cursor-not-allowed" : ""}
+                        />
+                        <Input 
+                          label="State Code" 
+                          {...register('state_code')} 
+                          error={errors.state_code?.message} 
+                          placeholder="e.g. 29"
+                          readOnly={gstinValid}
+                          className={gstinValid ? "bg-gray-100 cursor-not-allowed" : ""}
+                        />
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Bank Details */}
+                  <div className="md:col-span-2">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Bank Information</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <BankAccountTypeSelect 
+                        label="Bank Account Type" 
+                        {...register('bank_account_type')} 
+                        error={errors.bank_account_type?.message} 
+                      />
                     </div>
                   </div>
 
                   {/* Contact Details */}
                   <div className="md:col-span-2">
                     <h4 className="text-sm font-semibold text-gray-700 mb-3">Contact Information</h4>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Input label="Contact Person" {...register('contact_person')} error={errors.contact_person?.message} />
-                      <Input label="Mobile Number" {...register('mobile')} error={errors.mobile?.message} />
+                      
+                      <PhoneInput 
+                        label="Mobile Number" 
+                        value={watch('mobile') || ''} 
+                        countryCode={watch('mobile_country_code') || '+91'} 
+                        onValueChange={(phone, cc, e164) => { 
+                          setValue('mobile', phone); 
+                          setValue('mobile_country_code', cc); 
+                          setValue('mobile_e164', e164); 
+                        }} 
+                        error={errors.mobile?.message}
+                      />
+
+                      <PhoneInput 
+                        label="Office Contact" 
+                        optional 
+                        value={watch('office_phone') || ''} 
+                        countryCode={watch('office_phone_country_code') || '+91'} 
+                        onValueChange={(phone, cc, e164) => { 
+                          setValue('office_phone', phone); 
+                          setValue('office_phone_country_code', cc); 
+                          setValue('office_phone_e164', e164); 
+                        }} 
+                        error={errors.office_phone?.message}
+                      />
+
                       <Input label="Email Address" type="email" {...register('email')} error={errors.email?.message} />
+                      
+                      <Input label="Website" type="url" {...register('website')} placeholder="https://..." error={errors.website?.message} />
                     </div>
                   </div>
                 </div>

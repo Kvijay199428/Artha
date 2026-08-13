@@ -3,7 +3,7 @@ from app.models.company import Company, CompanyGSTDetail, CompanyAddress, Compan
 from app.schemas.auth import CompanySetupRequest
 from app.core.security import hash_pin, generate_id
 from app.core.exceptions import ValidationException, ConflictException
-from app.utils.gstin import validate_gstin
+from app.core.gst import GSTService
 
 class CompanyService:
     @staticmethod
@@ -22,7 +22,9 @@ class CompanyService:
             ownership_type=data.ownership_type,
             status="ACTIVE",
             mobile=data.mobile,
+            mobile_country_code=data.mobile_country_code,
             office_phone=data.office_phone,
+            office_phone_country_code=data.office_phone_country_code,
             email=data.email,
             authorized_person_name=data.authorized_person_name,
             authorized_person_designation=data.authorized_person_designation,
@@ -33,19 +35,23 @@ class CompanyService:
         # GST details
         gst_detail = None
         if data.gst_registered and data.gstin:
-            gst_validation = validate_gstin(data.gstin)
-            if not gst_validation["valid"]:
+            gst_validation = GSTService.validate(data.gstin)
+            if not gst_validation.valid:
                 raise ValidationException("Invalid GSTIN. Please check the 15-character GST number.")
+            
+            parsed = GSTService.parse(data.gstin)
             
             gst_detail = CompanyGSTDetail(
                 company_id=company.id,
-                gstin=gst_validation["normalized"],
-                state_code=gst_validation["state_code"],
-                pan=gst_validation["pan"],
-                registration_number=gst_validation["registration_number"],
-                gstin_character_14=gst_validation["default_code"],
-                checksum=gst_validation["checksum"],
-                gstin_validation_status="VALID" if gst_validation["valid"] else "INVALID",
+                gstin=gst_validation.gstin,
+                state_code=parsed.state_code,
+                state_name=parsed.state,
+                pan=parsed.pan,
+                tan=data.tan,
+                registration_number=parsed.entity_number,
+                gstin_character_14=parsed.default_character,
+                checksum=parsed.check_digit,
+                gstin_validation_status="VALID",
             )
             db.add(gst_detail)
         
@@ -116,11 +122,41 @@ class CompanyService:
         return company
     
     @staticmethod
-    def update_company_logo(db: Session, company_id: str, logo_url: str):
-        # We will assume FileStorageService handles the physical upload and returns a URL or Asset ID
+    def update_company_logo(db: Session, company_id: str, logo_metadata: dict) -> Company:
         company = db.query(Company).filter(Company.id == company_id).first()
-        # You can store logo in Company model or CompanyAsset model. For now we will assume Company model has a logo_url (needs to be added if missing) or we just return success.
-        pass
+        if not company:
+            raise ValidationException("Company not found")
+        
+        if not logo_metadata:
+            company.logo_asset_id = None
+            company.logo_url = None
+            db.commit()
+            return company
+
+        from app.models.company import CompanyAsset
+        # Store in CompanyAsset
+        asset = CompanyAsset(
+            company_id=company_id,
+            asset_type="COMPANY_LOGO",
+            file_path=logo_metadata["file_path"],
+            mime_type=logo_metadata["mime_type"],
+            file_size=logo_metadata["file_size"],
+            width=logo_metadata.get("standardized_width"),
+            height=logo_metadata.get("standardized_height"),
+            original_width=logo_metadata.get("original_width"),
+            original_height=logo_metadata.get("original_height"),
+            standardized=True
+        )
+        db.add(asset)
+        db.flush()
+        
+        # Update logo reference on company
+        from app.services.file_storage_service import FileStorageService
+        company.logo_asset_id = asset.id
+        company.logo_url = FileStorageService.get_logo_serve_url(company_id)
+        db.commit()
+        db.refresh(company)
+        return company
         
     @staticmethod
     def change_pin(db: Session, company_id: str, old_pin: str, new_pin: str):
