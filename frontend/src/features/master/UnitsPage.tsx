@@ -71,8 +71,8 @@ export default function UnitsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Units of Measurement</h2>
-          <p className="mt-1 text-sm text-gray-500">Manage base units, derived units, and custom conversion formulas.</p>
+          <h2 className="text-2xl font-bold text-foreground">Units of Measurement</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Manage base units, derived units, and custom conversion formulas.</p>
         </div>
         <Button onClick={() => setIsModalOpen(true)}>Add New Unit</Button>
       </div>
@@ -80,34 +80,34 @@ export default function UnitsPage() {
       {isLoading ? (
         <div>Loading units...</div>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="bg-card rounded-xl shadow-sm border border overflow-hidden">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted/50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Abbreviation</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Formula / Multiplier</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Unit</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Abbreviation</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Category</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Type</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Formula / Multiplier</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-card divide-y divide-border">
               {units.map((unit) => (
                 <tr key={unit.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{unit.abbreviation}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{unit.category}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">{unit.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{unit.abbreviation}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{unit.category}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                     {unit.is_base_unit ? (
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Base</span>
                     ) : (
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">Derived</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                     {unit.formula ? (
-                      <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{unit.formula}</code>
+                      <code className="text-xs bg-muted px-1 py-0.5 rounded">{unit.formula}</code>
                     ) : unit.multiplier !== 1 ? (
                       `${unit.multiplier}x Base`
                     ) : '-'}
@@ -134,10 +134,10 @@ export default function UnitsPage() {
       {isModalOpen && (
         <div className="fixed inset-0 z-10 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={() => setIsModalOpen(false)}></div>
+            <div className="fixed inset-0 transition-opacity bg-black/60" onClick={() => setIsModalOpen(false)}></div>
             <span className="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
-            <div className="inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
-              <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Add New Unit</h3>
+            <div className="inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-card rounded-xl shadow-xl sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+              <h3 className="text-lg font-medium leading-6 text-foreground mb-4">Add New Unit</h3>
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 {apiError && (
                   <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm border border-red-100">
@@ -153,15 +153,15 @@ export default function UnitsPage() {
                 <Input label="Category (e.g. Weight)" {...register('category')} error={errors.category?.message} />
                 
                 <div className="flex items-center h-10 mt-2">
-                  <input type="checkbox" id="is_base_unit" className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded" {...register('is_base_unit')} />
-                  <label htmlFor="is_base_unit" className="ml-2 block text-sm text-gray-900 font-medium">This is a Base Unit</label>
+                  <input type="checkbox" id="is_base_unit" className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-input rounded" {...register('is_base_unit')} />
+                  <label htmlFor="is_base_unit" className="ml-2 block text-sm text-foreground font-medium">This is a Base Unit</label>
                 </div>
 
                 {!isBaseUnit && (
-                  <div className="space-y-4 p-4 bg-gray-50 rounded-md border border-gray-200">
+                  <div className="space-y-4 p-4 bg-muted rounded-md border border">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Base Unit Reference</label>
-                      <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('base_unit_id')}>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">Base Unit Reference</label>
+                      <select className="block w-full rounded-lg border text-sm px-3 py-2 outline-none transition-colors bg-background border-input focus:border-slate-500" {...register('base_unit_id')}>
                         <option value="">Select a base unit...</option>
                         {units.filter(u => u.is_base_unit).map(u => (
                           <option key={u.id} value={u.id}>{u.name} ({u.abbreviation})</option>

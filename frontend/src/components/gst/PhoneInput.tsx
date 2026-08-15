@@ -1,16 +1,59 @@
-import { useState } from 'react';
-import { COMMON_COUNTRY_CODES } from '../../lib/gst/constants';
+import { useState, useRef, useEffect } from 'react';
+import {
+  parsePhoneNumber,
+  getCountries,
+  getCountryCallingCode,
+  AsYouType,
+  isValidPhoneNumber,
+  type CountryCode,
+} from 'libphonenumber-js';
 
+// ── Country metadata ──────────────────────────────────────────────────────────
+// Emoji flag from ISO 3166-1 alpha-2 code
+function flagEmoji(iso: CountryCode): string {
+  return iso
+    .toUpperCase()
+    .replace(/./g, (char) => String.fromCodePoint(char.charCodeAt(0) + 127397));
+}
+
+// Display name from browser Intl if available, fallback to code
+const displayName = new Intl.DisplayNames(['en'], { type: 'region' });
+function countryName(iso: CountryCode): string {
+  try { return displayName.of(iso) ?? iso; } catch { return iso; }
+}
+
+// Build the full country list from libphonenumber-js at module load time
+const ALL_COUNTRIES = getCountries()
+  .map((iso) => ({
+    iso,
+    callingCode: `+${getCountryCallingCode(iso)}`,
+    name: countryName(iso),
+    flag: flagEmoji(iso),
+  }))
+  .sort((a, b) => {
+    // Pin India first, then sort alphabetically
+    if (a.iso === 'IN') return -1;
+    if (b.iso === 'IN') return 1;
+    return a.name.localeCompare(b.name);
+  });
+
+// ── Component ─────────────────────────────────────────────────────────────────
 interface PhoneInputProps {
-  value?: string; // The local phone number
-  countryCode?: string; // e.g. "+91"
-  onValueChange?: (phone: string, countryCode: string, e164: string) => void;
+  value?: string;           // local/national number
+  countryCode?: string;     // e.g. "+91"
+  onValueChange?: (
+    nationalNumber: string,
+    callingCode: string,    // e.g. "+91"
+    e164: string,           // e.g. "+919876543210"
+    iso: string,            // e.g. "IN"
+    isValid: boolean
+  ) => void;
   label?: string;
   placeholder?: string;
   required?: boolean;
+  optional?: boolean;
   error?: string;
   disabled?: boolean;
-  optional?: boolean;
   name?: string;
   countryCodeName?: string;
 }
@@ -20,113 +63,194 @@ export function PhoneInput({
   countryCode = '+91',
   onValueChange,
   label,
-  placeholder = 'Phone number',
+  placeholder,
   required,
+  optional,
   error,
   disabled,
-  optional,
   name,
   countryCodeName,
 }: PhoneInputProps) {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const selectedCountry = COMMON_COUNTRY_CODES.find(c => c.code === countryCode) ?? COMMON_COUNTRY_CODES[0];
+  const [formatted, setFormatted] = useState(value);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
-  const filteredCountries = COMMON_COUNTRY_CODES.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.code.includes(search) ||
-    c.country.toLowerCase().includes(search.toLowerCase())
-  );
+  // Resolve the selected country from the calling code
+  const selectedCountry =
+    ALL_COUNTRIES.find((c) => c.callingCode === countryCode) ??
+    ALL_COUNTRIES.find((c) => c.iso === 'IN')!;
 
-  const handleCountrySelect = (country: typeof COMMON_COUNTRY_CODES[number]) => {
-    setIsDropdownOpen(false);
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+        setSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Auto-focus search when dropdown opens
+  useEffect(() => {
+    if (isOpen) setTimeout(() => searchRef.current?.focus(), 50);
+  }, [isOpen]);
+
+  const filtered = search
+    ? ALL_COUNTRIES.filter(
+        (c) =>
+          c.name.toLowerCase().includes(search.toLowerCase()) ||
+          c.callingCode.includes(search) ||
+          c.iso.toLowerCase().includes(search.toLowerCase())
+      )
+    : ALL_COUNTRIES;
+
+  const handleCountrySelect = (c: typeof ALL_COUNTRIES[number]) => {
+    setIsOpen(false);
     setSearch('');
-    const e164 = `${country.code}${value.replace(/^0/, '')}`.replace(/\s+/g, '');
-    onValueChange?.(value, country.code, e164);
+    emitChange(formatted, c.callingCode, c.iso);
   };
 
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const phone = e.target.value;
-    const e164 = `${countryCode}${phone.replace(/^0/, '')}`.replace(/\s+/g, '');
-    onValueChange?.(phone, countryCode, e164);
+  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    // Format as you type using libphonenumber-js
+    const asYouType = new AsYouType(selectedCountry.iso);
+    const fmt = asYouType.input(raw);
+    setFormatted(fmt);
+    emitChange(fmt, selectedCountry.callingCode, selectedCountry.iso);
   };
+
+  const emitChange = (national: string, calling: string, iso: string) => {
+    if (!onValueChange) return;
+    // Strip non-digits for e164 building
+    const digits = national.replace(/\D/g, '');
+    const e164candidate = `${calling}${digits}`;
+    let e164 = e164candidate;
+    let valid = false;
+    try {
+      const parsed = parsePhoneNumber(e164candidate, iso as CountryCode);
+      if (parsed) {
+        e164 = parsed.format('E.164');
+        valid = parsed.isValid();
+      }
+    } catch {
+      // partial input — leave e164 as-is, valid = false
+    }
+    // Fallback: also try isValidPhoneNumber
+    if (!valid && digits.length >= 7) {
+      try { valid = isValidPhoneNumber(e164candidate); } catch { /* noop */ }
+    }
+    onValueChange(national, calling, e164, iso, valid);
+  };
+
+  // Parse an incoming full e164 into national + country when value prop changes externally
+  useEffect(() => {
+    if (!value) return;
+    if (value.startsWith('+')) {
+      try {
+        const parsed = parsePhoneNumber(value);
+        if (parsed) setFormatted(parsed.formatNational());
+      } catch { /* partial */ }
+    } else {
+      setFormatted(value);
+    }
+  }, [value]);
+
+  const borderClass = error
+    ? 'border-destructive focus-within:ring-destructive/50'
+    : 'border-input focus-within:border-ring focus-within:ring-ring/30';
 
   return (
-    <div className="w-full">
+    <div className="w-full space-y-1">
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          {label}{optional && <span className="text-gray-400 font-normal ml-1">(Optional)</span>}
-          {required && <span className="text-red-500 ml-0.5">*</span>}
+        <label className="text-sm font-medium text-foreground">
+          {label}
+          {required && <span className="text-destructive ml-0.5">*</span>}
+          {optional && <span className="text-muted-foreground font-normal ml-1">(Optional)</span>}
         </label>
       )}
-      <div className={`flex rounded-md shadow-sm border transition-colors ${
-        error ? 'border-red-400' : 'border-gray-300'
-      } ${disabled ? 'bg-gray-50' : 'bg-white'}`}>
-        {/* Country Code Selector */}
-        <div className="relative">
+
+      <div
+        className={`flex rounded-lg border bg-background transition-all focus-within:ring-[3px] ${borderClass} ${
+          disabled ? 'opacity-60 cursor-not-allowed' : ''
+        }`}
+      >
+        {/* Country selector */}
+        <div ref={dropdownRef} className="relative flex-shrink-0">
           <button
             type="button"
             disabled={disabled}
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className={`flex items-center gap-1.5 px-3 py-2 border-r border-gray-300 rounded-l-md text-sm font-medium text-gray-700 hover:bg-gray-50 whitespace-nowrap ${
-              disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
-            }`}
+            onClick={() => setIsOpen((v) => !v)}
+            className="flex items-center gap-1.5 h-9 px-3 border-r border-input rounded-l-lg text-sm font-medium text-foreground hover:bg-muted transition-colors whitespace-nowrap disabled:cursor-not-allowed"
           >
-            <span className="text-base">{selectedCountry.flag}</span>
-            <span className="text-gray-600">{selectedCountry.code}</span>
-            <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            <span className="text-base leading-none">{selectedCountry.flag}</span>
+            <span className="text-muted-foreground">{selectedCountry.callingCode}</span>
+            <svg className="w-3 h-3 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isOpen ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'} />
             </svg>
           </button>
-          
-          {isDropdownOpen && (
-            <div className="absolute top-full left-0 z-50 mt-1 w-64 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden">
-              <div className="p-2 border-b border-gray-100">
+
+          {isOpen && (
+            <div className="absolute top-full left-0 z-50 mt-1 w-72 bg-popover border border-border rounded-lg shadow-lg overflow-hidden">
+              {/* Search */}
+              <div className="p-2 border-b border-border">
                 <input
+                  ref={searchRef}
                   type="text"
                   value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder="Search country..."
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded outline-none focus:border-blue-500"
-                  autoFocus
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search country or code…"
+                  className="w-full px-3 py-1.5 text-sm bg-background border border-input rounded-md outline-none focus:border-ring text-foreground placeholder:text-muted-foreground"
                 />
               </div>
-              <div className="max-h-48 overflow-y-auto">
-                {filteredCountries.map((country) => (
-                  <button
-                    key={country.code}
-                    type="button"
-                    onClick={() => handleCountrySelect(country)}
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-blue-50 text-left transition-colors ${
-                      country.code === countryCode ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'
-                    }`}
-                  >
-                    <span className="text-base">{country.flag}</span>
-                    <span>{country.name}</span>
-                    <span className="ml-auto text-gray-400">{country.code}</span>
-                  </button>
-                ))}
+              {/* List */}
+              <div className="max-h-52 overflow-y-auto">
+                {filtered.length === 0 ? (
+                  <p className="px-3 py-4 text-sm text-muted-foreground text-center">No results</p>
+                ) : (
+                  filtered.map((c) => (
+                    <button
+                      key={c.iso}
+                      type="button"
+                      onClick={() => handleCountrySelect(c)}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors hover:bg-accent hover:text-accent-foreground ${
+                        c.iso === selectedCountry.iso
+                          ? 'bg-accent text-accent-foreground font-medium'
+                          : 'text-foreground'
+                      }`}
+                    >
+                      <span className="text-base">{c.flag}</span>
+                      <span className="flex-1 truncate">{c.name}</span>
+                      <span className="text-muted-foreground tabular-nums">{c.callingCode}</span>
+                    </button>
+                  ))
+                )}
               </div>
             </div>
           )}
         </div>
-        
-        {/* Phone Number Input */}
+
+        {/* Number input */}
         <input
           name={name}
           type="tel"
-          value={value}
-          onChange={handlePhoneChange}
+          value={formatted}
+          onChange={handleInput}
           disabled={disabled}
-          placeholder={placeholder}
-          className={`flex-1 px-3 py-2 text-sm rounded-r-md outline-none border-0 bg-transparent ${
-            disabled ? 'text-gray-500' : 'text-gray-900'
-          } w-full min-w-0`}
+          placeholder={placeholder ?? (selectedCountry.iso === 'IN' ? '98765 43210' : 'Phone number')}
+          className="flex-1 h-9 px-3 text-sm bg-transparent outline-none text-foreground placeholder:text-muted-foreground disabled:cursor-not-allowed min-w-0 rounded-r-lg"
         />
       </div>
-      {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
-      {/* Hidden field for country code - for form libraries */}
-      {countryCodeName && <input type="hidden" name={countryCodeName} value={countryCode} />}
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
+      {/* Hidden field for form libraries that read by name */}
+      {countryCodeName && (
+        <input type="hidden" name={countryCodeName} value={selectedCountry.callingCode} />
+      )}
     </div>
   );
 }

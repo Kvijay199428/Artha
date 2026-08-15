@@ -60,16 +60,16 @@ export function GSTINInput({
   // Determine border color
   const borderClass = (() => {
     if (error) return 'border-red-400 focus:border-red-500 focus:ring-red-500';
-    if (!validation) return 'border-gray-300 focus:border-blue-500 focus:ring-blue-500';
+    if (!validation) return 'border-input focus:border-blue-500 focus:ring-blue-500';
     if (currentValue.length === 15 && validation.valid) return 'border-green-400 focus:border-green-500 focus:ring-green-500';
     if (currentValue.length === 15 && !validation.valid) return 'border-red-400 focus:border-red-500 focus:ring-red-500';
-    return 'border-gray-300 focus:border-blue-500 focus:ring-blue-500';
+    return 'border-input focus:border-blue-500 focus:ring-blue-500';
   })();
 
   return (
     <div className={`w-full ${className}`}>
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-muted-foreground mb-1">
           {label}
         </label>
       )}
@@ -85,7 +85,7 @@ export function GSTINInput({
           maxLength={15}
           placeholder="e.g. 29ABCDE1234F1Z5"
           className={`block w-full rounded-md border shadow-sm sm:text-sm px-3 py-2 outline-none font-mono tracking-wider transition-colors ${
-            disabled ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'
+            disabled ? 'bg-muted text-muted-foreground cursor-not-allowed' : 'bg-background'
           } ${borderClass}`}
           spellCheck={false}
           autoComplete="off"
@@ -116,9 +116,9 @@ export function GSTINInput({
           {error ? (
             <span className="text-red-600">{error}</span>
           ) : currentValue.length === 0 ? (
-            <span className="text-gray-400">GSTIN format: 15 characters — State Code (2) + PAN (10) + Entity (1) + Z + Check digit</span>
+            <span className="text-muted-foreground">GSTIN format: 15 characters — State Code (2) + PAN (10) + Entity (1) + Z + Check digit</span>
           ) : currentValue.length < 15 ? (
-            <span className="text-gray-500">Enter a valid 15-character GSTIN</span>
+            <span className="text-muted-foreground">Enter a valid 15-character GSTIN</span>
           ) : validation?.valid ? (
             <span className="text-green-600 font-medium">✓ Valid GSTIN format</span>
           ) : (
@@ -126,7 +126,7 @@ export function GSTINInput({
           )}
         </div>
         <div className={`text-xs font-mono ${
-          currentValue.length === 15 ? 'text-gray-700' : 'text-gray-400'
+          currentValue.length === 15 ? 'text-foreground' : 'text-muted-foreground'
         }`}>
           {currentValue.length} / 15
         </div>
@@ -135,18 +135,18 @@ export function GSTINInput({
       {/* GSTIN Breakdown when valid */}
       {showBreakdown && parsed && (
         <div className="mt-2 bg-green-50 border border-green-200 rounded-md p-3">
-          <div className="font-mono text-sm text-gray-800 flex items-center gap-1 flex-wrap">
+          <div className="font-mono text-sm text-foreground flex items-center gap-1 flex-wrap">
             <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-bold">{parsed.stateCode}</span>
-            <span className="text-gray-400">|</span>
+            <span className="text-muted-foreground">|</span>
             <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-bold">{parsed.pan}</span>
-            <span className="text-gray-400">|</span>
+            <span className="text-muted-foreground">|</span>
             <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded font-bold">{parsed.entityNumber}</span>
-            <span className="text-gray-400">|</span>
-            <span className="bg-gray-100 text-gray-800 px-2 py-0.5 rounded font-bold">{parsed.defaultCharacter}</span>
-            <span className="text-gray-400">|</span>
+            <span className="text-muted-foreground">|</span>
+            <span className="bg-muted text-foreground px-2 py-0.5 rounded font-bold">{parsed.defaultCharacter}</span>
+            <span className="text-muted-foreground">|</span>
             <span className="bg-orange-100 text-orange-800 px-2 py-0.5 rounded font-bold">{parsed.checkDigit}</span>
           </div>
-          <div className="font-mono text-xs text-gray-500 mt-1 flex items-center gap-1 flex-wrap">
+          <div className="font-mono text-xs text-muted-foreground mt-1 flex items-center gap-1 flex-wrap">
             <span className="w-[28px] text-center">State</span>
             <span className="text-transparent">|</span>
             <span className="w-[80px] text-center">PAN</span>
@@ -157,7 +157,7 @@ export function GSTINInput({
             <span className="text-transparent">|</span>
             <span className="w-[16px] text-center">Chk</span>
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-600">
+          <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
             <span><span className="font-medium">State:</span> {parsed.stateName || parsed.stateCode}</span>
             <span><span className="font-medium">PAN:</span> {parsed.pan}</span>
           </div>

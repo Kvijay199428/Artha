@@ -8,11 +8,11 @@ class Settings(BaseSettings):
     session_secret: str = "dev-session-secret-change-in-production"
     storage_path: str = "storage"
     log_level: str = "INFO"
-    cors_origins: str = "http://localhost:5173"
+    cors_origins: str = "http://localhost:5173,http://localhost:3000,http://localhost:4173"
     
     @property
     def cors_origin_list(self) -> list[str]:
-        return [o.strip() for o in self.cors_origins.split(",")]
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
     
     @property
     def db_path(self) -> Path:

@@ -80,8 +80,8 @@ export default function PartiesPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Customers & Suppliers</h2>
-          <p className="mt-1 text-sm text-gray-500">Manage your sundry debtors and creditors.</p>
+          <h2 className="text-2xl font-bold text-foreground">Customers & Suppliers</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Manage your sundry debtors and creditors.</p>
         </div>
         <Button onClick={() => { setIsModalOpen(true); reset(); setGstinValid(false); }}>Add New Party</Button>
       </div>
@@ -89,23 +89,23 @@ export default function PartiesPage() {
       {isLoading ? (
         <div>Loading parties...</div>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="bg-card rounded-xl shadow-sm border border overflow-hidden">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted/50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Party Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">GSTIN / Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">State</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Party Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Type</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">GSTIN / Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Contact</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">State</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-card divide-y divide-border">
               {parties.map((party) => (
                 <tr key={party.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{party.legal_name}</div>
-                    {party.trade_name && <div className="text-xs text-gray-500">{party.trade_name}</div>}
+                    <div className="text-sm font-medium text-foreground">{party.legal_name}</div>
+                    {party.trade_name && <div className="text-xs text-muted-foreground">{party.trade_name}</div>}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${party.account_type === 'CUSTOMER' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
@@ -113,21 +113,21 @@ export default function PartiesPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{party.gstin || 'No GSTIN'}</div>
-                    <div className="text-xs text-gray-500">{party.gst_registration_type}</div>
+                    <div className="text-sm text-foreground">{party.gstin || 'No GSTIN'}</div>
+                    <div className="text-xs text-muted-foreground">{party.gst_registration_type}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                     <div>{party.contact_person || '-'}</div>
                     <div>{party.mobile || '-'}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                     {party.state} ({party.state_code})
                   </td>
                 </tr>
               ))}
               {parties.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
                     No parties found. Click "Add New Party" to create one.
                   </td>
                 </tr>
@@ -140,10 +140,10 @@ export default function PartiesPage() {
       {isModalOpen && (
         <div className="fixed inset-0 z-10 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={() => setIsModalOpen(false)}></div>
+            <div className="fixed inset-0 transition-opacity bg-black/60" onClick={() => setIsModalOpen(false)}></div>
             <span className="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
-            <div className="inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full sm:p-6">
-              <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4 border-b pb-2">Add New Party</h3>
+            <div className="inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-card rounded-xl shadow-xl sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full sm:p-6">
+              <h3 className="text-lg font-medium leading-6 text-foreground mb-4 border-b pb-2">Add New Party</h3>
               
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 {apiError && (
@@ -156,15 +156,15 @@ export default function PartiesPage() {
                   {/* Basic Details */}
                   <div className="md:col-span-2 grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Account Type</label>
-                      <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('account_type')}>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">Account Type</label>
+                      <select className="block w-full rounded-lg border text-sm px-3 py-2 outline-none transition-colors bg-background border-input focus:border-slate-500" {...register('account_type')}>
                         <option value="CUSTOMER">Customer (Debtor)</option>
                         <option value="VENDOR">Vendor (Creditor)</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Party Type</label>
-                      <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('party_type')}>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">Party Type</label>
+                      <select className="block w-full rounded-lg border text-sm px-3 py-2 outline-none transition-colors bg-background border-input focus:border-slate-500" {...register('party_type')}>
                         <option value="BUSINESS">Business (B2B)</option>
                         <option value="INDIVIDUAL">Individual (B2C)</option>
                       </select>
@@ -175,12 +175,12 @@ export default function PartiesPage() {
                   <Input label="Trade Name (Optional)" {...register('trade_name')} error={errors.trade_name?.message} />
                   
                   {/* Tax Details */}
-                  <div className="md:col-span-2 bg-gray-50 p-4 rounded-md border border-gray-200">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Tax & Location Details</h4>
+                  <div className="md:col-span-2 bg-muted p-4 rounded-md border border">
+                    <h4 className="text-sm font-semibold text-muted-foreground mb-3">Tax & Location Details</h4>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">GST Registration</label>
-                        <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('gst_registration_type')}>
+                        <label className="block text-sm font-medium text-muted-foreground mb-1">GST Registration</label>
+                        <select className="block w-full rounded-lg border text-sm px-3 py-2 outline-none transition-colors bg-background border-input focus:border-slate-500" {...register('gst_registration_type')}>
                           <option value="REGISTERED">Registered Regular</option>
                           <option value="COMPOSITION">Registered Composition</option>
                           <option value="UNREGISTERED">Unregistered</option>
@@ -228,7 +228,7 @@ export default function PartiesPage() {
                           error={errors.state?.message} 
                           placeholder="e.g. Karnataka"
                           readOnly={gstinValid}
-                          className={gstinValid ? "bg-gray-100 cursor-not-allowed" : ""}
+                          className={gstinValid ? "bg-muted cursor-not-allowed" : ""}
                         />
                         <Input 
                           label="State Code" 
@@ -236,7 +236,7 @@ export default function PartiesPage() {
                           error={errors.state_code?.message} 
                           placeholder="e.g. 29"
                           readOnly={gstinValid}
-                          className={gstinValid ? "bg-gray-100 cursor-not-allowed" : ""}
+                          className={gstinValid ? "bg-muted cursor-not-allowed" : ""}
                         />
                       </div>
                     </div>
@@ -244,7 +244,7 @@ export default function PartiesPage() {
 
                   {/* Bank Details */}
                   <div className="md:col-span-2">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Bank Information</h4>
+                    <h4 className="text-sm font-semibold text-muted-foreground mb-3">Bank Information</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <BankAccountTypeSelect 
                         label="Bank Account Type" 
@@ -256,7 +256,7 @@ export default function PartiesPage() {
 
                   {/* Contact Details */}
                   <div className="md:col-span-2">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Contact Information</h4>
+                    <h4 className="text-sm font-semibold text-muted-foreground mb-3">Contact Information</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Input label="Contact Person" {...register('contact_person')} error={errors.contact_person?.message} />
                       
@@ -264,7 +264,7 @@ export default function PartiesPage() {
                         label="Mobile Number" 
                         value={watch('mobile') || ''} 
                         countryCode={watch('mobile_country_code') || '+91'} 
-                        onValueChange={(phone, cc, e164) => { 
+                        onValueChange={(phone, cc, e164, _iso) => { 
                           setValue('mobile', phone); 
                           setValue('mobile_country_code', cc); 
                           setValue('mobile_e164', e164); 
@@ -277,7 +277,7 @@ export default function PartiesPage() {
                         optional 
                         value={watch('office_phone') || ''} 
                         countryCode={watch('office_phone_country_code') || '+91'} 
-                        onValueChange={(phone, cc, e164) => { 
+                        onValueChange={(phone, cc, e164, _iso) => { 
                           setValue('office_phone', phone); 
                           setValue('office_phone_country_code', cc); 
                           setValue('office_phone_e164', e164); 

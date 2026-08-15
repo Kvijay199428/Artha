@@ -100,23 +100,23 @@ export default function QuotationBuilderPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">
+        <h2 className="text-2xl font-bold text-foreground">
           Create {isSupplyIn ? 'Purchase Quotation' : 'Sales Quotation'}
         </h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm text-muted-foreground">
           Create a non-binding quotation for your {isSupplyIn ? 'supplier' : 'customer'}.
         </p>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border p-6">
+      <div className="bg-card rounded-lg shadow-sm border p-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
                 {isSupplyIn ? 'Supplier' : 'Customer'} *
               </label>
               <select
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                className="w-full rounded-md border-input shadow-sm focus:border-primary-500 focus:ring-primary-500"
                 {...register('party_id')}
               >
                 <option value="">-- Select Party --</option>
@@ -128,9 +128,9 @@ export default function QuotationBuilderPage() {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tax Treatment</label>
+              <label className="block text-sm font-medium text-muted-foreground mb-1">Tax Treatment</label>
               <select
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                className="w-full rounded-md border-input shadow-sm focus:border-primary-500 focus:ring-primary-500"
                 {...register('tax_treatment')}
               >
                 <option value="GST">GST</option>
@@ -156,33 +156,33 @@ export default function QuotationBuilderPage() {
 
           <div className="mt-8 border-t pt-6">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Quotation Items</h3>
+              <h3 className="text-lg font-medium text-foreground">Quotation Items</h3>
               <Button type="button" variant="secondary" onClick={() => append({ item_name_snapshot: '', quantity: 1, rate: 0, discount_value: 0, gst_rate: 18 })}>
                 + Add Row
               </Button>
             </div>
             
             <div className="overflow-x-auto border rounded-lg">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-border">
+                <thead className="bg-muted/50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item Selection</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-48">Item Name *</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-24">Qty *</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-32">Rate *</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-32">Disc (₹)</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Item Selection</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase w-48">Item Name *</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase w-24">Qty *</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase w-32">Rate *</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase w-32">Disc (₹)</th>
                     {watchTaxTreatment === 'GST' && (
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-24">GST %</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase w-24">GST %</th>
                     )}
                     <th className="px-4 py-3"></th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-card divide-y divide-border">
                   {fields.map((field, index) => (
                     <tr key={field.id}>
                       <td className="px-4 py-2">
                         <select 
-                          className="w-full text-sm rounded border-gray-300"
+                          className="w-full text-sm rounded border-input"
                           onChange={(e) => handleItemSelect(index, e.target.value)}
                         >
                           <option value="">-- Catalog --</option>
@@ -194,7 +194,7 @@ export default function QuotationBuilderPage() {
                       <td className="px-4 py-2">
                         <input
                           {...register(`lines.${index}.item_name_snapshot`)}
-                          className="w-full text-sm rounded border-gray-300"
+                          className="w-full text-sm rounded border-input"
                           placeholder="Manual name"
                         />
                       </td>
@@ -202,21 +202,21 @@ export default function QuotationBuilderPage() {
                         <input
                           type="number" step="any" min="0"
                           {...register(`lines.${index}.quantity`, { valueAsNumber: true })}
-                          className="w-full text-sm rounded border-gray-300"
+                          className="w-full text-sm rounded border-input"
                         />
                       </td>
                       <td className="px-4 py-2">
                         <input
                           type="number" step="any" min="0"
                           {...register(`lines.${index}.rate`, { valueAsNumber: true })}
-                          className="w-full text-sm rounded border-gray-300"
+                          className="w-full text-sm rounded border-input"
                         />
                       </td>
                       <td className="px-4 py-2">
                         <input
                           type="number" step="any" min="0"
                           {...register(`lines.${index}.discount_value`, { valueAsNumber: true })}
-                          className="w-full text-sm rounded border-gray-300"
+                          className="w-full text-sm rounded border-input"
                         />
                       </td>
                       {watchTaxTreatment === 'GST' && (
@@ -224,7 +224,7 @@ export default function QuotationBuilderPage() {
                           <input
                             type="number" step="any" min="0"
                             {...register(`lines.${index}.gst_rate`, { valueAsNumber: true })}
-                            className="w-full text-sm rounded border-gray-300"
+                            className="w-full text-sm rounded border-input"
                           />
                         </td>
                       )}
@@ -241,19 +241,19 @@ export default function QuotationBuilderPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Notes / Remarks</label>
+              <label className="block text-sm font-medium text-muted-foreground mb-1">Notes / Remarks</label>
               <textarea
                 {...register('notes')}
                 rows={3}
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                className="w-full rounded-md border-input shadow-sm focus:border-primary-500 focus:ring-primary-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Terms & Conditions</label>
+              <label className="block text-sm font-medium text-muted-foreground mb-1">Terms & Conditions</label>
               <textarea
                 {...register('terms')}
                 rows={3}
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                className="w-full rounded-md border-input shadow-sm focus:border-primary-500 focus:ring-primary-500"
               />
             </div>
           </div>

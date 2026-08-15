@@ -158,8 +158,8 @@ export default function InvoiceBuilderPage() {
     <div className="max-w-6xl mx-auto space-y-6 pb-20">
       <div className="flex justify-between items-center border-b pb-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Create Tax Invoice</h2>
-          <p className="mt-1 text-sm text-gray-500">Generate a new GST compliant invoice.</p>
+          <h2 className="text-2xl font-bold text-foreground">Create Tax Invoice</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Generate a new GST compliant invoice.</p>
         </div>
       </div>
 
@@ -171,11 +171,11 @@ export default function InvoiceBuilderPage() {
         )}
 
         {/* Header Information */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-card p-6 rounded-lg shadow-sm border grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Customer</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-1">Customer</label>
             <select 
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2"
+              className="block w-full rounded-lg border text-sm px-3 py-2 outline-none transition-colors bg-background border-input focus:border-slate-500"
               {...register('customer_id')}
               onChange={(e) => {
                 register('customer_id').onChange(e);
@@ -195,21 +195,21 @@ export default function InvoiceBuilderPage() {
         </div>
 
         {/* Invoice Lines */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border space-y-4">
-          <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Items & Services</h3>
+        <div className="bg-card p-6 rounded-lg shadow-sm border space-y-4">
+          <h3 className="text-lg font-medium text-foreground border-b pb-2 mb-4">Items & Services</h3>
           
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border text-sm">
+              <thead className="bg-muted/50">
                 <tr>
-                  <th className="px-3 py-2 text-left font-medium text-gray-500 w-1/4">Item / Product</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-500 w-24">HSN</th>
-                  <th className="px-3 py-2 text-right font-medium text-gray-500 w-24">Qty</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-500 w-28">Unit</th>
-                  <th className="px-3 py-2 text-right font-medium text-gray-500 w-28">Rate (₹)</th>
-                  <th className="px-3 py-2 text-right font-medium text-gray-500 w-24">Discount</th>
-                  <th className="px-3 py-2 text-right font-medium text-gray-500 w-20">GST %</th>
-                  <th className="px-3 py-2 text-right font-medium text-gray-500 w-32">Amount</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-1/4">Item / Product</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-24">HSN</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground w-24">Qty</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-28">Unit</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground w-28">Rate (₹)</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground w-24">Discount</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground w-20">GST %</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground w-32">Amount</th>
                   <th className="px-3 py-2 w-10"></th>
                 </tr>
               </thead>
@@ -217,10 +217,10 @@ export default function InvoiceBuilderPage() {
                 {fields.map((field, index) => {
                   const calculatedLine = calcData?.lines?.[index];
                   return (
-                    <tr key={field.id} className="hover:bg-gray-50">
+                    <tr key={field.id} className="hover:bg-muted/50">
                       <td className="px-3 py-2">
                         <select 
-                          className="block w-full rounded border-gray-300 shadow-sm text-sm border px-2 py-1 mb-1"
+                          className="block w-full rounded border-input shadow-sm text-sm border px-2 py-1 mb-1"
                           onChange={(e) => handleItemSelect(index, e.target.value)}
                         >
                           <option value="">Select Item...</option>
@@ -228,17 +228,17 @@ export default function InvoiceBuilderPage() {
                             <option key={i.id} value={i.id}>{i.name}</option>
                           ))}
                         </select>
-                        <input type="text" placeholder="Item Name" className="block w-full rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.item_name`)} />
+                        <input type="text" placeholder="Item Name" className="block w-full rounded border-input shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.item_name`)} />
                       </td>
                       <td className="px-3 py-2">
-                        <input type="text" className="block w-full rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.hsn_sac`)} />
+                        <input type="text" className="block w-full rounded border-input shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.hsn_sac`)} />
                       </td>
                       <td className="px-3 py-2">
-                        <input type="number" step="any" className="block w-full text-right rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.quantity`)} />
+                        <input type="number" step="any" className="block w-full text-right rounded border-input shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.quantity`)} />
                       </td>
                       <td className="px-3 py-2">
                         <select 
-                          className="block w-full rounded border-gray-300 shadow-sm text-sm border px-2 py-1"
+                          className="block w-full rounded border-input shadow-sm text-sm border px-2 py-1"
                           {...register(`lines.${index}.unit_id`)}
                           onChange={(e) => {
                             register(`lines.${index}.unit_id`).onChange(e);
@@ -252,12 +252,12 @@ export default function InvoiceBuilderPage() {
                         </select>
                       </td>
                       <td className="px-3 py-2">
-                        <input type="number" step="any" className="block w-full text-right rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.rate`)} />
+                        <input type="number" step="any" className="block w-full text-right rounded border-input shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.rate`)} />
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex space-x-1">
-                          <input type="number" step="any" className="block w-full text-right rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.discount_value`)} />
-                          <select className="block rounded border-gray-300 shadow-sm text-xs border px-1 py-1 bg-gray-50" {...register(`lines.${index}.discount_type`)}>
+                          <input type="number" step="any" className="block w-full text-right rounded border-input shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.discount_value`)} />
+                          <select className="block rounded border-input shadow-sm text-xs border px-1 py-1 bg-muted/50" {...register(`lines.${index}.discount_type`)}>
                             <option value="NONE">None</option>
                             <option value="PERCENT">%</option>
                             <option value="FIXED">₹</option>
@@ -265,9 +265,9 @@ export default function InvoiceBuilderPage() {
                         </div>
                       </td>
                       <td className="px-3 py-2">
-                        <input type="number" step="any" className="block w-full text-right rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.gst_rate`)} />
+                        <input type="number" step="any" className="block w-full text-right rounded border-input shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.gst_rate`)} />
                       </td>
-                      <td className="px-3 py-2 text-right font-medium text-gray-900 bg-gray-50">
+                      <td className="px-3 py-2 text-right font-medium text-foreground bg-muted/50">
                         {calculateMutation.isPending ? '...' : (calculatedLine?.line_total ? `₹${calculatedLine.line_total.toFixed(2)}` : '₹0.00')}
                       </td>
                       <td className="px-3 py-2 text-center">
@@ -293,20 +293,20 @@ export default function InvoiceBuilderPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Customer Notes</label>
-              <textarea rows={3} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('notes')} />
+              <label className="block text-sm font-medium text-muted-foreground mb-1">Customer Notes</label>
+              <textarea rows={3} className="block w-full rounded-lg border text-sm px-3 py-2 outline-none transition-colors bg-background border-input focus:border-slate-500" {...register('notes')} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Terms & Conditions</label>
-              <textarea rows={3} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('terms')} />
+              <label className="block text-sm font-medium text-muted-foreground mb-1">Terms & Conditions</label>
+              <textarea rows={3} className="block w-full rounded-lg border text-sm px-3 py-2 outline-none transition-colors bg-background border-input focus:border-slate-500" {...register('terms')} />
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Invoice Summary</h3>
+          <div className="bg-card p-6 rounded-lg shadow-sm border">
+            <h3 className="text-lg font-medium text-foreground border-b pb-2 mb-4">Invoice Summary</h3>
             
             <div className="space-y-3 text-sm">
-              <div className="flex justify-between text-gray-600">
+              <div className="flex justify-between text-muted-foreground">
                 <span>Subtotal</span>
                 <span>₹{(calcData?.subtotal || 0).toFixed(2)}</span>
               </div>
@@ -314,36 +314,36 @@ export default function InvoiceBuilderPage() {
                 <span>Discount</span>
                 <span>- ₹{(calcData?.discount_total || 0).toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-gray-800 font-medium pt-2 border-t">
+              <div className="flex justify-between text-foreground font-medium pt-2 border-t">
                 <span>Taxable Value</span>
                 <span>₹{(calcData?.taxable_total || 0).toFixed(2)}</span>
               </div>
               
               {(calcData?.igst_total || 0) > 0 ? (
-                <div className="flex justify-between text-gray-600">
+                <div className="flex justify-between text-muted-foreground">
                   <span>IGST</span>
                   <span>₹{(calcData?.igst_total || 0).toFixed(2)}</span>
                 </div>
               ) : (
                 <>
-                  <div className="flex justify-between text-gray-600">
+                  <div className="flex justify-between text-muted-foreground">
                     <span>CGST</span>
                     <span>₹{(calcData?.cgst_total || 0).toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between text-gray-600">
+                  <div className="flex justify-between text-muted-foreground">
                     <span>SGST / UTGST</span>
                     <span>₹{(calcData?.sgst_total || 0).toFixed(2)}</span>
                   </div>
                 </>
               )}
 
-              <div className="flex justify-between text-xl font-bold text-gray-900 pt-4 border-t mt-4">
+              <div className="flex justify-between text-xl font-bold text-foreground pt-4 border-t mt-4">
                 <span>Grand Total</span>
                 <span>₹{(calcData?.grand_total || 0).toFixed(2)}</span>
               </div>
 
               {calcData?.amount_in_words && (
-                <div className="text-xs text-gray-500 text-right italic mt-1">
+                <div className="text-xs text-muted-foreground text-right italic mt-1">
                   Rupees {calcData.amount_in_words}
                 </div>
               )}
@@ -351,7 +351,7 @@ export default function InvoiceBuilderPage() {
           </div>
         </div>
 
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-lg flex justify-end space-x-4 z-10 md:ml-64">
+        <div className="fixed bottom-0 left-0 right-0 bg-card border-t p-4 shadow-lg flex justify-end space-x-4 z-10 md:ml-64">
           <Button type="button" variant="secondary" onClick={() => navigate('/')}>Cancel</Button>
           <Button type="submit" isLoading={createMutation.isPending} disabled={calculateMutation.isPending || !calcData?.grand_total}>
             Save Draft Invoice

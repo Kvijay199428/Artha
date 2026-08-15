@@ -42,8 +42,8 @@ export default function OrderListPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">{pageTitle}</h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <h2 className="text-2xl font-bold text-foreground">{pageTitle}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Manage your {orderType.toLowerCase()} orders.
           </p>
         </div>
@@ -52,40 +52,40 @@ export default function OrderListPage() {
         </Link>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="bg-card rounded-xl shadow-sm border border overflow-hidden">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-muted/50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order No</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{partyLabel}</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tax Type</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Order No</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">{partyLabel}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Tax Type</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-card divide-y divide-border">
             {isLoading ? (
-              <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">Loading orders...</td></tr>
+              <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-muted-foreground">Loading orders...</td></tr>
             ) : data?.items.length === 0 ? (
-              <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">No {orderType.toLowerCase()} orders found.</td></tr>
+              <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-muted-foreground">No {orderType.toLowerCase()} orders found.</td></tr>
             ) : (
               data?.items.map((order) => (
-                <tr key={order.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.order_date}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{order.order_number || 'DRAFT'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.party_id.substring(0,8)}...</td>
+                <tr key={order.id} className="hover:bg-muted/50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{order.order_date}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground font-medium">{order.order_number || 'DRAFT'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{order.party_id.substring(0,8)}...</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                      ${order.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' : 
+                      ${order.status === 'DRAFT' ? 'bg-muted text-muted-foreground' : 
                         order.status === 'CONFIRMED' ? 'bg-blue-100 text-blue-800' : 
                         order.status === 'CANCELLED' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
                       {order.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.tax_treatment.replace('_', ' ')}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-bold">₹{order.grand_total.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{order.tax_treatment.replace('_', ' ')}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground text-right font-bold">₹{order.grand_total.toFixed(2)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button onClick={() => setSelectedOrder(order)} className="text-primary-600 hover:text-primary-900">View</button>
                   </td>
@@ -98,32 +98,32 @@ export default function OrderListPage() {
 
       {/* View Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+          <div className="bg-card rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
             <div className="p-6 border-b flex justify-between items-center">
               <div>
-                <h3 className="text-xl font-bold text-gray-900">
+                <h3 className="text-xl font-bold text-foreground">
                   {selectedOrder.order_number || 'Draft Order'}
                 </h3>
-                <p className="text-sm text-gray-500">Date: {selectedOrder.order_date} | Type: {selectedOrder.order_type} | Tax: {selectedOrder.tax_treatment.replace('_', ' ')}</p>
+                <p className="text-sm text-muted-foreground">Date: {selectedOrder.order_date} | Type: {selectedOrder.order_type} | Tax: {selectedOrder.tax_treatment.replace('_', ' ')}</p>
               </div>
-              <button onClick={() => setSelectedOrder(null)} className="text-gray-400 hover:text-gray-500 text-2xl font-bold">&times;</button>
+              <button onClick={() => setSelectedOrder(null)} className="text-gray-400 hover:text-muted-foreground text-2xl font-bold">&times;</button>
             </div>
             
             <div className="p-6 overflow-y-auto flex-1">
-              <table className="min-w-full divide-y divide-gray-200 border mb-6 text-sm">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-border border mb-6 text-sm">
+                <thead className="bg-muted/50">
                   <tr>
-                    <th className="px-4 py-2 text-left text-gray-500 font-medium">Item</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Qty</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Rate</th>
+                    <th className="px-4 py-2 text-left text-muted-foreground font-medium">Item</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium">Qty</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium">Rate</th>
                     {selectedOrder.tax_treatment === 'GST' && (
                       <>
-                        <th className="px-4 py-2 text-right text-gray-500 font-medium">Taxable</th>
-                        <th className="px-4 py-2 text-right text-gray-500 font-medium">GST</th>
+                        <th className="px-4 py-2 text-right text-muted-foreground font-medium">Taxable</th>
+                        <th className="px-4 py-2 text-right text-muted-foreground font-medium">GST</th>
                       </>
                     )}
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Total</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -147,24 +147,24 @@ export default function OrderListPage() {
               <div className="flex justify-end">
                 <div className="w-64 space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Subtotal</span>
+                    <span className="text-muted-foreground">Subtotal</span>
                     <span>₹{selectedOrder.subtotal.toFixed(2)}</span>
                   </div>
                   {selectedOrder.tax_treatment === 'GST' && (
                     <>
                       {selectedOrder.igst_total > 0 ? (
                         <div className="flex justify-between">
-                          <span className="text-gray-600">IGST</span>
+                          <span className="text-muted-foreground">IGST</span>
                           <span>₹{selectedOrder.igst_total.toFixed(2)}</span>
                         </div>
                       ) : (
                         <>
                           <div className="flex justify-between">
-                            <span className="text-gray-600">CGST</span>
+                            <span className="text-muted-foreground">CGST</span>
                             <span>₹{selectedOrder.cgst_total.toFixed(2)}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-600">SGST</span>
+                            <span className="text-muted-foreground">SGST</span>
                             <span>₹{selectedOrder.sgst_total.toFixed(2)}</span>
                           </div>
                         </>
@@ -179,7 +179,7 @@ export default function OrderListPage() {
               </div>
             </div>
 
-            <div className="p-6 border-t bg-gray-50 flex justify-end space-x-3 rounded-b-lg">
+            <div className="p-6 border-t bg-muted flex justify-end space-x-3 rounded-b-lg">
               <Button variant="secondary" onClick={() => setSelectedOrder(null)}>Close</Button>
               {selectedOrder.status === 'DRAFT' && (
                 <Button 

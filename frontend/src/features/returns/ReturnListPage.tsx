@@ -68,8 +68,8 @@ export default function ReturnListPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">{pageTitle}</h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <h2 className="text-2xl font-bold text-foreground">{pageTitle}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Manage your {returnType.toLowerCase().replace('_', ' ')}s.
           </p>
         </div>
@@ -78,44 +78,44 @@ export default function ReturnListPage() {
         </Link>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="bg-card rounded-xl shadow-sm border border overflow-hidden">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-muted/50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Return No</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{partyLabel}</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Financial</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Return No</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">{partyLabel}</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Financial</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-card divide-y divide-border">
             {isLoading ? (
-              <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">Loading returns...</td></tr>
+              <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-muted-foreground">Loading returns...</td></tr>
             ) : data?.items.length === 0 ? (
-              <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">No returns found.</td></tr>
+              <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-muted-foreground">No returns found.</td></tr>
             ) : (
               data?.items.map((ret) => (
-                <tr key={ret.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{ret.return_date}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{ret.return_number || 'DRAFT'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{ret.party_id.substring(0,8)}...</td>
+                <tr key={ret.id} className="hover:bg-muted/50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{ret.return_date}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground font-medium">{ret.return_number || 'DRAFT'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{ret.party_id.substring(0,8)}...</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                      ${ret.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' : 
+                      ${ret.status === 'DRAFT' ? 'bg-muted text-muted-foreground' : 
                         ret.status === 'APPROVED' ? 'bg-blue-100 text-blue-800' : 
                         ret.status === 'COMPLETED' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                       {ret.status}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-muted text-foreground">
                       {ret.financial_status.replace('_', ' ')}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-bold">₹{ret.grand_total.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground text-right font-bold">₹{ret.grand_total.toFixed(2)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button onClick={() => setSelectedReturn(ret)} className="text-primary-600 hover:text-primary-900">View</button>
                   </td>
@@ -128,27 +128,27 @@ export default function ReturnListPage() {
 
       {/* View Modal */}
       {selectedReturn && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+          <div className="bg-card rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
             <div className="p-6 border-b flex justify-between items-center">
               <div>
-                <h3 className="text-xl font-bold text-gray-900">
+                <h3 className="text-xl font-bold text-foreground">
                   {selectedReturn.return_number || 'Draft Return'}
                 </h3>
-                <p className="text-sm text-gray-500">Original Order: {selectedReturn.original_order_id.substring(0, 8)}...</p>
+                <p className="text-sm text-muted-foreground">Original Order: {selectedReturn.original_order_id.substring(0, 8)}...</p>
               </div>
-              <button onClick={() => setSelectedReturn(null)} className="text-gray-400 hover:text-gray-500 text-2xl font-bold">&times;</button>
+              <button onClick={() => setSelectedReturn(null)} className="text-gray-400 hover:text-muted-foreground text-2xl font-bold">&times;</button>
             </div>
             
             <div className="p-6 overflow-y-auto flex-1">
-              <table className="min-w-full divide-y divide-gray-200 border mb-6 text-sm">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-border border mb-6 text-sm">
+                <thead className="bg-muted/50">
                   <tr>
-                    <th className="px-4 py-2 text-left text-gray-500 font-medium">Item</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Return Qty</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Rate</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium">GST</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Total</th>
+                    <th className="px-4 py-2 text-left text-muted-foreground font-medium">Item</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium">Return Qty</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium">Rate</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium">GST</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -156,7 +156,7 @@ export default function ReturnListPage() {
                     <tr key={line.id}>
                       <td className="px-4 py-2">
                         {line.item_name_snapshot}
-                        <div className="text-xs text-gray-500">Condition: {line.condition}</div>
+                        <div className="text-xs text-muted-foreground">Condition: {line.condition}</div>
                       </td>
                       <td className="px-4 py-2 text-right font-medium text-red-600">
                         {line.return_quantity} {line.unit_snapshot}
@@ -171,15 +171,15 @@ export default function ReturnListPage() {
 
               <div className="flex flex-col md:flex-row justify-between mt-6 pt-4 border-t gap-6">
                 <div className="w-full md:w-1/2">
-                  <h4 className="font-semibold text-gray-900 mb-2">Settlements</h4>
+                  <h4 className="font-semibold text-foreground mb-2">Settlements</h4>
                   {selectedReturn.settlements.length > 0 ? (
                     <div className="space-y-2">
                       {selectedReturn.settlements.map((s: any) => (
-                        <div key={s.id} className="bg-white border rounded p-3 text-sm flex justify-between items-center shadow-sm">
+                        <div key={s.id} className="bg-card border rounded p-3 text-sm flex justify-between items-center shadow-sm">
                           <div>
-                            <div className="font-medium text-gray-900">{s.settlement_type.replace(/_/g, ' ')}</div>
-                            <div className="text-gray-500 text-xs">{new Date(s.settlement_date).toLocaleDateString()} {s.reference_number ? `| Ref: ${s.reference_number}` : ''}</div>
-                            {s.notes && <div className="text-gray-500 text-xs italic">Note: {s.notes}</div>}
+                            <div className="font-medium text-foreground">{s.settlement_type.replace(/_/g, ' ')}</div>
+                            <div className="text-muted-foreground text-xs">{new Date(s.settlement_date).toLocaleDateString()} {s.reference_number ? `| Ref: ${s.reference_number}` : ''}</div>
+                            {s.notes && <div className="text-muted-foreground text-xs italic">Note: {s.notes}</div>}
                           </div>
                           <div className="font-bold text-green-600">
                             ₹{s.amount.toFixed(2)}
@@ -188,13 +188,13 @@ export default function ReturnListPage() {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-sm text-gray-500 italic">No settlements recorded yet.</div>
+                    <div className="text-sm text-muted-foreground italic">No settlements recorded yet.</div>
                   )}
                 </div>
                 
-                <div className="w-full md:w-64 space-y-2 text-sm bg-gray-50 p-4 rounded-lg self-start border">
+                <div className="w-full md:w-64 space-y-2 text-sm bg-muted p-4 rounded-lg self-start border">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Subtotal</span>
+                    <span className="text-muted-foreground">Subtotal</span>
                     <span>₹{selectedReturn.subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg pt-2 border-t mt-2">
@@ -213,7 +213,7 @@ export default function ReturnListPage() {
               </div>
             </div>
 
-            <div className="p-6 border-t bg-gray-50 flex justify-end space-x-3 rounded-b-lg">
+            <div className="p-6 border-t bg-muted flex justify-end space-x-3 rounded-b-lg">
               <Button variant="secondary" onClick={() => setSelectedReturn(null)}>Close</Button>
               {selectedReturn.status === 'DRAFT' && (
                 <Button 
@@ -253,17 +253,17 @@ export default function ReturnListPage() {
 
       {/* Settlement Modal */}
       {showSettlementModal && selectedReturn && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+          <div className="bg-card rounded-lg shadow-xl max-w-md w-full">
             <div className="p-6 border-b flex justify-between items-center">
-              <h3 className="text-xl font-bold text-gray-900">Process Settlement</h3>
-              <button onClick={() => setShowSettlementModal(false)} className="text-gray-400 hover:text-gray-500 text-2xl font-bold">&times;</button>
+              <h3 className="text-xl font-bold text-foreground">Process Settlement</h3>
+              <button onClick={() => setShowSettlementModal(false)} className="text-gray-400 hover:text-muted-foreground text-2xl font-bold">&times;</button>
             </div>
             <form onSubmit={handleSettlementSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Settlement Type</label>
+                <label className="block text-sm font-medium text-muted-foreground">Settlement Type</label>
                 <select 
-                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                  className="mt-1 w-full rounded-md border-input shadow-sm focus:border-primary-500 focus:ring-primary-500"
                   value={settlementForm.settlement_type}
                   onChange={(e) => setSettlementForm({...settlementForm, settlement_type: e.target.value})}
                   required
@@ -285,12 +285,12 @@ export default function ReturnListPage() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700">Amount (₹)</label>
+                <label className="block text-sm font-medium text-muted-foreground">Amount (₹)</label>
                 <input 
                   type="number" 
                   step="0.01"
                   min="0.01"
-                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                  className="mt-1 w-full rounded-md border-input shadow-sm focus:border-primary-500 focus:ring-primary-500"
                   value={settlementForm.amount}
                   onChange={(e) => setSettlementForm({...settlementForm, amount: parseFloat(e.target.value)})}
                   required
@@ -298,19 +298,19 @@ export default function ReturnListPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Reference Number</label>
+                <label className="block text-sm font-medium text-muted-foreground">Reference Number</label>
                 <input 
                   type="text" 
-                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                  className="mt-1 w-full rounded-md border-input shadow-sm focus:border-primary-500 focus:ring-primary-500"
                   value={settlementForm.reference_number}
                   onChange={(e) => setSettlementForm({...settlementForm, reference_number: e.target.value})}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Notes</label>
+                <label className="block text-sm font-medium text-muted-foreground">Notes</label>
                 <textarea 
-                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                  className="mt-1 w-full rounded-md border-input shadow-sm focus:border-primary-500 focus:ring-primary-500"
                   value={settlementForm.notes}
                   onChange={(e) => setSettlementForm({...settlementForm, notes: e.target.value})}
                   rows={2}

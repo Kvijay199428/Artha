@@ -27,6 +27,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 @app.exception_handler(AppException)
@@ -51,6 +52,13 @@ async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
     )
 
 app.include_router(api_router, prefix="/api")
+
+@app.exception_handler(404)
+async def not_found_handler(request: Request, exc):
+    return JSONResponse(
+        status_code=404,
+        content={"success": False, "error": {"code": "NOT_FOUND", "message": "Endpoint not found"}}
+    )
 
 @app.get("/health")
 def health_check():

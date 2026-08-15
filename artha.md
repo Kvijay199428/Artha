@@ -1205,11 +1205,11 @@ class Settings(BaseSettings):
     session_secret: str = "dev-session-secret-change-in-production"
     storage_path: str = "storage"
     log_level: str = "INFO"
-    cors_origins: str = "http://localhost:5173"
+    cors_origins: str = "http://localhost:5173,http://localhost:3000,http://localhost:4173"
     
     @property
     def cors_origin_list(self) -> list[str]:
-        return [o.strip() for o in self.cors_origins.split(",")]
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
     
     @property
     def db_path(self) -> Path:
@@ -1778,6 +1778,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 @app.exception_handler(AppException)
@@ -1802,6 +1803,13 @@ async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
     )
 
 app.include_router(api_router, prefix="/api")
+
+@app.exception_handler(404)
+async def not_found_handler(request: Request, exc):
+    return JSONResponse(
+        status_code=404,
+        content={"success": False, "error": {"code": "NOT_FOUND", "message": "Endpoint not found"}}
+    )
 
 @app.get("/health")
 def health_check():
@@ -3079,34 +3087,49 @@ class UnitVersion(Base):
 ```python
 // File: backend/app/schemas/auth.py
 from pydantic import BaseModel, Field
+from typing import Optional
 
 class CompanySetupRequest(BaseModel):
+    # Business
     company_name: str = Field(..., min_length=2, max_length=200)
     ownership_type: str = Field(...)
+    authorized_person_name: str = Field(..., min_length=1, max_length=100)
+    authorized_person_designation: Optional[str] = Field(None, max_length=100)
+
+    # GST / Tax
     gst_registered: bool = True
-    gstin: str | None = Field(None, max_length=15)
-    tan: str | None = Field(None, max_length=10)
+    gstin: Optional[str] = Field(None, max_length=15)
+    tan: Optional[str] = Field(None, max_length=10)
+
+    # Address
     address_line_1: str = Field(..., min_length=1, max_length=200)
-    address_line_2: str | None = Field(None, max_length=200)
+    address_line_2: Optional[str] = Field(None, max_length=200)
     city: str = Field(..., min_length=1, max_length=100)
-    district: str | None = Field(None, max_length=100)
+    district: Optional[str] = Field(None, max_length=100)
     state: str = Field(..., min_length=1, max_length=100)
     state_code: str = Field(..., min_length=1, max_length=2)
     pincode: str = Field(..., min_length=4, max_length=10)
     country: str = Field(default="India")
+
+    # Contact
+    mobile: str = Field(..., min_length=7, max_length=20)
     mobile_country_code: str = Field(default="+91")
-    mobile: str = Field(..., min_length=10, max_length=20)
-    office_phone_country_code: str | None = Field(None, max_length=5)
-    office_phone: str | None = Field(None, max_length=20)
+    mobile_e164: Optional[str] = Field(None, max_length=25)
+    office_phone: Optional[str] = Field(None, max_length=20)
+    office_phone_country_code: Optional[str] = Field(None, max_length=5)
+    office_phone_e164: Optional[str] = Field(None, max_length=25)
     email: str = Field(..., max_length=100)
-    authorized_person_name: str = Field(..., min_length=1, max_length=100)
-    authorized_person_designation: str | None = Field(None, max_length=100)
-    bank_account_holder_name: str = Field(..., min_length=1, max_length=100)
-    bank_account_number: str = Field(..., min_length=4, max_length=50)
-    bank_ifsc: str = Field(..., min_length=11, max_length=20)
-    bank_name: str | None = Field(None, max_length=100)
-    bank_branch: str = Field(..., min_length=1, max_length=100)
-    bank_account_type: str = Field(default="Current")
+    website: Optional[str] = Field(None, max_length=300)
+
+    # Bank — ALL OPTIONAL
+    bank_account_holder_name: Optional[str] = Field(None, max_length=100)
+    bank_account_number: Optional[str] = Field(None, max_length=50)
+    bank_ifsc: Optional[str] = Field(None, max_length=20)
+    bank_name: Optional[str] = Field(None, max_length=100)
+    bank_branch: Optional[str] = Field(None, max_length=100)
+    bank_account_type: Optional[str] = Field(None, max_length=30)
+
+    # Security
     pin: str = Field(..., min_length=4, max_length=4)
     confirm_pin: str = Field(..., min_length=4, max_length=4)
 
@@ -3121,13 +3144,13 @@ class LoginResponse(BaseModel):
 class CompanyProfileResponse(BaseModel):
     id: str
     company_name: str
-    legal_name: str | None
+    legal_name: Optional[str]
     ownership_type: str
     status: str
     mobile: str
     email: str
     authorized_person_name: str
-    logo_url: str | None
+    logo_url: Optional[str]
 ```
 
 ```python
@@ -4321,9 +4344,12 @@ class CompanyService:
             status="ACTIVE",
             mobile=data.mobile,
             mobile_country_code=data.mobile_country_code,
+            mobile_e164=data.mobile_e164,
             office_phone=data.office_phone,
             office_phone_country_code=data.office_phone_country_code,
+            office_phone_e164=data.office_phone_e164,
             email=data.email,
+            website=data.website,
             authorized_person_name=data.authorized_person_name,
             authorized_person_designation=data.authorized_person_designation,
         )
@@ -4369,18 +4395,19 @@ class CompanyService:
         )
         db.add(address)
         
-        # Bank account
-        bank = CompanyBankAccount(
-            company_id=company.id,
-            account_holder_name=data.bank_account_holder_name,
-            account_number=data.bank_account_number,
-            ifsc=data.bank_ifsc.upper(),
-            bank_name=data.bank_name,
-            branch=data.bank_branch,
-            account_type=data.bank_account_type,
-            is_primary=True,
-        )
-        db.add(bank)
+        # Bank account — optional, only create if details provided
+        if data.bank_account_number and data.bank_ifsc and data.bank_account_holder_name:
+            bank = CompanyBankAccount(
+                company_id=company.id,
+                account_holder_name=data.bank_account_holder_name,
+                account_number=data.bank_account_number,
+                ifsc=data.bank_ifsc.upper(),
+                bank_name=data.bank_name,
+                branch=data.bank_branch or "",
+                account_type=data.bank_account_type or "CURRENT",
+                is_primary=True,
+            )
+            db.add(bank)
         
         # Auth
         auth = CompanyAuth(
@@ -6853,6 +6880,42 @@ ALTER TABLE parties ADD COLUMN office_phone_e164 VARCHAR(20);
 ALTER TABLE party_bank_accounts ADD COLUMN account_type VARCHAR(30) DEFAULT 'CURRENT';
 ```
 
+```sql
+// File: backend/migrations/phase11_schema.sql
+-- Phase 11: Schema additions
+-- SQLite-compatible ALTER TABLE statements
+-- Run ONCE on existing databases to add new columns added in Phase 10-11
+-- Fresh installs: create_all() handles this automatically
+
+-- Company: new contact/logo fields
+ALTER TABLE companies ADD COLUMN mobile_country_code VARCHAR(5) DEFAULT '+91';
+ALTER TABLE companies ADD COLUMN mobile_e164 VARCHAR(25);
+ALTER TABLE companies ADD COLUMN office_phone_country_code VARCHAR(5);
+ALTER TABLE companies ADD COLUMN office_phone_e164 VARCHAR(25);
+ALTER TABLE companies ADD COLUMN website VARCHAR(300);
+ALTER TABLE companies ADD COLUMN logo_url VARCHAR(500);
+ALTER TABLE companies ADD COLUMN logo_asset_id VARCHAR(36);
+
+-- Company GST: TAN field
+ALTER TABLE company_gst_details ADD COLUMN tan VARCHAR(10);
+
+-- Parties: new contact fields
+ALTER TABLE parties ADD COLUMN tan VARCHAR(10);
+ALTER TABLE parties ADD COLUMN mobile_country_code VARCHAR(5) DEFAULT '+91';
+ALTER TABLE parties ADD COLUMN mobile_e164 VARCHAR(25);
+ALTER TABLE parties ADD COLUMN office_phone VARCHAR(20);
+ALTER TABLE parties ADD COLUMN office_phone_country_code VARCHAR(5);
+ALTER TABLE parties ADD COLUMN office_phone_e164 VARCHAR(25);
+
+-- Party bank accounts: account type
+ALTER TABLE party_bank_accounts ADD COLUMN account_type VARCHAR(30) DEFAULT 'CURRENT';
+
+-- Company assets: standardization metadata
+ALTER TABLE company_assets ADD COLUMN original_width INTEGER;
+ALTER TABLE company_assets ADD COLUMN original_height INTEGER;
+ALTER TABLE company_assets ADD COLUMN standardized BOOLEAN DEFAULT 0;
+```
+
 ```toml
 // File: backend/pyproject.toml
 [build-system]
@@ -6901,24 +6964,20 @@ include = ["app*"]
 
 ```
 // File: frontend/Dockerfile
-FROM node:22-alpine as build
+FROM node:22-alpine AS build
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
+# VITE_API_URL defaults to /api/v1 for production (Nginx proxy)
+ARG VITE_API_URL=/api/v1
+ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
-# SPA routing setup
-RUN echo "server { \
-    listen 80; \
-    location / { \
-        root /usr/share/nginx/html; \
-        index index.html index.htm; \
-        try_files \$uri \$uri/ /index.html; \
-    } \
-}" > /etc/nginx/conf.d/default.conf
+# Use our custom nginx config (handles /api proxy + SPA routing)
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
 ```
@@ -6976,6 +7035,47 @@ See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rule
 </html>
 ```
 
+```conf
+// File: frontend/nginx.conf
+server {
+    listen 80;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Proxy /api/* to the backend service
+    location /api/ {
+        proxy_pass http://backend:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+        proxy_connect_timeout 10s;
+        # Pass CORS preflight through to FastAPI
+        proxy_pass_header Access-Control-Allow-Origin;
+    }
+
+    # Static assets — cache aggressively
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    # Health check endpoint
+    location /health {
+        proxy_pass http://backend:8000/health;
+        proxy_set_header Host $host;
+    }
+
+    # SPA routing — all other routes serve index.html
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
 ```json
 // File: frontend/package.json
 {
@@ -6993,6 +7093,7 @@ See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rule
     "@hookform/resolvers": "^5.7.1",
     "@tanstack/react-query": "^5.101.4",
     "axios": "^1.19.0",
+    "libphonenumber-js": "^1.13.11",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-hook-form": "^7.85.0",
@@ -7000,6 +7101,15 @@ See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rule
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@radix-ui/react-checkbox": "^1.3.11",
+    "@radix-ui/react-dialog": "^1.1.23",
+    "@radix-ui/react-dropdown-menu": "^2.1.24",
+    "@radix-ui/react-label": "^2.1.15",
+    "@radix-ui/react-select": "^2.3.7",
+    "@radix-ui/react-separator": "^1.1.15",
+    "@radix-ui/react-slot": "^1.3.3",
+    "@radix-ui/react-switch": "^1.3.7",
+    "@radix-ui/react-toast": "^1.2.23",
     "@tailwindcss/postcss": "^4.3.3",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^24.13.3",
@@ -7007,9 +7117,13 @@ See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rule
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
     "autoprefixer": "^10.5.4",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.31.0",
     "oxlint": "^1.75.0",
     "postcss": "^8.5.26",
     "prettier": "^3.9.6",
+    "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "vite": "^8.2.0"
@@ -7252,10 +7366,9 @@ export default {
 // File: frontend/src/App.tsx
 import { Outlet } from 'react-router-dom';
 
-
 function App() {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       <main className="flex-grow">
         <Outlet />
       </main>
@@ -7274,26 +7387,32 @@ export interface SetupRequest {
   company_name: string;
   ownership_type: string;
   mobile: string;
+  mobile_country_code?: string;
+  mobile_e164?: string;
   office_phone?: string;
+  office_phone_country_code?: string;
+  office_phone_e164?: string;
   email: string;
+  website?: string;
   authorized_person_name: string;
   authorized_person_designation?: string;
   gst_registered: boolean;
   gstin?: string;
+  tan?: string;
   address_line_1: string;
   address_line_2?: string;
   city: string;
-  district: string;
+  district?: string;
   state: string;
   state_code: string;
   pincode: string;
   country: string;
-  bank_account_holder_name: string;
-  bank_account_number: string;
-  bank_ifsc: string;
-  bank_name: string;
-  bank_branch: string;
-  bank_account_type: string;
+  bank_account_holder_name?: string;
+  bank_account_number?: string;
+  bank_ifsc?: string;
+  bank_name?: string;
+  bank_branch?: string;
+  bank_account_type?: string;
   pin: string;
   confirm_pin: string;
 }
@@ -7416,7 +7535,9 @@ export const boqsApi = {
 // File: frontend/src/api/client.ts
 import axios, { AxiosError } from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:28030/api/v1`;
+// Production (via Nginx proxy): /api/v1 — same origin, no CORS
+// Development: http://localhost:8000/api/v1 (set in .env.development)
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -7438,32 +7559,33 @@ apiClient.interceptors.response.use(
   (error: AxiosError) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
-      // Redirect to login handled by router/auth hook
       window.dispatchEvent(new Event('unauthorized'));
     }
-    
+
     const customError = {
       message: 'An unexpected error occurred',
       code: 'UNKNOWN_ERROR',
       fields: {} as Record<string, string>,
-      status: error.response?.status || 500
+      status: error.response?.status || 500,
     };
-    
+
     if (error.response?.data) {
       const data = error.response.data as any;
       if (data.detail && Array.isArray(data.detail)) {
-        // Validation errors
         customError.message = 'Validation failed';
         customError.code = 'VALIDATION_ERROR';
         data.detail.forEach((err: any) => {
           customError.fields[err.loc.join('.')] = err.msg;
         });
+      } else if (data.error) {
+        customError.message = data.error.message || data.message || 'An error occurred';
+        customError.code = data.error.code || 'API_ERROR';
       } else if (data.message) {
         customError.message = data.message;
         customError.code = data.code || 'API_ERROR';
       }
     }
-    
+
     return Promise.reject(customError);
   }
 );
@@ -8255,6 +8377,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 export const queryClient = new QueryClient();
 
+// ── Auth Context ──────────────────────────────────────────────────────────────
 interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
@@ -8267,12 +8390,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const handleUnauthorized = () => logout();
     window.addEventListener('unauthorized', handleUnauthorized);
-    setIsLoading(false);
     return () => window.removeEventListener('unauthorized', handleUnauthorized);
   }, []);
 
@@ -8287,7 +8408,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ token, isAuthenticated: !!token, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ token, isAuthenticated: !!token, login, logout, isLoading: false }}>
       {children}
     </AuthContext.Provider>
   );
@@ -8295,18 +8416,78 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (context === undefined) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };
 
+// ── Theme Context ─────────────────────────────────────────────────────────────
+type Theme = 'light' | 'dark' | 'system';
+
+interface ThemeContextType {
+  theme: Theme;
+  setTheme: (t: Theme) => void;
+  resolvedTheme: 'light' | 'dark';
+}
+
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+
+export const ThemeProvider = ({ children }: { children: ReactNode }) => {
+  const [theme, setThemeState] = useState<Theme>(
+    () => (localStorage.getItem('theme') as Theme) || 'system'
+  );
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
+
+  const applyTheme = (t: Theme) => {
+    const html = document.documentElement;
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const resolved = t === 'system' ? (prefersDark ? 'dark' : 'light') : t;
+    setResolvedTheme(resolved);
+    // shadcn uses .dark class + [data-theme] attribute
+    if (resolved === 'dark') {
+      html.classList.add('dark');
+      html.setAttribute('data-theme', 'dark');
+    } else {
+      html.classList.remove('dark');
+      html.setAttribute('data-theme', 'light');
+    }
+  };
+
+  const setTheme = (t: Theme) => {
+    localStorage.setItem('theme', t);
+    setThemeState(t);
+    applyTheme(t);
+  };
+
+  useEffect(() => {
+    applyTheme(theme);
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = () => { if (theme === 'system') applyTheme('system'); };
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, [theme]);
+
+  return (
+    <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+};
+
+export const useTheme = () => {
+  const ctx = useContext(ThemeContext);
+  if (!ctx) throw new Error('useTheme must be used within ThemeProvider');
+  return ctx;
+};
+
+// ── Combined Providers ────────────────────────────────────────────────────────
 export const AppProviders = ({ children }: { children: ReactNode }) => {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        {children}
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 };
@@ -8314,9 +8495,9 @@ export const AppProviders = ({ children }: { children: ReactNode }) => {
 
 ```tsx
 // File: frontend/src/app/router.tsx
-import { createBrowserRouter, Navigate, Link } from 'react-router-dom';
+import { createBrowserRouter, Navigate, Link, useLocation } from 'react-router-dom';
 import App from '../App';
-import { useAuth } from './providers';
+import { useAuth, useTheme } from './providers';
 import LoginPage from '../features/auth/LoginPage';
 import SetupPage from '../features/auth/SetupPage';
 import PinChangePage from '../features/auth/PinChangePage';
@@ -8334,55 +8515,155 @@ import QuotationBuilderPage from '../features/quotations/QuotationBuilderPage';
 import BOQListPage from '../features/boqs/BOQListPage';
 import EstimateListPage from '../features/estimates/EstimateListPage';
 
+// ── Guards ────────────────────────────────────────────────────────────────────
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isLoading } = useAuth();
-  
-  if (isLoading) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  const { isAuthenticated } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" />;
-  
   return <>{children}</>;
 };
 
+// ── Theme toggle button ───────────────────────────────────────────────────────
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme();
+  const icons = { light: '☀️', dark: '🌙', system: '💻' };
+  const next: Record<string, 'dark' | 'system' | 'light'> = { light: 'dark', dark: 'system', system: 'light' };
+  return (
+    <button
+      onClick={() => setTheme(next[theme])}
+      title={`Theme: ${theme} — click to change`}
+      className="text-xs px-2 py-1 rounded-md bg-muted text-muted-foreground hover:bg-accent transition-colors border border"
+    >
+      {icons[theme]}
+    </button>
+  );
+}
+
+// ── Nav link ──────────────────────────────────────────────────────────────────
+function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
+  const loc = useLocation();
+  const active = loc.pathname === to || (to !== '/' && loc.pathname.startsWith(to));
+  return (
+    <Link
+      to={to}
+      className={`block px-3 py-2 rounded-md text-sm transition-colors ${
+        active ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium' : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+      }`}
+    >
+      {children}
+    </Link>
+  );
+}
+
+// ── Dashboard Shell ───────────────────────────────────────────────────────────
 const DashboardShell = ({ children }: { children: React.ReactNode }) => {
   const { logout } = useAuth();
+
   return (
-    <div className="min-h-screen flex bg-gray-50">
-      <div className="w-64 bg-white border-r hidden md:block">
-        <div className="h-16 flex items-center px-6 font-bold text-xl text-primary-600 border-b">
-          Artha Billing
+    <div className="min-h-screen flex bg-background">
+      {/* Sidebar */}
+      <aside className="w-64 bg-sidebar border-r border-sidebar-border hidden md:flex flex-col">
+        {/* Logo */}
+        <div className="h-16 flex items-center justify-between px-5 border-b border-sidebar-border flex-shrink-0">
+          <Link to="/" className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-slate-900 dark:bg-white flex items-center justify-center">
+              <span className="text-white dark:text-slate-900 text-xs font-black">A</span>
+            </div>
+            <span className="font-black tracking-widest text-foreground text-sm uppercase">ARTHA</span>
+          </Link>
+          <ThemeToggle />
         </div>
-        <nav className="p-4 space-y-2">
-          <Link to="/" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Dashboard</Link>
-          <Link to="/invoices/new" className="block px-4 py-2 text-blue-700 hover:bg-blue-50 font-medium rounded-md bg-blue-50">+ Create Invoice</Link>
-          <Link to="/invoices" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Sales Invoices</Link>
-          <Link to="/purchase-bills" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Purchase Bills</Link>
-          <Link to="/supply-in" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Supply In</Link>
-          <Link to="/supply-in/quotations" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md pl-8">↳ Quotations</Link>
-          <Link to="/supply-in/returns" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md pl-8">↳ Returns</Link>
-          <Link to="/supply-out" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Supply Out</Link>
-          <Link to="/supply-out/quotations" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md pl-8">↳ Quotations</Link>
-          <Link to="/supply-out/returns" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md pl-8">↳ Returns</Link>
-          <Link to="/boqs" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">BOQ</Link>
-          <Link to="/estimates" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Estimates</Link>
-          <Link to="/parties" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Customers & Vendors</Link>
-          <Link to="/items" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Items & Products</Link>
-          <Link to="/units" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Units</Link>
-          <Link to="/pin-change" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Security PIN</Link>
-          <button onClick={logout} className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded-md">Logout</button>
+
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
+          <NavLink to="/">Dashboard</NavLink>
+
+          <div className="pt-3 pb-1">
+            <p className="px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Sales</p>
+          </div>
+          <NavLink to="/invoices/new">+ Create Invoice</NavLink>
+          <NavLink to="/invoices">Sales Invoices</NavLink>
+
+          <div className="pt-3 pb-1">
+            <p className="px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Purchases</p>
+          </div>
+          <NavLink to="/purchase-bills">Purchase Bills</NavLink>
+
+          <div className="pt-3 pb-1">
+            <p className="px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Supply</p>
+          </div>
+          <NavLink to="/supply-in">Supply In</NavLink>
+          <NavLink to="/supply-in/quotations">↳ Quotations</NavLink>
+          <NavLink to="/supply-in/returns">↳ Returns</NavLink>
+          <NavLink to="/supply-out">Supply Out</NavLink>
+          <NavLink to="/supply-out/quotations">↳ Quotations</NavLink>
+          <NavLink to="/supply-out/returns">↳ Returns</NavLink>
+
+          <div className="pt-3 pb-1">
+            <p className="px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Documents</p>
+          </div>
+          <NavLink to="/boqs">BOQ</NavLink>
+          <NavLink to="/estimates">Estimates</NavLink>
+
+          <div className="pt-3 pb-1">
+            <p className="px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Master</p>
+          </div>
+          <NavLink to="/parties">Customers & Vendors</NavLink>
+          <NavLink to="/items">Items & Products</NavLink>
+          <NavLink to="/units">Units</NavLink>
         </nav>
-      </div>
-      <div className="flex-1">
-        <header className="h-16 bg-white border-b flex items-center px-6 md:hidden justify-between">
-          <span className="font-bold text-xl text-primary-600">Artha</span>
-          <button onClick={logout} className="text-sm text-red-600 font-medium">Logout</button>
+
+        {/* Footer */}
+        <div className="p-3 border-t border-sidebar-border space-y-1 flex-shrink-0">
+          <NavLink to="/pin-change">🔐 Security PIN</NavLink>
+          <button
+            onClick={logout}
+            className="w-full text-left block px-3 py-2 rounded-md text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+          >
+            ← Logout
+          </button>
+        </div>
+      </aside>
+
+      {/* Main area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Mobile header */}
+        <header className="h-14 bg-sidebar border-b border-sidebar-border flex items-center justify-between px-4 md:hidden">
+          <Link to="/" className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-slate-900 dark:bg-white flex items-center justify-center">
+              <span className="text-white dark:text-slate-900 text-xs font-black">A</span>
+            </div>
+            <span className="font-black tracking-widest text-foreground text-sm uppercase">ARTHA</span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <button
+              onClick={logout}
+              className="text-sm text-red-500 font-medium px-3 py-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            >
+              Logout
+            </button>
+          </div>
         </header>
-        <main className="p-6">
+
+        {/* Page content */}
+        <main className="flex-1 p-4 md:p-6 overflow-auto">
           {children}
         </main>
       </div>
     </div>
   );
 };
+
+// ── Helpers for themed page elements ─────────────────────────────────────────
+// Re-exported for use in page components
+export { DashboardShell };
+
+// ── Router ────────────────────────────────────────────────────────────────────
+const wrap = (element: React.ReactNode) => (
+  <ProtectedRoute>
+    <DashboardShell>{element}</DashboardShell>
+  </ProtectedRoute>
+);
 
 export const router = createBrowserRouter([
   {
@@ -8391,239 +8672,44 @@ export const router = createBrowserRouter([
     children: [
       {
         path: '/',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-                <h1 className="text-2xl font-bold mb-4">Welcome to Artha</h1>
-                <p className="text-gray-600 mb-6">This is your secure billing dashboard. Choose a module from the sidebar to begin.</p>
-                <div className="flex space-x-4">
-                  <Link to="/invoices/new" className="px-4 py-2 bg-primary-600 text-white rounded-md font-medium">Create Invoice</Link>
-                  <Link to="/invoices" className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md font-medium hover:bg-gray-50">View Invoices</Link>
-                </div>
-              </div>
-            </DashboardShell>
-          </ProtectedRoute>
+        element: wrap(
+          <div className="bg-card rounded-xl shadow-sm border border p-6">
+            <h1 className="text-2xl font-bold text-foreground mb-2">Welcome to ARTHA</h1>
+            <p className="text-muted-foreground mb-6">Your secure GST billing dashboard. Choose a module from the sidebar.</p>
+            <div className="flex flex-wrap gap-3">
+              <Link to="/invoices/new" className="px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity">
+                Create Invoice
+              </Link>
+              <Link to="/invoices" className="px-4 py-2 bg-muted text-foreground rounded-lg font-medium text-sm border border hover:bg-accent transition-colors">
+                View Invoices
+              </Link>
+            </div>
+          </div>
         ),
       },
-      {
-        path: 'invoices/new',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <InvoiceBuilderPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'invoices',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <InvoiceListPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'purchase-bills',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <InvoiceListPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'supply-in',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <OrderListPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'supply-in/quotations',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <QuotationListPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'supply-in/quotations/new',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <QuotationBuilderPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'supply-in/returns',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <ReturnListPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'supply-in/returns/new',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <ReturnBuilderPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'supply-in/new',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <OrderBuilderPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'supply-out',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <OrderListPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'supply-out/quotations',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <QuotationListPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'supply-out/quotations/new',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <QuotationBuilderPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'supply-out/returns',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <ReturnListPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'supply-out/returns/new',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <ReturnBuilderPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'boqs',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <BOQListPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'estimates',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <EstimateListPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'supply-out/new',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <OrderBuilderPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'parties',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <PartiesPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'items',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <ItemsPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'units',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <UnitsPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'pin-change',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <PinChangePage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'login',
-        element: <LoginPage />,
-      },
-      {
-        path: 'setup',
-        element: <SetupPage />,
-      }
+      { path: 'invoices/new',              element: wrap(<InvoiceBuilderPage />) },
+      { path: 'invoices',                  element: wrap(<InvoiceListPage />) },
+      { path: 'purchase-bills',            element: wrap(<InvoiceListPage />) },
+      { path: 'supply-in',                 element: wrap(<OrderListPage />) },
+      { path: 'supply-in/quotations',      element: wrap(<QuotationListPage />) },
+      { path: 'supply-in/quotations/new',  element: wrap(<QuotationBuilderPage />) },
+      { path: 'supply-in/returns',         element: wrap(<ReturnListPage />) },
+      { path: 'supply-in/returns/new',     element: wrap(<ReturnBuilderPage />) },
+      { path: 'supply-in/new',             element: wrap(<OrderBuilderPage />) },
+      { path: 'supply-out',                element: wrap(<OrderListPage />) },
+      { path: 'supply-out/quotations',     element: wrap(<QuotationListPage />) },
+      { path: 'supply-out/quotations/new', element: wrap(<QuotationBuilderPage />) },
+      { path: 'supply-out/returns',        element: wrap(<ReturnListPage />) },
+      { path: 'supply-out/returns/new',    element: wrap(<ReturnBuilderPage />) },
+      { path: 'supply-out/new',            element: wrap(<OrderBuilderPage />) },
+      { path: 'boqs',                      element: wrap(<BOQListPage />) },
+      { path: 'estimates',                 element: wrap(<EstimateListPage />) },
+      { path: 'parties',                   element: wrap(<PartiesPage />) },
+      { path: 'items',                     element: wrap(<ItemsPage />) },
+      { path: 'units',                     element: wrap(<UnitsPage />) },
+      { path: 'pin-change',                element: wrap(<PinChangePage />) },
+      { path: 'login',                     element: <LoginPage /> },
+      { path: 'setup',                     element: <SetupPage /> },
     ],
   },
 ]);
@@ -8641,83 +8727,16 @@ export const router = createBrowserRouter([
 
 ```tsx
 // File: frontend/src/components/common/Button.tsx
-import React from 'react';
-import type { ButtonHTMLAttributes } from 'react';
-
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
-  isLoading?: boolean;
-}
-
-export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className = '', variant = 'primary', isLoading = false, children, disabled, ...props }, ref) => {
-    const baseStyles = 'inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
-    
-    const variants = {
-      primary: 'bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 shadow-sm border border-transparent',
-      secondary: 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 focus:ring-primary-500 shadow-sm',
-      danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 shadow-sm border border-transparent',
-      ghost: 'bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-500',
-    };
-
-    return (
-      <button
-        ref={ref}
-        className={`${baseStyles} ${variants[variant]} ${className}`}
-        disabled={disabled || isLoading}
-        {...props}
-      >
-        {isLoading && (
-          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-        )}
-        {children}
-      </button>
-    );
-  }
-);
-Button.displayName = 'Button';
+// Re-export from shadcn ui/ — keeps all existing import paths working
+export { Button } from '../ui/button';
+export type { ButtonProps } from '../ui/button';
 ```
 
 ```tsx
 // File: frontend/src/components/common/Input.tsx
-import React from 'react';
-import type { InputHTMLAttributes } from 'react';
-
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
-  error?: any;
-}
-
-export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className = '', label, error, id, ...props }, ref) => {
-    const inputId = id || Math.random().toString(36).substring(7);
-    
-    return (
-      <div className="w-full">
-        {label && (
-          <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 mb-1">
-            {label}
-          </label>
-        )}
-        <input
-          id={inputId}
-          ref={ref}
-          className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2 outline-none transition-colors ${
-            error ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500' : ''
-          } ${className}`}
-          {...props}
-        />
-        {error && (
-          <p className="mt-1 text-sm text-red-600">{error}</p>
-        )}
-      </div>
-    );
-  }
-);
-Input.displayName = 'Input';
+// Re-export from shadcn ui/ — keeps all existing import paths working
+export { Input } from '../ui/input';
+export type { InputProps } from '../ui/input';
 ```
 
 ```tsx
@@ -8740,7 +8759,7 @@ export const BankAccountTypeSelect = React.forwardRef<
   return (
     <div className="w-full">
       {label && (
-        <label htmlFor={selectId} className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor={selectId} className="block text-sm font-medium text-muted-foreground mb-1">
           {label}{required && <span className="text-red-500 ml-0.5">*</span>}
         </label>
       )}
@@ -8749,8 +8768,8 @@ export const BankAccountTypeSelect = React.forwardRef<
         id={selectId}
         required={required}
         className={`block w-full rounded-md border shadow-sm sm:text-sm px-3 py-2 outline-none transition-colors ${
-          error ? 'border-red-400 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
-        } ${props.disabled ? 'bg-gray-50 text-gray-500' : 'bg-white text-gray-900'} ${className}`}
+          error ? 'border-red-400 focus:border-red-500' : 'border-input focus:border-blue-500'
+        } ${props.disabled ? 'bg-muted text-muted-foreground' : 'bg-card text-foreground'} ${className}`}
         {...props}
       >
         <option value="">Select Account Type</option>
@@ -8831,16 +8850,16 @@ export function GSTINInput({
   // Determine border color
   const borderClass = (() => {
     if (error) return 'border-red-400 focus:border-red-500 focus:ring-red-500';
-    if (!validation) return 'border-gray-300 focus:border-blue-500 focus:ring-blue-500';
+    if (!validation) return 'border-input focus:border-blue-500 focus:ring-blue-500';
     if (currentValue.length === 15 && validation.valid) return 'border-green-400 focus:border-green-500 focus:ring-green-500';
     if (currentValue.length === 15 && !validation.valid) return 'border-red-400 focus:border-red-500 focus:ring-red-500';
-    return 'border-gray-300 focus:border-blue-500 focus:ring-blue-500';
+    return 'border-input focus:border-blue-500 focus:ring-blue-500';
   })();
 
   return (
     <div className={`w-full ${className}`}>
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-muted-foreground mb-1">
           {label}
         </label>
       )}
@@ -8856,7 +8875,7 @@ export function GSTINInput({
           maxLength={15}
           placeholder="e.g. 29ABCDE1234F1Z5"
           className={`block w-full rounded-md border shadow-sm sm:text-sm px-3 py-2 outline-none font-mono tracking-wider transition-colors ${
-            disabled ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white'
+            disabled ? 'bg-muted text-muted-foreground cursor-not-allowed' : 'bg-background'
           } ${borderClass}`}
           spellCheck={false}
           autoComplete="off"
@@ -8887,9 +8906,9 @@ export function GSTINInput({
           {error ? (
             <span className="text-red-600">{error}</span>
           ) : currentValue.length === 0 ? (
-            <span className="text-gray-400">GSTIN format: 15 characters — State Code (2) + PAN (10) + Entity (1) + Z + Check digit</span>
+            <span className="text-muted-foreground">GSTIN format: 15 characters — State Code (2) + PAN (10) + Entity (1) + Z + Check digit</span>
           ) : currentValue.length < 15 ? (
-            <span className="text-gray-500">Enter a valid 15-character GSTIN</span>
+            <span className="text-muted-foreground">Enter a valid 15-character GSTIN</span>
           ) : validation?.valid ? (
             <span className="text-green-600 font-medium">✓ Valid GSTIN format</span>
           ) : (
@@ -8897,7 +8916,7 @@ export function GSTINInput({
           )}
         </div>
         <div className={`text-xs font-mono ${
-          currentValue.length === 15 ? 'text-gray-700' : 'text-gray-400'
+          currentValue.length === 15 ? 'text-foreground' : 'text-muted-foreground'
         }`}>
           {currentValue.length} / 15
         </div>
@@ -8906,18 +8925,18 @@ export function GSTINInput({
       {/* GSTIN Breakdown when valid */}
       {showBreakdown && parsed && (
         <div className="mt-2 bg-green-50 border border-green-200 rounded-md p-3">
-          <div className="font-mono text-sm text-gray-800 flex items-center gap-1 flex-wrap">
+          <div className="font-mono text-sm text-foreground flex items-center gap-1 flex-wrap">
             <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-bold">{parsed.stateCode}</span>
-            <span className="text-gray-400">|</span>
+            <span className="text-muted-foreground">|</span>
             <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-bold">{parsed.pan}</span>
-            <span className="text-gray-400">|</span>
+            <span className="text-muted-foreground">|</span>
             <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded font-bold">{parsed.entityNumber}</span>
-            <span className="text-gray-400">|</span>
-            <span className="bg-gray-100 text-gray-800 px-2 py-0.5 rounded font-bold">{parsed.defaultCharacter}</span>
-            <span className="text-gray-400">|</span>
+            <span className="text-muted-foreground">|</span>
+            <span className="bg-muted text-foreground px-2 py-0.5 rounded font-bold">{parsed.defaultCharacter}</span>
+            <span className="text-muted-foreground">|</span>
             <span className="bg-orange-100 text-orange-800 px-2 py-0.5 rounded font-bold">{parsed.checkDigit}</span>
           </div>
-          <div className="font-mono text-xs text-gray-500 mt-1 flex items-center gap-1 flex-wrap">
+          <div className="font-mono text-xs text-muted-foreground mt-1 flex items-center gap-1 flex-wrap">
             <span className="w-[28px] text-center">State</span>
             <span className="text-transparent">|</span>
             <span className="w-[80px] text-center">PAN</span>
@@ -8928,7 +8947,7 @@ export function GSTINInput({
             <span className="text-transparent">|</span>
             <span className="w-[16px] text-center">Chk</span>
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-600">
+          <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
             <span><span className="font-medium">State:</span> {parsed.stateName || parsed.stateCode}</span>
             <span><span className="font-medium">PAN:</span> {parsed.pan}</span>
           </div>
@@ -9002,7 +9021,7 @@ export function LogoUpload({ currentLogoUrl, onFileSelect, onRemove, disabled }:
       {/* Preview box */}
       <div
         className={`relative w-24 h-24 rounded-lg border-2 border-dashed flex items-center justify-center overflow-hidden transition-colors cursor-pointer ${
-          dragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-300 bg-gray-50 hover:border-gray-400'
+          dragOver ? 'border-blue-400 bg-blue-50' : 'border-input bg-muted hover:border-input'
         } ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
         onClick={() => !disabled && inputRef.current?.click()}
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -9013,10 +9032,10 @@ export function LogoUpload({ currentLogoUrl, onFileSelect, onRemove, disabled }:
           <img src={preview} alt="Company logo" className="w-full h-full object-cover" />
         ) : (
           <div className="text-center p-2">
-            <svg className="w-8 h-8 text-gray-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-8 h-8 text-muted-foreground mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <span className="text-xs text-gray-400 mt-1 block">Logo</span>
+            <span className="text-xs text-muted-foreground mt-1 block">Logo</span>
           </div>
         )}
       </div>
@@ -9040,7 +9059,7 @@ export function LogoUpload({ currentLogoUrl, onFileSelect, onRemove, disabled }:
             Remove Logo
           </button>
         )}
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-muted-foreground">
           Square image recommended<br />
           PNG, JPEG or WebP · Min 100×100px · Max 5MB<br />
           Will be standardized to 600×600px
@@ -9068,19 +9087,62 @@ export function LogoUpload({ currentLogoUrl, onFileSelect, onRemove, disabled }:
 
 ```tsx
 // File: frontend/src/components/gst/PhoneInput.tsx
-import { useState } from 'react';
-import { COMMON_COUNTRY_CODES } from '../../lib/gst/constants';
+import { useState, useRef, useEffect } from 'react';
+import {
+  parsePhoneNumber,
+  getCountries,
+  getCountryCallingCode,
+  AsYouType,
+  isValidPhoneNumber,
+  type CountryCode,
+} from 'libphonenumber-js';
 
+// ── Country metadata ──────────────────────────────────────────────────────────
+// Emoji flag from ISO 3166-1 alpha-2 code
+function flagEmoji(iso: CountryCode): string {
+  return iso
+    .toUpperCase()
+    .replace(/./g, (char) => String.fromCodePoint(char.charCodeAt(0) + 127397));
+}
+
+// Display name from browser Intl if available, fallback to code
+const displayName = new Intl.DisplayNames(['en'], { type: 'region' });
+function countryName(iso: CountryCode): string {
+  try { return displayName.of(iso) ?? iso; } catch { return iso; }
+}
+
+// Build the full country list from libphonenumber-js at module load time
+const ALL_COUNTRIES = getCountries()
+  .map((iso) => ({
+    iso,
+    callingCode: `+${getCountryCallingCode(iso)}`,
+    name: countryName(iso),
+    flag: flagEmoji(iso),
+  }))
+  .sort((a, b) => {
+    // Pin India first, then sort alphabetically
+    if (a.iso === 'IN') return -1;
+    if (b.iso === 'IN') return 1;
+    return a.name.localeCompare(b.name);
+  });
+
+// ── Component ─────────────────────────────────────────────────────────────────
 interface PhoneInputProps {
-  value?: string; // The local phone number
-  countryCode?: string; // e.g. "+91"
-  onValueChange?: (phone: string, countryCode: string, e164: string) => void;
+  value?: string;           // local/national number
+  countryCode?: string;     // e.g. "+91"
+  onValueChange?: (
+    nationalNumber: string,
+    callingCode: string,    // e.g. "+91"
+    e164: string,           // e.g. "+919876543210"
+    iso: string,            // e.g. "IN"
+    isValid: boolean
+  ) => void;
   label?: string;
   placeholder?: string;
   required?: boolean;
+  optional?: boolean;
   error?: string;
   disabled?: boolean;
-  optional?: boolean;
   name?: string;
   countryCodeName?: string;
 }
@@ -9090,113 +9152,194 @@ export function PhoneInput({
   countryCode = '+91',
   onValueChange,
   label,
-  placeholder = 'Phone number',
+  placeholder,
   required,
+  optional,
   error,
   disabled,
-  optional,
   name,
   countryCodeName,
 }: PhoneInputProps) {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const selectedCountry = COMMON_COUNTRY_CODES.find(c => c.code === countryCode) ?? COMMON_COUNTRY_CODES[0];
+  const [formatted, setFormatted] = useState(value);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
-  const filteredCountries = COMMON_COUNTRY_CODES.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.code.includes(search) ||
-    c.country.toLowerCase().includes(search.toLowerCase())
-  );
+  // Resolve the selected country from the calling code
+  const selectedCountry =
+    ALL_COUNTRIES.find((c) => c.callingCode === countryCode) ??
+    ALL_COUNTRIES.find((c) => c.iso === 'IN')!;
 
-  const handleCountrySelect = (country: typeof COMMON_COUNTRY_CODES[number]) => {
-    setIsDropdownOpen(false);
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+        setSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Auto-focus search when dropdown opens
+  useEffect(() => {
+    if (isOpen) setTimeout(() => searchRef.current?.focus(), 50);
+  }, [isOpen]);
+
+  const filtered = search
+    ? ALL_COUNTRIES.filter(
+        (c) =>
+          c.name.toLowerCase().includes(search.toLowerCase()) ||
+          c.callingCode.includes(search) ||
+          c.iso.toLowerCase().includes(search.toLowerCase())
+      )
+    : ALL_COUNTRIES;
+
+  const handleCountrySelect = (c: typeof ALL_COUNTRIES[number]) => {
+    setIsOpen(false);
     setSearch('');
-    const e164 = `${country.code}${value.replace(/^0/, '')}`.replace(/\s+/g, '');
-    onValueChange?.(value, country.code, e164);
+    emitChange(formatted, c.callingCode, c.iso);
   };
 
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const phone = e.target.value;
-    const e164 = `${countryCode}${phone.replace(/^0/, '')}`.replace(/\s+/g, '');
-    onValueChange?.(phone, countryCode, e164);
+  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    // Format as you type using libphonenumber-js
+    const asYouType = new AsYouType(selectedCountry.iso);
+    const fmt = asYouType.input(raw);
+    setFormatted(fmt);
+    emitChange(fmt, selectedCountry.callingCode, selectedCountry.iso);
   };
+
+  const emitChange = (national: string, calling: string, iso: string) => {
+    if (!onValueChange) return;
+    // Strip non-digits for e164 building
+    const digits = national.replace(/\D/g, '');
+    const e164candidate = `${calling}${digits}`;
+    let e164 = e164candidate;
+    let valid = false;
+    try {
+      const parsed = parsePhoneNumber(e164candidate, iso as CountryCode);
+      if (parsed) {
+        e164 = parsed.format('E.164');
+        valid = parsed.isValid();
+      }
+    } catch {
+      // partial input — leave e164 as-is, valid = false
+    }
+    // Fallback: also try isValidPhoneNumber
+    if (!valid && digits.length >= 7) {
+      try { valid = isValidPhoneNumber(e164candidate); } catch { /* noop */ }
+    }
+    onValueChange(national, calling, e164, iso, valid);
+  };
+
+  // Parse an incoming full e164 into national + country when value prop changes externally
+  useEffect(() => {
+    if (!value) return;
+    if (value.startsWith('+')) {
+      try {
+        const parsed = parsePhoneNumber(value);
+        if (parsed) setFormatted(parsed.formatNational());
+      } catch { /* partial */ }
+    } else {
+      setFormatted(value);
+    }
+  }, [value]);
+
+  const borderClass = error
+    ? 'border-destructive focus-within:ring-destructive/50'
+    : 'border-input focus-within:border-ring focus-within:ring-ring/30';
 
   return (
-    <div className="w-full">
+    <div className="w-full space-y-1">
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          {label}{optional && <span className="text-gray-400 font-normal ml-1">(Optional)</span>}
-          {required && <span className="text-red-500 ml-0.5">*</span>}
+        <label className="text-sm font-medium text-foreground">
+          {label}
+          {required && <span className="text-destructive ml-0.5">*</span>}
+          {optional && <span className="text-muted-foreground font-normal ml-1">(Optional)</span>}
         </label>
       )}
-      <div className={`flex rounded-md shadow-sm border transition-colors ${
-        error ? 'border-red-400' : 'border-gray-300'
-      } ${disabled ? 'bg-gray-50' : 'bg-white'}`}>
-        {/* Country Code Selector */}
-        <div className="relative">
+
+      <div
+        className={`flex rounded-lg border bg-background transition-all focus-within:ring-[3px] ${borderClass} ${
+          disabled ? 'opacity-60 cursor-not-allowed' : ''
+        }`}
+      >
+        {/* Country selector */}
+        <div ref={dropdownRef} className="relative flex-shrink-0">
           <button
             type="button"
             disabled={disabled}
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className={`flex items-center gap-1.5 px-3 py-2 border-r border-gray-300 rounded-l-md text-sm font-medium text-gray-700 hover:bg-gray-50 whitespace-nowrap ${
-              disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
-            }`}
+            onClick={() => setIsOpen((v) => !v)}
+            className="flex items-center gap-1.5 h-9 px-3 border-r border-input rounded-l-lg text-sm font-medium text-foreground hover:bg-muted transition-colors whitespace-nowrap disabled:cursor-not-allowed"
           >
-            <span className="text-base">{selectedCountry.flag}</span>
-            <span className="text-gray-600">{selectedCountry.code}</span>
-            <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            <span className="text-base leading-none">{selectedCountry.flag}</span>
+            <span className="text-muted-foreground">{selectedCountry.callingCode}</span>
+            <svg className="w-3 h-3 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isOpen ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'} />
             </svg>
           </button>
-          
-          {isDropdownOpen && (
-            <div className="absolute top-full left-0 z-50 mt-1 w-64 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden">
-              <div className="p-2 border-b border-gray-100">
+
+          {isOpen && (
+            <div className="absolute top-full left-0 z-50 mt-1 w-72 bg-popover border border-border rounded-lg shadow-lg overflow-hidden">
+              {/* Search */}
+              <div className="p-2 border-b border-border">
                 <input
+                  ref={searchRef}
                   type="text"
                   value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder="Search country..."
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded outline-none focus:border-blue-500"
-                  autoFocus
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search country or code…"
+                  className="w-full px-3 py-1.5 text-sm bg-background border border-input rounded-md outline-none focus:border-ring text-foreground placeholder:text-muted-foreground"
                 />
               </div>
-              <div className="max-h-48 overflow-y-auto">
-                {filteredCountries.map((country) => (
-                  <button
-                    key={country.code}
-                    type="button"
-                    onClick={() => handleCountrySelect(country)}
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-blue-50 text-left transition-colors ${
-                      country.code === countryCode ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'
-                    }`}
-                  >
-                    <span className="text-base">{country.flag}</span>
-                    <span>{country.name}</span>
-                    <span className="ml-auto text-gray-400">{country.code}</span>
-                  </button>
-                ))}
+              {/* List */}
+              <div className="max-h-52 overflow-y-auto">
+                {filtered.length === 0 ? (
+                  <p className="px-3 py-4 text-sm text-muted-foreground text-center">No results</p>
+                ) : (
+                  filtered.map((c) => (
+                    <button
+                      key={c.iso}
+                      type="button"
+                      onClick={() => handleCountrySelect(c)}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors hover:bg-accent hover:text-accent-foreground ${
+                        c.iso === selectedCountry.iso
+                          ? 'bg-accent text-accent-foreground font-medium'
+                          : 'text-foreground'
+                      }`}
+                    >
+                      <span className="text-base">{c.flag}</span>
+                      <span className="flex-1 truncate">{c.name}</span>
+                      <span className="text-muted-foreground tabular-nums">{c.callingCode}</span>
+                    </button>
+                  ))
+                )}
               </div>
             </div>
           )}
         </div>
-        
-        {/* Phone Number Input */}
+
+        {/* Number input */}
         <input
           name={name}
           type="tel"
-          value={value}
-          onChange={handlePhoneChange}
+          value={formatted}
+          onChange={handleInput}
           disabled={disabled}
-          placeholder={placeholder}
-          className={`flex-1 px-3 py-2 text-sm rounded-r-md outline-none border-0 bg-transparent ${
-            disabled ? 'text-gray-500' : 'text-gray-900'
-          } w-full min-w-0`}
+          placeholder={placeholder ?? (selectedCountry.iso === 'IN' ? '98765 43210' : 'Phone number')}
+          className="flex-1 h-9 px-3 text-sm bg-transparent outline-none text-foreground placeholder:text-muted-foreground disabled:cursor-not-allowed min-w-0 rounded-r-lg"
         />
       </div>
-      {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
-      {/* Hidden field for country code - for form libraries */}
-      {countryCodeName && <input type="hidden" name={countryCodeName} value={countryCode} />}
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
+      {/* Hidden field for form libraries that read by name */}
+      {countryCodeName && (
+        <input type="hidden" name={countryCodeName} value={selectedCountry.callingCode} />
+      )}
     </div>
   );
 }
@@ -9211,97 +9354,775 @@ export { BankAccountTypeSelect } from './BankAccountTypeSelect';
 ```
 
 ```tsx
+// File: frontend/src/components/ui/badge.tsx
+import * as React from 'react';
+import { cn } from '../../lib/utils';
+import { cva, type VariantProps } from 'class-variance-authority';
+
+const badgeVariants = cva(
+  'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+  {
+    variants: {
+      variant: {
+        default:     'border-transparent bg-primary text-primary-foreground',
+        secondary:   'border-transparent bg-secondary text-secondary-foreground',
+        destructive: 'border-transparent bg-destructive text-destructive-foreground',
+        outline:     'text-foreground border-border',
+        success:     'border-transparent bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+        warning:     'border-transparent bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+        info:        'border-transparent bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+      },
+    },
+    defaultVariants: { variant: 'default' },
+  }
+);
+
+export interface BadgeProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof badgeVariants> {}
+
+function Badge({ className, variant, ...props }: BadgeProps) {
+  return <div className={cn(badgeVariants({ variant }), className)} {...props} />;
+}
+
+export { Badge, badgeVariants };
+```
+
+```tsx
+// File: frontend/src/components/ui/button.tsx
+import * as React from 'react';
+import { Slot } from '@radix-ui/react-slot';
+import { cva, type VariantProps } from 'class-variance-authority';
+import { cn } from '../../lib/utils';
+
+const buttonVariants = cva(
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&_svg]:pointer-events-none [&_svg:not([class*="size-"])]:size-4 shrink-0',
+  {
+    variants: {
+      variant: {
+        default:
+          'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90',
+        destructive:
+          'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90',
+        outline:
+          'border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground',
+        secondary:
+          'bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80',
+        ghost: 'hover:bg-accent hover:text-accent-foreground',
+        link: 'text-primary underline-offset-4 hover:underline',
+      },
+      size: {
+        default: 'h-9 px-4 py-2',
+        sm: 'h-8 rounded-md px-3 text-xs',
+        lg: 'h-10 rounded-lg px-6',
+        icon: 'h-9 w-9',
+      },
+    },
+    defaultVariants: {
+      variant: 'default',
+      size: 'default',
+    },
+  }
+);
+
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {
+  asChild?: boolean;
+  isLoading?: boolean;
+}
+
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, asChild = false, isLoading, children, disabled, ...props }, ref) => {
+    const Comp = asChild ? Slot : 'button';
+    return (
+      <Comp
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        disabled={disabled || isLoading}
+        {...props}
+      >
+        {isLoading && (
+          <svg
+            className="animate-spin size-4"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+        )}
+        {children}
+      </Comp>
+    );
+  }
+);
+Button.displayName = 'Button';
+
+export { Button, buttonVariants };
+```
+
+```tsx
+// File: frontend/src/components/ui/card.tsx
+import * as React from 'react';
+import { cn } from '../../lib/utils';
+
+function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      data-slot="card"
+      className={cn('bg-card text-card-foreground rounded-xl border shadow-sm', className)}
+      {...props}
+    />
+  );
+}
+
+function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      data-slot="card-header"
+      className={cn('flex flex-col gap-1.5 p-6', className)}
+      {...props}
+    />
+  );
+}
+
+function CardTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
+  return (
+    <h3
+      data-slot="card-title"
+      className={cn('text-lg font-semibold leading-none text-card-foreground', className)}
+      {...props}
+    />
+  );
+}
+
+function CardDescription({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
+  return (
+    <p
+      data-slot="card-description"
+      className={cn('text-sm text-muted-foreground', className)}
+      {...props}
+    />
+  );
+}
+
+function CardContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      data-slot="card-content"
+      className={cn('p-6 pt-0', className)}
+      {...props}
+    />
+  );
+}
+
+function CardFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      data-slot="card-footer"
+      className={cn('flex items-center p-6 pt-0', className)}
+      {...props}
+    />
+  );
+}
+
+export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter };
+```
+
+```tsx
+// File: frontend/src/components/ui/dialog.tsx
+import * as React from 'react';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { X } from 'lucide-react';
+import { cn } from '../../lib/utils';
+
+const Dialog = DialogPrimitive.Root;
+const DialogTrigger = DialogPrimitive.Trigger;
+const DialogPortal = DialogPrimitive.Portal;
+const DialogClose = DialogPrimitive.Close;
+
+function DialogOverlay({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
+  return (
+    <DialogPrimitive.Overlay
+      data-slot="dialog-overlay"
+      className={cn(
+        'fixed inset-0 z-50 bg-black/60 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
+function DialogContent({ className, children, ...props }: React.ComponentProps<typeof DialogPrimitive.Content>) {
+  return (
+    <DialogPortal>
+      <DialogOverlay />
+      <DialogPrimitive.Content
+        data-slot="dialog-content"
+        className={cn(
+          'bg-background fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 rounded-xl border p-6 shadow-xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]',
+          className
+        )}
+        {...props}
+      >
+        {children}
+        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </DialogPrimitive.Close>
+      </DialogPrimitive.Content>
+    </DialogPortal>
+  );
+}
+
+function DialogHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      data-slot="dialog-header"
+      className={cn('flex flex-col gap-2 text-center sm:text-left', className)}
+      {...props}
+    />
+  );
+}
+
+function DialogFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      data-slot="dialog-footer"
+      className={cn('flex flex-col-reverse gap-2 sm:flex-row sm:justify-end', className)}
+      {...props}
+    />
+  );
+}
+
+function DialogTitle({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Title>) {
+  return (
+    <DialogPrimitive.Title
+      data-slot="dialog-title"
+      className={cn('text-lg font-semibold leading-none text-foreground', className)}
+      {...props}
+    />
+  );
+}
+
+function DialogDescription({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Description>) {
+  return (
+    <DialogPrimitive.Description
+      data-slot="dialog-description"
+      className={cn('text-sm text-muted-foreground', className)}
+      {...props}
+    />
+  );
+}
+
+export {
+  Dialog, DialogClose, DialogContent, DialogDescription,
+  DialogFooter, DialogHeader, DialogOverlay, DialogPortal,
+  DialogTitle, DialogTrigger,
+};
+```
+
+```tsx
+// File: frontend/src/components/ui/input.tsx
+import * as React from 'react';
+import { cn } from '../../lib/utils';
+
+export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  label?: string;
+  error?: any; // accepts string | FieldError from react-hook-form
+}
+
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, label, error, id, type, ...props }, ref) => {
+    const inputId = id || React.useId();
+    return (
+      <div className="w-full space-y-1">
+        {label && (
+          <label
+            htmlFor={inputId}
+            className="text-sm font-medium leading-none text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          >
+            {label}
+          </label>
+        )}
+        <input
+          id={inputId}
+          type={type}
+          ref={ref}
+          data-slot="input"
+          className={cn(
+            'file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input flex h-9 w-full min-w-0 rounded-lg border bg-transparent px-3 py-1 text-sm shadow-sm transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
+            error && 'border-destructive focus-visible:ring-destructive/50 focus-visible:border-destructive',
+            className
+          )}
+          {...props}
+        />
+        {error && (
+          <p className="text-sm text-destructive">{error}</p>
+        )}
+      </div>
+    );
+  }
+);
+Input.displayName = 'Input';
+
+export { Input };
+```
+
+```tsx
+// File: frontend/src/components/ui/label.tsx
+import * as React from 'react';
+import * as LabelPrimitive from '@radix-ui/react-label';
+import { cn } from '../../lib/utils';
+
+function Label({ className, ...props }: React.ComponentProps<typeof LabelPrimitive.Root>) {
+  return (
+    <LabelPrimitive.Root
+      data-slot="label"
+      className={cn(
+        'flex items-center gap-2 text-sm font-medium leading-none select-none text-foreground group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50',
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
+export { Label };
+```
+
+```tsx
+// File: frontend/src/components/ui/select.tsx
+import * as React from 'react';
+import * as SelectPrimitive from '@radix-ui/react-select';
+import { Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { cn } from '../../lib/utils';
+
+const Select = SelectPrimitive.Root;
+const SelectGroup = SelectPrimitive.Group;
+const SelectValue = SelectPrimitive.Value;
+
+function SelectTrigger({ className, children, ...props }: React.ComponentProps<typeof SelectPrimitive.Trigger>) {
+  return (
+    <SelectPrimitive.Trigger
+      data-slot="select-trigger"
+      className={cn(
+        'border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*="text-"])]:text-muted-foreground focus:ring-ring/50 dark:bg-input/30 flex h-9 w-full items-center justify-between gap-2 rounded-lg border bg-transparent px-3 py-2 text-sm shadow-sm transition-[color,box-shadow] outline-none focus:ring-[3px] focus:border-ring disabled:cursor-not-allowed disabled:opacity-50 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2',
+        className
+      )}
+      {...props}
+    >
+      {children}
+      <SelectPrimitive.Icon asChild>
+        <ChevronDown className="size-4 opacity-50" />
+      </SelectPrimitive.Icon>
+    </SelectPrimitive.Trigger>
+  );
+}
+
+function SelectScrollUpButton({ className, ...props }: React.ComponentProps<typeof SelectPrimitive.ScrollUpButton>) {
+  return (
+    <SelectPrimitive.ScrollUpButton
+      className={cn('flex cursor-default items-center justify-center py-1', className)}
+      {...props}
+    >
+      <ChevronUp className="size-4" />
+    </SelectPrimitive.ScrollUpButton>
+  );
+}
+
+function SelectScrollDownButton({ className, ...props }: React.ComponentProps<typeof SelectPrimitive.ScrollDownButton>) {
+  return (
+    <SelectPrimitive.ScrollDownButton
+      className={cn('flex cursor-default items-center justify-center py-1', className)}
+      {...props}
+    >
+      <ChevronDown className="size-4" />
+    </SelectPrimitive.ScrollDownButton>
+  );
+}
+
+function SelectContent({ className, children, position = 'popper', ...props }: React.ComponentProps<typeof SelectPrimitive.Content>) {
+  return (
+    <SelectPrimitive.Portal>
+      <SelectPrimitive.Content
+        data-slot="select-content"
+        className={cn(
+          'bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative z-50 max-h-96 min-w-[8rem] origin-[--radix-select-content-transform-origin] overflow-hidden rounded-lg border shadow-lg',
+          position === 'popper' &&
+            'data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1',
+          className
+        )}
+        position={position}
+        {...props}
+      >
+        <SelectScrollUpButton />
+        <SelectPrimitive.Viewport
+          className={cn(
+            'p-1',
+            position === 'popper' &&
+              'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]'
+          )}
+        >
+          {children}
+        </SelectPrimitive.Viewport>
+        <SelectScrollDownButton />
+      </SelectPrimitive.Content>
+    </SelectPrimitive.Portal>
+  );
+}
+
+function SelectLabel({ className, ...props }: React.ComponentProps<typeof SelectPrimitive.Label>) {
+  return (
+    <SelectPrimitive.Label
+      data-slot="select-label"
+      className={cn('text-muted-foreground px-2 py-1.5 text-xs font-medium', className)}
+      {...props}
+    />
+  );
+}
+
+function SelectItem({ className, children, ...props }: React.ComponentProps<typeof SelectPrimitive.Item>) {
+  return (
+    <SelectPrimitive.Item
+      data-slot="select-item"
+      className={cn(
+        'focus:bg-accent focus:text-accent-foreground [&_svg:not([class*="text-"])]:text-muted-foreground relative flex w-full cursor-default select-none items-center gap-2 rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*="size-"])]:size-4',
+        className
+      )}
+      {...props}
+    >
+      <span className="absolute right-2 flex size-3.5 items-center justify-center">
+        <SelectPrimitive.ItemIndicator>
+          <Check className="size-4" />
+        </SelectPrimitive.ItemIndicator>
+      </span>
+      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+    </SelectPrimitive.Item>
+  );
+}
+
+function SelectSeparator({ className, ...props }: React.ComponentProps<typeof SelectPrimitive.Separator>) {
+  return (
+    <SelectPrimitive.Separator
+      data-slot="select-separator"
+      className={cn('bg-border pointer-events-none -mx-1 my-1 h-px', className)}
+      {...props}
+    />
+  );
+}
+
+export {
+  Select, SelectContent, SelectGroup, SelectItem, SelectLabel,
+  SelectScrollDownButton, SelectScrollUpButton, SelectSeparator,
+  SelectTrigger, SelectValue,
+};
+```
+
+```tsx
+// File: frontend/src/components/ui/separator.tsx
+import * as React from 'react';
+import * as SeparatorPrimitive from '@radix-ui/react-separator';
+import { cn } from '../../lib/utils';
+
+function Separator({ className, orientation = 'horizontal', decorative = true, ...props }: React.ComponentProps<typeof SeparatorPrimitive.Root>) {
+  return (
+    <SeparatorPrimitive.Root
+      data-slot="separator"
+      decorative={decorative}
+      orientation={orientation}
+      className={cn(
+        'bg-border shrink-0',
+        orientation === 'horizontal' ? 'h-px w-full' : 'h-full w-px',
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
+export { Separator };
+```
+
+```tsx
+// File: frontend/src/components/ui/table.tsx
+import * as React from 'react';
+import { cn } from '../../lib/utils';
+
+function Table({ className, ...props }: React.HTMLAttributes<HTMLTableElement>) {
+  return (
+    <div data-slot="table-container" className="relative w-full overflow-auto">
+      <table
+        data-slot="table"
+        className={cn('w-full caption-bottom text-sm', className)}
+        {...props}
+      />
+    </div>
+  );
+}
+
+function TableHeader({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
+  return (
+    <thead
+      data-slot="table-header"
+      className={cn('bg-muted/50 [&_tr]:border-b', className)}
+      {...props}
+    />
+  );
+}
+
+function TableBody({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
+  return (
+    <tbody
+      data-slot="table-body"
+      className={cn('[&_tr:last-child]:border-0', className)}
+      {...props}
+    />
+  );
+}
+
+function TableFooter({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
+  return (
+    <tfoot
+      data-slot="table-footer"
+      className={cn('bg-muted/50 border-t font-medium [&>tr]:last:border-b-0', className)}
+      {...props}
+    />
+  );
+}
+
+function TableRow({ className, ...props }: React.HTMLAttributes<HTMLTableRowElement>) {
+  return (
+    <tr
+      data-slot="table-row"
+      className={cn(
+        'border-b border-border transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted',
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
+function TableHead({ className, ...props }: React.ThHTMLAttributes<HTMLTableCellElement>) {
+  return (
+    <th
+      data-slot="table-head"
+      className={cn(
+        'text-muted-foreground h-10 px-4 text-left align-middle text-xs font-medium uppercase tracking-wider whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
+function TableCell({ className, ...props }: React.TdHTMLAttributes<HTMLTableCellElement>) {
+  return (
+    <td
+      data-slot="table-cell"
+      className={cn(
+        'px-4 py-3 align-middle text-sm text-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
+function TableCaption({ className, ...props }: React.HTMLAttributes<HTMLTableCaptionElement>) {
+  return (
+    <caption
+      data-slot="table-caption"
+      className={cn('mt-4 text-sm text-muted-foreground', className)}
+      {...props}
+    />
+  );
+}
+
+export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow };
+```
+
+```tsx
 // File: frontend/src/features/auth/LoginPage.tsx
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { useMutation } from '@tanstack/react-query';
 import { authApi } from '../../api/auth';
 import { useAuth } from '../../app/providers';
-import { Button } from '../../components/common/Button';
-import { Input } from '../../components/common/Input';
 
-const loginSchema = z.object({
-  pin: z.string().length(4, 'PIN must be exactly 4 digits').regex(/^\d+$/, 'PIN must contain only numbers'),
-});
-
-type LoginForm = z.infer<typeof loginSchema>;
+type PinStatus = 'idle' | 'verifying' | 'success' | 'error' | 'locked';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [apiError, setApiError] = useState<string | null>(null);
+  const [pin, setPin] = useState('');
+  const [status, setStatus] = useState<PinStatus>('idle');
+  const [errorMsg, setErrorMsg] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
-    resolver: zodResolver(loginSchema)
-  });
+  // Auto-focus on mount
+  useEffect(() => {
+    const t = setTimeout(() => inputRef.current?.focus(), 100);
+    return () => clearTimeout(t);
+  }, []);
 
   const mutation = useMutation({
     mutationFn: authApi.login,
     onSuccess: (response) => {
+      setStatus('success');
       login(response.data.token);
       navigate('/');
     },
     onError: (error: any) => {
-      setApiError(error.message || 'Login failed. Please check your PIN.');
-    }
+      const msg = error.message || '';
+      setPin('');
+      if (msg.toLowerCase().includes('lock') || msg.toLowerCase().includes('temporarily')) {
+        setStatus('locked');
+        setErrorMsg(msg);
+      } else {
+        setStatus('error');
+        setErrorMsg('Incorrect PIN');
+      }
+      // Re-focus so user can try again
+      setTimeout(() => inputRef.current?.focus(), 80);
+    },
   });
 
-  const onSubmit = (data: LoginForm) => {
-    setApiError(null);
-    mutation.mutate(data);
+  const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digits = e.target.value.replace(/\D/g, '').slice(0, 4);
+    setPin(digits);
+
+    // Reset error when user starts typing again
+    if (status === 'error' || status === 'locked') {
+      setStatus('idle');
+      setErrorMsg('');
+    }
+
+    // Auto-submit when 4 digits entered
+    if (digits.length === 4) {
+      setStatus('verifying');
+      mutation.mutate({ pin: digits });
+    }
+  };
+
+  const isDisabled = status === 'verifying' || status === 'locked' || status === 'success';
+
+  const dotColor = (filled: boolean): string => {
+    if (!filled) return 'bg-slate-200 dark:bg-slate-600';
+    switch (status) {
+      case 'success':  return 'bg-green-500 scale-110';
+      case 'error':    return 'bg-red-400 scale-110 animate-bounce';
+      case 'locked':   return 'bg-orange-400 scale-110';
+      case 'verifying': return 'bg-blue-400 animate-pulse';
+      default:          return 'bg-slate-800 dark:bg-white scale-110';
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg border border-gray-100">
-        <div>
-          <h2 className="mt-2 text-center text-3xl font-extrabold text-gray-900 tracking-tight">
-            Artha Billing
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Enter your secure 4-digit PIN to access your company dashboard
-          </p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 px-4">
+      <div className="w-full max-w-sm">
+
+        {/* Branding */}
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-slate-900 dark:bg-white mb-4 shadow-lg">
+            <span className="text-white dark:text-slate-900 text-xl font-black tracking-tighter">A</span>
+          </div>
+          <h1 className="text-2xl font-black tracking-widest text-slate-900 dark:text-white uppercase">ARTHA</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Secure Billing Platform</p>
         </div>
-        
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
-          {apiError && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm border border-red-100">
-              {apiError}
-            </div>
-          )}
-          
-          <div className="space-y-4">
-            <Input
-              label="Secure PIN"
-              type="password"
-              inputMode="numeric"
-              maxLength={4}
-              placeholder="••••"
-              className="text-center text-2xl tracking-[0.5em] py-3"
-              {...register('pin')}
-              error={errors.pin?.message}
-            />
+
+        {/* Card */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 p-8">
+          <div className="text-center mb-8">
+            <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Enter your PIN</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">4-digit secure access code</p>
           </div>
 
-          <div>
-            <Button
-              type="submit"
-              className="w-full py-3"
-              isLoading={mutation.isPending}
+          {/* PIN dot indicators */}
+          <div className="flex justify-center gap-4 mb-4">
+            {[0, 1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className={`w-4 h-4 rounded-full transition-all duration-150 ${dotColor(i < pin.length)}`}
+              />
+            ))}
+          </div>
+
+          {/* Hidden input — captures actual typing */}
+          <input
+            ref={inputRef}
+            type="password"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            autoComplete="one-time-code"
+            maxLength={4}
+            value={pin}
+            onChange={handlePinChange}
+            disabled={isDisabled}
+            className="sr-only"
+            aria-label="Enter 4-digit PIN"
+          />
+
+          {/* Tap-target / status line */}
+          <button
+            type="button"
+            onClick={() => !isDisabled && inputRef.current?.focus()}
+            disabled={isDisabled}
+            className={`w-full mt-2 py-3 rounded-xl border-2 text-sm transition-all duration-200 focus:outline-none ${
+              status === 'idle' || status === 'verifying'
+                ? 'border-dashed border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:border-slate-400 dark:hover:border-slate-400 cursor-text'
+                : 'border-transparent'
+            }`}
+          >
+            {status === 'idle' && pin.length === 0 && (
+              <span>Tap here, then type your PIN</span>
+            )}
+            {status === 'idle' && pin.length > 0 && pin.length < 4 && (
+              <span className="text-slate-500">{pin.length} of 4 digits entered…</span>
+            )}
+            {status === 'verifying' && (
+              <span className="text-blue-500 font-medium">Verifying…</span>
+            )}
+            {status === 'success' && (
+              <span className="text-green-600 dark:text-green-400 font-semibold">✓ PIN verified — redirecting…</span>
+            )}
+            {status === 'error' && (
+              <span className="text-red-500 font-semibold">✕ {errorMsg}</span>
+            )}
+            {status === 'locked' && (
+              <span className="text-orange-500 font-semibold">⚠ Account locked</span>
+            )}
+          </button>
+
+          {/* Expanded error/locked message */}
+          {(status === 'error' || status === 'locked') && (
+            <div
+              className={`mt-4 p-3 rounded-lg text-sm text-center ${
+                status === 'locked'
+                  ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 border border-orange-100 dark:border-orange-800'
+                  : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-800'
+              }`}
             >
-              Secure Login
-            </Button>
+              {errorMsg}
+              {status === 'error' && (
+                <div className="text-xs mt-1 opacity-70">Tap above and try again</div>
+              )}
+            </div>
+          )}
+
+          <div className="mt-6 text-center">
+            <a
+              href="/setup"
+              className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+            >
+              First time? Run setup wizard →
+            </a>
           </div>
-          
-          <div className="text-center">
-            <p className="text-sm text-gray-500">
-              First time here? <a href="/setup" className="font-medium text-primary-600 hover:text-primary-500">Run setup wizard</a>
-            </p>
-          </div>
-        </form>
+        </div>
       </div>
     </div>
   );
@@ -9359,12 +10180,12 @@ export default function PinChangePage() {
   };
 
   return (
-    <div className="max-w-md mx-auto space-y-8 bg-white p-10 rounded-xl shadow border border-gray-100 mt-12">
+    <div className="max-w-md mx-auto space-y-8 bg-card p-10 rounded-xl shadow border mt-12">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
+        <h2 className="text-2xl font-bold text-foreground tracking-tight">
           Change Security PIN
         </h2>
-        <p className="mt-2 text-sm text-gray-600">
+        <p className="mt-2 text-sm text-muted-foreground">
           Update your 4-digit PIN for dashboard access.
         </p>
       </div>
@@ -9430,7 +10251,7 @@ export default function PinChangePage() {
 
 ```tsx
 // File: frontend/src/features/auth/SetupPage.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9441,216 +10262,692 @@ import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import { GSTINInput, PhoneInput, BankAccountTypeSelect } from '../../components/gst';
 
+// ── Schema ────────────────────────────────────────────────────────────────────
 const setupSchema = z.object({
-  company_name: z.string().min(1, 'Company Name is required'),
-  ownership_type: z.string().min(1, 'Ownership Type is required'),
-  mobile: z.string().min(1, 'Mobile is required'),
-  mobile_country_code: z.string().optional(),
-  mobile_e164: z.string().optional(),
-  email: z.string().email('Invalid email address'),
-  authorized_person_name: z.string().min(1, 'Authorized Person is required'),
+  // Business
+  company_name: z.string().min(2, 'Company name must be at least 2 characters'),
+  ownership_type: z.string().min(1, 'Ownership type is required'),
+  authorized_person_name: z.string().min(1, 'Authorized person name is required'),
+  authorized_person_designation: z.string().optional(),
+  // GST
   gst_registered: z.boolean(),
   gstin: z.string().optional(),
+  tan: z.string().optional(),
+  // Address
   address_line_1: z.string().min(1, 'Address is required'),
+  address_line_2: z.string().optional(),
   city: z.string().min(1, 'City is required'),
-  district: z.string().min(1, 'District is required'),
+  district: z.string().optional(),
   state: z.string().min(1, 'State is required'),
-  state_code: z.string().length(2, 'State Code must be 2 digits'),
-  pincode: z.string().length(6, 'Pincode must be 6 digits'),
+  state_code: z.string().min(1, 'State code is required'),
+  pincode: z.string().min(4, 'Valid pincode required').max(10),
   country: z.string().default('India'),
-  bank_account_holder_name: z.string().min(1, 'Account Holder Name is required'),
-  bank_account_number: z.string().min(1, 'Account Number is required'),
-  bank_ifsc: z.string().min(1, 'IFSC is required'),
-  bank_name: z.string().min(1, 'Bank Name is required'),
-  bank_branch: z.string().min(1, 'Branch is required'),
-  bank_account_type: z.string().min(1, 'Account Type is required'),
-  pin: z.string().length(4, 'PIN must be exactly 4 digits').regex(/^\d+$/, 'PIN must contain only numbers'),
-  confirm_pin: z.string().length(4, 'PIN must be exactly 4 digits'),
-}).refine((data) => data.pin === data.confirm_pin, {
+  // Contact
+  mobile: z.string().min(7, 'Mobile number required'),
+  mobile_country_code: z.string().default('+91'),
+  mobile_e164: z.string().optional(),
+  office_phone: z.string().optional(),
+  office_phone_country_code: z.string().optional(),
+  office_phone_e164: z.string().optional(),
+  email: z.string().email('Valid email required'),
+  website: z.string().optional(),
+  // Security
+  pin: z.string().length(4, 'PIN must be exactly 4 digits').regex(/^\d{4}$/, 'PIN must be digits'),
+  confirm_pin: z.string().length(4, 'Confirm PIN must be 4 digits'),
+  // Bank — all optional
+  bank_account_holder_name: z.string().optional(),
+  bank_account_number: z.string().optional(),
+  bank_ifsc: z.string().optional(),
+  bank_name: z.string().optional(),
+  bank_branch: z.string().optional(),
+  bank_account_type: z.string().optional(),
+}).refine(d => d.pin === d.confirm_pin, {
   message: "PINs don't match",
-  path: ["confirm_pin"],
-}).refine((data) => {
-  if (data.gst_registered) return !!data.gstin && data.gstin.length === 15;
+  path: ['confirm_pin'],
+}).refine(d => {
+  if (d.gst_registered && d.gstin && d.gstin.length > 0) {
+    return d.gstin.length === 15;
+  }
   return true;
-}, {
-  message: "Valid GSTIN is required if GST registered",
-  path: ["gstin"],
-});
+}, { message: 'GSTIN must be exactly 15 characters', path: ['gstin'] });
 
 type SetupForm = z.infer<typeof setupSchema>;
 
+const OWNERSHIP_TYPES = [
+  'Proprietorship', 'Partnership', 'LLP',
+  'Private Limited', 'Public Limited', 'OPC',
+  'HUF', 'Trust', 'Society', 'Other',
+];
+
+const TABS = [
+  { id: 0, label: 'Business',  icon: '🏢' },
+  { id: 1, label: 'GST & Tax', icon: '📋' },
+  { id: 2, label: 'Address',   icon: '📍' },
+  { id: 3, label: 'Contact',   icon: '📞' },
+  { id: 4, label: 'Security',  icon: '🔐' },
+  { id: 5, label: 'Bank',      icon: '🏦', optional: true },
+];
+
+// ── Completion transition screen ─────────────────────────────────────────────
+function CreationTransition({ onDone }: { onDone: () => void }) {
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const dotTimer = setInterval(() => setTick(t => t + 1), 500);
+    const doneTimer = setTimeout(onDone, 5000);
+    return () => { clearInterval(dotTimer); clearTimeout(doneTimer); };
+  }, [onDone]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ backdropFilter: 'blur(12px)', backgroundColor: 'rgba(15,23,42,0.75)' }}
+    >
+      <div className="bg-white/10 border border-white/20 rounded-3xl p-12 text-center shadow-2xl max-w-sm w-full mx-4">
+        {/* Animated logo */}
+        <div className="flex justify-center mb-6">
+          <div
+            className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center shadow-lg"
+            style={{ animation: 'logoPulse 2s ease-in-out infinite' }}
+          >
+            <span className="text-slate-900 text-2xl font-black">A</span>
+          </div>
+        </div>
+        <h2 className="text-2xl font-black tracking-widest text-white uppercase mb-3">ARTHA</h2>
+        <p className="text-white/80 text-sm mb-6">Company creation is in progress…</p>
+        <div className="flex justify-center gap-2 mb-6">
+          {[0, 1, 2].map(i => (
+            <div
+              key={i}
+              className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                tick % 3 === i ? 'bg-white scale-125' : 'bg-white/30'
+              }`}
+            />
+          ))}
+        </div>
+        <p className="text-white/40 text-xs">Redirecting to login…</p>
+      </div>
+      <style>{`
+        @keyframes logoPulse {
+          0%, 100% { transform: scale(1); box-shadow: 0 4px 24px rgba(255,255,255,0.2); }
+          50%       { transform: scale(1.06); box-shadow: 0 8px 32px rgba(255,255,255,0.35); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ── Main wizard ───────────────────────────────────────────────────────────────
 export default function SetupPage() {
   const navigate = useNavigate();
-  const [apiError, setApiError] = useState<string | null>(null);
-  const [gstinValid, setGstinValid] = useState(false);
+  const [tab, setTab]                 = useState(0);
+  const [apiError, setApiError]       = useState<string | null>(null);
+  const [gstinValid, setGstinValid]   = useState(false);
+  const [showCreation, setShowCreation] = useState(false);
+  const [skipBank, setSkipBank]       = useState(false);
 
-  const { register, handleSubmit, watch, setValue, control, formState: { errors } } = useForm<any>({
+  const {
+    register, handleSubmit, watch, setValue, control,
+    trigger, formState: { errors },
+  } = useForm<any>({
     resolver: zodResolver(setupSchema),
+    mode: 'onBlur',
     defaultValues: {
       gst_registered: true,
       country: 'India',
       ownership_type: 'Proprietorship',
       bank_account_type: 'CURRENT',
-      mobile_country_code: '+91'
-    }
+      mobile_country_code: '+91',
+      office_phone_country_code: '+91',
+    },
   });
-
-  const isGstRegistered = watch('gst_registered');
 
   const mutation = useMutation({
     mutationFn: authApi.setup,
-    onSuccess: () => {
-      navigate('/login');
-    },
+    onSuccess: () => setShowCreation(true),
     onError: (error: any) => {
       setApiError(error.message || 'Setup failed. Please check your inputs.');
-    }
+    },
   });
 
-  const onSubmit = (data: any) => {
+  const isGstRegistered = watch('gst_registered');
+  const currentPin      = watch('pin');
+  const confirmPin      = watch('confirm_pin');
+  const stateValue      = watch('state');
+
+  const pinsMatch    = currentPin?.length === 4 && confirmPin?.length === 4 && currentPin === confirmPin;
+  const pinsMismatch = confirmPin?.length === 4 && currentPin !== confirmPin;
+
+  const onSubmit = (data: SetupForm) => {
     setApiError(null);
-    mutation.mutate(data as SetupForm);
+    if (skipBank) {
+      data = { ...data };
+      delete (data as any).bank_account_holder_name;
+      delete (data as any).bank_account_number;
+      delete (data as any).bank_ifsc;
+      delete (data as any).bank_name;
+      delete (data as any).bank_branch;
+      delete (data as any).bank_account_type;
+    }
+    mutation.mutate(data as any);
+  };
+
+  // Fields to validate per tab before proceeding
+  const tabFields: Record<number, (keyof SetupForm)[]> = {
+    0: ['company_name', 'ownership_type', 'authorized_person_name'],
+    1: ['gstin'],
+    2: ['address_line_1', 'city', 'state', 'state_code', 'pincode'],
+    3: ['mobile', 'email'],
+    4: ['pin', 'confirm_pin'],
+    5: [],
+  };
+
+  const goNext = async () => {
+    const valid = await trigger(tabFields[tab]);
+    if (valid) setTab(t => Math.min(t + 1, TABS.length - 1));
+  };
+
+  const goBack = () => {
+    setApiError(null);
+    setTab(t => Math.max(t - 1, 0));
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto space-y-8 bg-white p-10 rounded-xl shadow-lg border border-gray-100">
-        <div>
-          <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">
-            Company Setup
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Initialize your organization profile to start billing.
-          </p>
+    <>
+      {showCreation && (
+        <CreationTransition onDone={() => navigate('/login')} />
+      )}
+
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 py-8 px-4">
+
+        {/* ── Header / Branding ── */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-xl bg-slate-900 dark:bg-white flex items-center justify-center shadow-md"
+              style={{ animation: 'waveFloat 3s ease-in-out infinite' }}
+            >
+              <span className="text-white dark:text-slate-900 text-lg font-black">A</span>
+            </div>
+            <span className="text-2xl font-black tracking-widest text-slate-900 dark:text-white uppercase">
+              ARTHA
+            </span>
+          </div>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Company Setup Wizard</p>
         </div>
-        
-        <form className="mt-8 space-y-8" onSubmit={handleSubmit(onSubmit)}>
-          {apiError && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm border border-red-100">
-              {apiError}
-            </div>
-          )}
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-6 md:col-span-2">
-              <h3 className="text-lg font-medium border-b pb-2 text-gray-800">Basic Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Input label="Company Name" {...register('company_name')} error={errors.company_name?.message as string} />
-                <Input label="Ownership Type" {...register('ownership_type')} error={errors.ownership_type?.message as string} />
-                
-                <PhoneInput 
-                  label="Mobile" 
-                  value={watch('mobile') || ''} 
-                  countryCode={watch('mobile_country_code') || '+91'} 
-                  onValueChange={(phone, cc, e164) => { 
-                    setValue('mobile', phone); 
-                    setValue('mobile_country_code', cc); 
-                    setValue('mobile_e164', e164); 
-                  }} 
-                  error={errors.mobile?.message as string}
-                />
 
-                <Input label="Email" type="email" {...register('email')} error={errors.email?.message as string} />
-                <Input label="Authorized Person" {...register('authorized_person_name')} error={errors.authorized_person_name?.message as string} />
-              </div>
-            </div>
-
-            <div className="space-y-6 md:col-span-2">
-              <h3 className="text-lg font-medium border-b pb-2 text-gray-800">Tax Details</h3>
-              <div className="grid grid-cols-1 gap-6">
-                <div className="flex items-center h-10">
-                  <input type="checkbox" id="gst_registered" className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded" {...register('gst_registered')} />
-                  <label htmlFor="gst_registered" className="ml-2 block text-sm text-gray-900">GST Registered</label>
-                </div>
-                {isGstRegistered && (
-                  <Controller
-                    name="gstin"
-                    control={control}
-                    render={({ field }) => (
-                      <GSTINInput
-                        label="GSTIN"
-                        value={field.value || ''}
-                        onChange={(v) => field.onChange(v)}
-                        error={errors.gstin?.message as string}
-                        onValidated={(parsed, valid) => {
-                          if (valid && parsed) {
-                            setValue('state_code', parsed.stateCode, { shouldValidate: true });
-                            setValue('state', parsed.stateName || '', { shouldValidate: true });
-                            setGstinValid(true);
-                          } else {
-                            setGstinValid(false);
-                          }
-                        }}
-                      />
-                    )}
-                  />
+        {/* ── Tab progress bar ── */}
+        <div className="max-w-3xl mx-auto mb-6">
+          <div className="flex items-center justify-center gap-1 flex-wrap">
+            {TABS.map((t, i) => (
+              <div key={t.id} className="flex items-center">
+                <button
+                  type="button"
+                  onClick={() => i <= tab && setTab(i)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                    i === tab
+                      ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md'
+                      : i < tab
+                      ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 cursor-pointer'
+                      : 'bg-slate-100 dark:bg-slate-700 text-slate-400 cursor-default'
+                  }`}
+                >
+                  <span>{i < tab ? '✓' : t.icon}</span>
+                  <span className="hidden sm:inline">{t.label}</span>
+                  {t.optional && <span className="opacity-50 text-[10px]">(opt)</span>}
+                </button>
+                {i < TABS.length - 1 && (
+                  <div className={`w-4 h-px mx-1 ${i < tab ? 'bg-green-400' : 'bg-slate-200 dark:bg-slate-600'}`} />
                 )}
               </div>
-            </div>
-
-            <div className="space-y-6 md:col-span-2">
-              <h3 className="text-lg font-medium border-b pb-2 text-gray-800">Address</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Input label="Address Line 1" className="md:col-span-2" {...register('address_line_1')} error={errors.address_line_1?.message as string} />
-                <Input label="City" {...register('city')} error={errors.city?.message as string} />
-                <Input label="District" {...register('district')} error={errors.district?.message as string} />
-                <Input 
-                  label="State" 
-                  {...register('state')} 
-                  error={errors.state?.message as string} 
-                  readOnly={isGstRegistered && gstinValid}
-                  className={isGstRegistered && gstinValid ? "bg-gray-100 cursor-not-allowed" : ""}
-                />
-                <Input 
-                  label="State Code (e.g. 27 for MH)" 
-                  {...register('state_code')} 
-                  error={errors.state_code?.message as string} 
-                  readOnly={isGstRegistered && gstinValid}
-                  className={isGstRegistered && gstinValid ? "bg-gray-100 cursor-not-allowed" : ""}
-                />
-                <Input label="Pincode" {...register('pincode')} error={errors.pincode?.message as string} />
-              </div>
-            </div>
-
-            <div className="space-y-6 md:col-span-2">
-              <h3 className="text-lg font-medium border-b pb-2 text-gray-800">Bank Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Input label="Account Holder Name" {...register('bank_account_holder_name')} error={errors.bank_account_holder_name?.message as string} />
-                <Input label="Account Number" {...register('bank_account_number')} error={errors.bank_account_number?.message as string} />
-                <Input label="IFSC Code" {...register('bank_ifsc')} error={errors.bank_ifsc?.message as string} />
-                <Input label="Bank Name" {...register('bank_name')} error={errors.bank_name?.message as string} />
-                <Input label="Branch" {...register('bank_branch')} error={errors.bank_branch?.message as string} />
-                
-                <BankAccountTypeSelect 
-                  label="Account Type" 
-                  {...register('bank_account_type')} 
-                  error={errors.bank_account_type?.message as string} 
-                />
-              </div>
-            </div>
-
-            <div className="space-y-6 md:col-span-2">
-              <h3 className="text-lg font-medium border-b pb-2 text-gray-800">Security</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Input label="Create 4-Digit Login PIN" type="password" maxLength={4} {...register('pin')} error={errors.pin?.message as string} />
-                <Input label="Confirm PIN" type="password" maxLength={4} {...register('confirm_pin')} error={errors.confirm_pin?.message as string} />
-              </div>
-            </div>
-
+            ))}
           </div>
+        </div>
 
-          <div className="pt-5 border-t">
-            <Button
-              type="submit"
-              className="w-full md:w-auto px-8"
-              isLoading={mutation.isPending}
-            >
-              Complete Setup
-            </Button>
+        {/* ── Form card ── */}
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 overflow-hidden">
+
+            {apiError && (
+              <div className="bg-red-50 dark:bg-red-900/20 border-b border-red-100 dark:border-red-800 px-6 py-3 text-sm text-red-600 dark:text-red-400">
+                {apiError}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit(onSubmit)}>
+              <div className="p-6 md:p-8 min-h-[360px]">
+
+                {/* ── TAB 0: Business ── */}
+                {tab === 0 && (
+                  <div className="space-y-5">
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Business Information</h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Your company's legal identity</p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2">
+                        <Input
+                          label="Legal Company Name"
+                          {...register('company_name')}
+                          error={errors.company_name?.message}
+                          placeholder="e.g. Acme Pvt. Ltd."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                          Ownership Type
+                        </label>
+                        <select
+                          {...register('ownership_type')}
+                          className="block w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm px-3 py-2 outline-none focus:border-slate-500 transition-colors"
+                        >
+                          {OWNERSHIP_TYPES.map(t => (
+                            <option key={t} value={t}>{t}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <Input
+                        label="Authorized Person"
+                        {...register('authorized_person_name')}
+                        error={errors.authorized_person_name?.message}
+                        placeholder="Full legal name"
+                      />
+                      <div className="md:col-span-2">
+                        <Input
+                          label="Designation (Optional)"
+                          {...register('authorized_person_designation')}
+                          placeholder="e.g. Director, Proprietor, Managing Partner"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── TAB 1: GST & Tax ── */}
+                {tab === 1 && (
+                  <div className="space-y-5">
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white">GST & Tax Identity</h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                        GSTIN automatically populates State Code and PAN
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        id="gst_reg"
+                        className="w-4 h-4 rounded border-slate-300 text-slate-900 dark:text-white"
+                        {...register('gst_registered')}
+                      />
+                      <label htmlFor="gst_reg" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        GST Registered
+                      </label>
+                    </div>
+
+                    {isGstRegistered && (
+                      <>
+                        <Controller
+                          name="gstin"
+                          control={control}
+                          render={({ field }) => (
+                            <GSTINInput
+                              label="GSTIN"
+                              value={field.value || ''}
+                              onChange={v => field.onChange(v)}
+                              error={errors.gstin?.message as string}
+                              onValidated={(parsed, valid) => {
+                                if (valid && parsed) {
+                                  setValue('state_code', parsed.stateCode, { shouldValidate: true });
+                                  setValue('state', parsed.stateName || '', { shouldValidate: true });
+                                  setGstinValid(true);
+                                } else {
+                                  setGstinValid(false);
+                                }
+                              }}
+                            />
+                          )}
+                        />
+                        {gstinValid && (
+                          <div className="grid grid-cols-2 gap-4">
+                            <Input
+                              label="State Code (auto-filled)"
+                              {...register('state_code')}
+                              readOnly
+                              className="bg-slate-50 dark:bg-slate-700 cursor-not-allowed font-mono"
+                            />
+                            <Input
+                              label="State (auto-filled)"
+                              {...register('state')}
+                              readOnly
+                              className="bg-slate-50 dark:bg-slate-700 cursor-not-allowed"
+                            />
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    <Input
+                      label="TAN (Optional)"
+                      {...register('tan')}
+                      placeholder="e.g. BLRA12345B"
+                    />
+
+                    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                      <p className="text-xs text-amber-700 dark:text-amber-300">
+                        ✓ Structural GSTIN validation (15-char format + checksum). Government portal verification not performed.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── TAB 2: Address ── */}
+                {tab === 2 && (
+                  <div className="space-y-5">
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Registered Address</h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                        Your company's registered office address
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2">
+                        <Input
+                          label="Address Line 1"
+                          {...register('address_line_1')}
+                          error={errors.address_line_1?.message}
+                          placeholder="Street, Building No., Floor"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Input
+                          label="Address Line 2 (Optional)"
+                          {...register('address_line_2')}
+                          placeholder="Area, Locality, Landmark"
+                        />
+                      </div>
+                      <Input
+                        label="City"
+                        {...register('city')}
+                        error={errors.city?.message}
+                      />
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                          District <span className="text-slate-400 font-normal text-xs">(Optional)</span>
+                        </label>
+                        <input
+                          {...register('district')}
+                          disabled={!stateValue}
+                          placeholder={!stateValue ? 'Enter state first' : 'District'}
+                          className={`block w-full rounded-lg border text-sm px-3 py-2 outline-none transition-colors ${
+                            !stateValue
+                              ? 'bg-slate-50 dark:bg-slate-700/50 border-slate-200 dark:border-slate-600 text-slate-400 cursor-not-allowed'
+                              : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white focus:border-slate-500'
+                          }`}
+                        />
+                      </div>
+                      <Input
+                        label="State"
+                        {...register('state')}
+                        error={errors.state?.message}
+                        readOnly={gstinValid}
+                        className={gstinValid ? 'bg-slate-50 dark:bg-slate-700 cursor-not-allowed' : ''}
+                      />
+                      <Input
+                        label="State Code"
+                        {...register('state_code')}
+                        error={errors.state_code?.message}
+                        readOnly={gstinValid}
+                        className={gstinValid ? 'bg-slate-50 dark:bg-slate-700 cursor-not-allowed font-mono' : 'font-mono'}
+                        maxLength={2}
+                      />
+                      <Input
+                        label="Pincode"
+                        {...register('pincode')}
+                        error={errors.pincode?.message}
+                        maxLength={10}
+                        inputMode="numeric"
+                      />
+                      <Input
+                        label="Country"
+                        {...register('country')}
+                        defaultValue="India"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* ── TAB 3: Contact ── */}
+                {tab === 3 && (
+                  <div className="space-y-5">
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Contact Details</h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">How customers reach your business</p>
+                    </div>
+                    <PhoneInput
+                      label="Mobile Number"
+                      required
+                      value={watch('mobile') || ''}
+                      countryCode={watch('mobile_country_code') || '+91'}
+                      onValueChange={(phone, cc, e164, _iso) => {
+                        setValue('mobile', phone);
+                        setValue('mobile_country_code', cc);
+                        setValue('mobile_e164', e164);
+                      }}
+                      error={errors.mobile?.message as string}
+                    />
+                    <Input
+                      label="Email"
+                      type="email"
+                      {...register('email')}
+                      error={errors.email?.message}
+                      placeholder="billing@yourcompany.com"
+                    />
+                    <PhoneInput
+                      label="Office Contact"
+                      optional
+                      value={watch('office_phone') || ''}
+                      countryCode={watch('office_phone_country_code') || '+91'}
+                      onValueChange={(phone, cc, e164, _iso) => {
+                        setValue('office_phone', phone);
+                        setValue('office_phone_country_code', cc);
+                        setValue('office_phone_e164', e164);
+                      }}
+                    />
+                    <Input
+                      label="Website (Optional)"
+                      type="url"
+                      {...register('website')}
+                      placeholder="https://www.yourcompany.com"
+                    />
+                  </div>
+                )}
+
+                {/* ── TAB 4: Security ── */}
+                {tab === 4 && (
+                  <div className="space-y-5">
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Security PIN</h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                        4-digit numeric PIN to access your dashboard
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Input
+                          label="Create PIN"
+                          type="password"
+                          inputMode="numeric"
+                          maxLength={4}
+                          placeholder="••••"
+                          className="text-center text-2xl tracking-[0.5em]"
+                          {...register('pin')}
+                          error={errors.pin?.message}
+                          onChange={(e) => {
+                            const digits = e.target.value.replace(/\D/g, '').slice(0, 4);
+                            setValue('pin', digits, { shouldValidate: true });
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <Input
+                          label="Confirm PIN"
+                          type="password"
+                          inputMode="numeric"
+                          maxLength={4}
+                          placeholder="••••"
+                          className="text-center text-2xl tracking-[0.5em]"
+                          {...register('confirm_pin')}
+                          error={errors.confirm_pin?.message}
+                          onChange={(e) => {
+                            const digits = e.target.value.replace(/\D/g, '').slice(0, 4);
+                            setValue('confirm_pin', digits, { shouldValidate: true });
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {pinsMatch && (
+                      <div className="flex items-center gap-2 text-green-600 dark:text-green-400 text-sm">
+                        <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        PINs match
+                      </div>
+                    )}
+                    {pinsMismatch && (
+                      <div className="flex items-center gap-2 text-red-500 text-sm">
+                        <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                        PINs don't match
+                      </div>
+                    )}
+
+                    <div className="bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-lg p-3">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Your PIN is hashed server-side using bcrypt. After 5 failed attempts, the account locks for 15 minutes.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── TAB 5: Bank (Optional) ── */}
+                {tab === 5 && (
+                  <div className="space-y-5">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Bank Details</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                          Optional — shown on invoices and receipts
+                        </p>
+                      </div>
+                      <span className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-2 py-1 rounded-full font-medium">
+                        Optional
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg border border-slate-200 dark:border-slate-600">
+                      <input
+                        type="checkbox"
+                        id="skip_bank"
+                        checked={skipBank}
+                        onChange={e => setSkipBank(e.target.checked)}
+                        className="w-4 h-4 rounded border-slate-300"
+                      />
+                      <label htmlFor="skip_bank" className="text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
+                        Skip bank details — I'll add them later from Settings
+                      </label>
+                    </div>
+
+                    {!skipBank && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Input
+                          label="Account Holder Name"
+                          {...register('bank_account_holder_name')}
+                          placeholder="As per bank records"
+                        />
+                        <Input
+                          label="Account Number"
+                          {...register('bank_account_number')}
+                        />
+                        <Input
+                          label="IFSC Code"
+                          {...register('bank_ifsc')}
+                          placeholder="e.g. SBIN0001234"
+                          className="uppercase"
+                          onChange={e => {
+                            setValue('bank_ifsc', e.target.value.toUpperCase());
+                          }}
+                        />
+                        <Input
+                          label="Bank Name"
+                          {...register('bank_name')}
+                        />
+                        <Input
+                          label="Branch"
+                          {...register('bank_branch')}
+                        />
+                        <BankAccountTypeSelect
+                          label="Account Type"
+                          {...register('bank_account_type')}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* ── Footer navigation ── */}
+              <div className="px-6 md:px-8 py-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between gap-3">
+                <div>
+                  {tab > 0 && (
+                    <button
+                      type="button"
+                      onClick={goBack}
+                      className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg transition-colors hover:shadow-sm"
+                    >
+                      ← Back
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-slate-400 dark:text-slate-500 tabular-nums">
+                    {tab + 1} / {TABS.length}
+                  </span>
+                  {tab < TABS.length - 1 ? (
+                    <button
+                      type="button"
+                      onClick={goNext}
+                      className="px-5 py-2 text-sm font-semibold text-white bg-slate-900 dark:bg-white dark:text-slate-900 rounded-lg hover:bg-slate-700 dark:hover:bg-slate-100 transition-colors shadow-sm active:scale-[0.97]"
+                    >
+                      Continue →
+                    </button>
+                  ) : (
+                    <Button
+                      type="submit"
+                      isLoading={mutation.isPending}
+                      className="px-6"
+                    >
+                      Complete Setup
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </form>
           </div>
-        </form>
+        </div>
+
+        {/* Wave animation */}
+        <style>{`
+          @keyframes waveFloat {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            33%       { transform: translateY(-4px) rotate(-3deg); }
+            66%       { transform: translateY(2px) rotate(2deg); }
+          }
+        `}</style>
       </div>
-    </div>
+    </>
   );
 }
 ```
@@ -9684,8 +10981,8 @@ export default function BOQListPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Bills of Quantities (BOQ)</h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <h2 className="text-2xl font-bold text-foreground">Bills of Quantities (BOQ)</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Manage your project BOQs and structural estimates.
           </p>
         </div>
@@ -9694,31 +10991,31 @@ export default function BOQListPage() {
         </Link>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="bg-card rounded-xl shadow-sm border border overflow-hidden">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-muted/50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BOQ No</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project Name</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">BOQ No</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Project Name</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-card divide-y divide-border">
             {isLoading ? (
-              <tr><td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">Loading BOQs...</td></tr>
+              <tr><td colSpan={5} className="px-6 py-4 text-center text-sm text-muted-foreground">Loading BOQs...</td></tr>
             ) : data?.items.length === 0 ? (
-              <tr><td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">No BOQs found.</td></tr>
+              <tr><td colSpan={5} className="px-6 py-4 text-center text-sm text-muted-foreground">No BOQs found.</td></tr>
             ) : (
               data?.items.map((b) => (
-                <tr key={b.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{new Date(b.boq_date).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{b.boq_number || 'DRAFT'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{b.project_name || '-'}</td>
+                <tr key={b.id} className="hover:bg-muted/50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{new Date(b.boq_date).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground font-medium">{b.boq_number || 'DRAFT'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{b.project_name || '-'}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                      ${b.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' : 'bg-blue-100 text-blue-800'}`}>
+                      ${b.status === 'DRAFT' ? 'bg-muted text-muted-foreground' : 'bg-blue-100 text-blue-800'}`}>
                       {b.status}
                     </span>
                   </td>
@@ -9733,44 +11030,44 @@ export default function BOQListPage() {
       </div>
 
       {selectedBOQ && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+          <div className="bg-card rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
             <div className="p-6 border-b flex justify-between items-center">
               <div>
-                <h3 className="text-xl font-bold text-gray-900">
+                <h3 className="text-xl font-bold text-foreground">
                   {selectedBOQ.boq_number || 'Draft BOQ'}
                 </h3>
-                <p className="text-sm text-gray-500">Project: {selectedBOQ.project_name} | Rev: {selectedBOQ.version}</p>
+                <p className="text-sm text-muted-foreground">Project: {selectedBOQ.project_name} | Rev: {selectedBOQ.version}</p>
               </div>
-              <button onClick={() => setSelectedBOQ(null)} className="text-gray-400 hover:text-gray-500 text-2xl font-bold">&times;</button>
+              <button onClick={() => setSelectedBOQ(null)} className="text-gray-400 hover:text-muted-foreground text-2xl font-bold">&times;</button>
             </div>
             
             <div className="p-6 overflow-y-auto flex-1">
-              <table className="min-w-full divide-y divide-gray-200 border text-sm mb-6">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-border border text-sm mb-6">
+                <thead className="bg-muted/50">
                   <tr>
-                    <th className="px-4 py-2 text-left text-gray-500 font-medium">Type</th>
-                    <th className="px-4 py-2 text-left text-gray-500 font-medium">Description</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Qty</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Est. Rate</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Est. Amount</th>
+                    <th className="px-4 py-2 text-left text-muted-foreground font-medium">Type</th>
+                    <th className="px-4 py-2 text-left text-muted-foreground font-medium">Description</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium">Qty</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium">Est. Rate</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium">Est. Amount</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {selectedBOQ.lines.map((line: any) => (
                     <tr key={line.id}>
-                      <td className="px-4 py-2 text-xs font-semibold text-gray-500">{line.item_type}</td>
+                      <td className="px-4 py-2 text-xs font-semibold text-muted-foreground">{line.item_type}</td>
                       <td className="px-4 py-2">
                         {line.description}
                         {line.quantity_formula && <div className="text-xs text-blue-500">Formula: {line.quantity_formula}</div>}
                       </td>
                       <td className="px-4 py-2 text-right">{line.quantity} {line.unit_snapshot}</td>
-                      <td className="px-4 py-2 text-right text-gray-500">₹{line.estimated_rate.toFixed(2)}</td>
+                      <td className="px-4 py-2 text-right text-muted-foreground">₹{line.estimated_rate.toFixed(2)}</td>
                       <td className="px-4 py-2 text-right font-medium">₹{line.estimated_amount.toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
-                <tfoot className="bg-gray-50">
+                <tfoot className="bg-muted/50">
                   <tr>
                     <td colSpan={4} className="px-4 py-2 text-right font-bold">Total Estimated Value</td>
                     <td className="px-4 py-2 text-right font-bold text-lg">
@@ -9780,13 +11077,13 @@ export default function BOQListPage() {
                 </tfoot>
               </table>
               {selectedBOQ.notes && (
-                <div className="mt-4 p-4 bg-gray-50 text-gray-800 text-sm rounded">
+                <div className="mt-4 p-4 bg-muted text-foreground text-sm rounded">
                   <strong>Notes:</strong> {selectedBOQ.notes}
                 </div>
               )}
             </div>
 
-            <div className="p-6 border-t bg-gray-50 flex justify-end space-x-3 rounded-b-lg">
+            <div className="p-6 border-t bg-muted flex justify-end space-x-3 rounded-b-lg">
               <Button variant="secondary" onClick={() => setSelectedBOQ(null)}>Close</Button>
               {selectedBOQ.status === 'DRAFT' && (
                 <Button 
@@ -9798,7 +11095,7 @@ export default function BOQListPage() {
               )}
               {selectedBOQ.status === 'APPROVED' && (
                 <Link to={`/estimates/new?boq_id=${selectedBOQ.id}`}>
-                  <Button variant="primary">Create Estimate</Button>
+                  <Button variant="default">Create Estimate</Button>
                 </Link>
               )}
             </div>
@@ -9839,8 +11136,8 @@ export default function EstimateListPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Cost Estimates</h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <h2 className="text-2xl font-bold text-foreground">Cost Estimates</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Internal cost estimations and markup pricing.
           </p>
         </div>
@@ -9849,36 +11146,36 @@ export default function EstimateListPage() {
         </Link>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="bg-card rounded-xl shadow-sm border border overflow-hidden">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-muted/50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estimate No</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Cost</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Selling Value</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Estimate No</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Cost</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Selling Value</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-card divide-y divide-border">
             {isLoading ? (
-              <tr><td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">Loading Estimates...</td></tr>
+              <tr><td colSpan={6} className="px-6 py-4 text-center text-sm text-muted-foreground">Loading Estimates...</td></tr>
             ) : data?.items.length === 0 ? (
-              <tr><td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">No Estimates found.</td></tr>
+              <tr><td colSpan={6} className="px-6 py-4 text-center text-sm text-muted-foreground">No Estimates found.</td></tr>
             ) : (
               data?.items.map((e) => (
-                <tr key={e.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{new Date(e.estimate_date).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{e.estimate_number || 'DRAFT'}</td>
+                <tr key={e.id} className="hover:bg-muted/50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{new Date(e.estimate_date).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground font-medium">{e.estimate_number || 'DRAFT'}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                      ${e.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' : 'bg-blue-100 text-blue-800'}`}>
+                      ${e.status === 'DRAFT' ? 'bg-muted text-muted-foreground' : 'bg-blue-100 text-blue-800'}`}>
                       {e.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-500">₹{e.total_cost.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-gray-900">₹{e.estimated_selling_value.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-muted-foreground">₹{e.total_cost.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-foreground">₹{e.estimated_selling_value.toFixed(2)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button onClick={() => setSelectedEstimate(e)} className="text-primary-600 hover:text-primary-900">View</button>
                   </td>
@@ -9890,30 +11187,30 @@ export default function EstimateListPage() {
       </div>
 
       {selectedEstimate && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+          <div className="bg-card rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] flex flex-col">
             <div className="p-6 border-b flex justify-between items-center">
               <div>
-                <h3 className="text-xl font-bold text-gray-900">
+                <h3 className="text-xl font-bold text-foreground">
                   {selectedEstimate.estimate_number || 'Draft Estimate'}
                 </h3>
-                <p className="text-sm text-gray-500">Rev: {selectedEstimate.version}</p>
+                <p className="text-sm text-muted-foreground">Rev: {selectedEstimate.version}</p>
               </div>
-              <button onClick={() => setSelectedEstimate(null)} className="text-gray-400 hover:text-gray-500 text-2xl font-bold">&times;</button>
+              <button onClick={() => setSelectedEstimate(null)} className="text-gray-400 hover:text-muted-foreground text-2xl font-bold">&times;</button>
             </div>
             
             <div className="p-6 overflow-y-auto flex-1">
-              <table className="min-w-full divide-y divide-gray-200 border text-sm mb-6">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-border border text-sm mb-6">
+                <thead className="bg-muted/50">
                   <tr>
-                    <th className="px-4 py-2 text-left text-gray-500 font-medium">Item Name</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Qty</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium bg-red-50">Cost Rate</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium bg-red-50">Cost Amt</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium bg-blue-50">Markup %</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium bg-blue-50">Markup Amt</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium bg-green-50">Sell Rate</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium bg-green-50">Sell Amt</th>
+                    <th className="px-4 py-2 text-left text-muted-foreground font-medium">Item Name</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium">Qty</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium bg-red-50">Cost Rate</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium bg-red-50">Cost Amt</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium bg-blue-50">Markup %</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium bg-blue-50">Markup Amt</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium bg-green-50">Sell Rate</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium bg-green-50">Sell Amt</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -9921,7 +11218,7 @@ export default function EstimateListPage() {
                     <tr key={line.id}>
                       <td className="px-4 py-2">
                         {line.item_name_snapshot}
-                        <div className="text-xs text-gray-400">{line.item_type}</div>
+                        <div className="text-xs text-muted-foreground">{line.item_type}</div>
                       </td>
                       <td className="px-4 py-2 text-right">{line.quantity} {line.unit_snapshot}</td>
                       <td className="px-4 py-2 text-right text-red-700 bg-red-50">₹{line.cost_rate.toFixed(2)}</td>
@@ -9936,7 +11233,7 @@ export default function EstimateListPage() {
               </table>
 
               <div className="grid grid-cols-2 gap-8 text-sm">
-                <div className="border rounded p-4 bg-gray-50">
+                <div className="border rounded p-4 bg-muted/50">
                   <h4 className="font-semibold mb-2">Cost Breakdown</h4>
                   <div className="flex justify-between"><span>Material</span><span>₹{selectedEstimate.material_cost.toFixed(2)}</span></div>
                   <div className="flex justify-between"><span>Labour</span><span>₹{selectedEstimate.labour_cost.toFixed(2)}</span></div>
@@ -9957,7 +11254,7 @@ export default function EstimateListPage() {
               </div>
             </div>
 
-            <div className="p-6 border-t bg-gray-50 flex justify-end space-x-3 rounded-b-lg">
+            <div className="p-6 border-t bg-muted flex justify-end space-x-3 rounded-b-lg">
               <Button variant="secondary" onClick={() => setSelectedEstimate(null)}>Close</Button>
               {selectedEstimate.status === 'DRAFT' && (
                 <Button 
@@ -9969,7 +11266,7 @@ export default function EstimateListPage() {
               )}
               {selectedEstimate.status === 'APPROVED' && (
                 <Link to={`/supply-out/quotations/new?estimate_id=${selectedEstimate.id}`}>
-                  <Button variant="primary">Create Quotation</Button>
+                  <Button variant="default">Create Quotation</Button>
                 </Link>
               )}
             </div>
@@ -10143,8 +11440,8 @@ export default function InvoiceBuilderPage() {
     <div className="max-w-6xl mx-auto space-y-6 pb-20">
       <div className="flex justify-between items-center border-b pb-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Create Tax Invoice</h2>
-          <p className="mt-1 text-sm text-gray-500">Generate a new GST compliant invoice.</p>
+          <h2 className="text-2xl font-bold text-foreground">Create Tax Invoice</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Generate a new GST compliant invoice.</p>
         </div>
       </div>
 
@@ -10156,11 +11453,11 @@ export default function InvoiceBuilderPage() {
         )}
 
         {/* Header Information */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-card p-6 rounded-lg shadow-sm border grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Customer</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-1">Customer</label>
             <select 
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2"
+              className="block w-full rounded-lg border text-sm px-3 py-2 outline-none transition-colors bg-background border-input focus:border-slate-500"
               {...register('customer_id')}
               onChange={(e) => {
                 register('customer_id').onChange(e);
@@ -10180,21 +11477,21 @@ export default function InvoiceBuilderPage() {
         </div>
 
         {/* Invoice Lines */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border space-y-4">
-          <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Items & Services</h3>
+        <div className="bg-card p-6 rounded-lg shadow-sm border space-y-4">
+          <h3 className="text-lg font-medium text-foreground border-b pb-2 mb-4">Items & Services</h3>
           
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border text-sm">
+              <thead className="bg-muted/50">
                 <tr>
-                  <th className="px-3 py-2 text-left font-medium text-gray-500 w-1/4">Item / Product</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-500 w-24">HSN</th>
-                  <th className="px-3 py-2 text-right font-medium text-gray-500 w-24">Qty</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-500 w-28">Unit</th>
-                  <th className="px-3 py-2 text-right font-medium text-gray-500 w-28">Rate (₹)</th>
-                  <th className="px-3 py-2 text-right font-medium text-gray-500 w-24">Discount</th>
-                  <th className="px-3 py-2 text-right font-medium text-gray-500 w-20">GST %</th>
-                  <th className="px-3 py-2 text-right font-medium text-gray-500 w-32">Amount</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-1/4">Item / Product</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-24">HSN</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground w-24">Qty</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-28">Unit</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground w-28">Rate (₹)</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground w-24">Discount</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground w-20">GST %</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground w-32">Amount</th>
                   <th className="px-3 py-2 w-10"></th>
                 </tr>
               </thead>
@@ -10202,10 +11499,10 @@ export default function InvoiceBuilderPage() {
                 {fields.map((field, index) => {
                   const calculatedLine = calcData?.lines?.[index];
                   return (
-                    <tr key={field.id} className="hover:bg-gray-50">
+                    <tr key={field.id} className="hover:bg-muted/50">
                       <td className="px-3 py-2">
                         <select 
-                          className="block w-full rounded border-gray-300 shadow-sm text-sm border px-2 py-1 mb-1"
+                          className="block w-full rounded border-input shadow-sm text-sm border px-2 py-1 mb-1"
                           onChange={(e) => handleItemSelect(index, e.target.value)}
                         >
                           <option value="">Select Item...</option>
@@ -10213,17 +11510,17 @@ export default function InvoiceBuilderPage() {
                             <option key={i.id} value={i.id}>{i.name}</option>
                           ))}
                         </select>
-                        <input type="text" placeholder="Item Name" className="block w-full rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.item_name`)} />
+                        <input type="text" placeholder="Item Name" className="block w-full rounded border-input shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.item_name`)} />
                       </td>
                       <td className="px-3 py-2">
-                        <input type="text" className="block w-full rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.hsn_sac`)} />
+                        <input type="text" className="block w-full rounded border-input shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.hsn_sac`)} />
                       </td>
                       <td className="px-3 py-2">
-                        <input type="number" step="any" className="block w-full text-right rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.quantity`)} />
+                        <input type="number" step="any" className="block w-full text-right rounded border-input shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.quantity`)} />
                       </td>
                       <td className="px-3 py-2">
                         <select 
-                          className="block w-full rounded border-gray-300 shadow-sm text-sm border px-2 py-1"
+                          className="block w-full rounded border-input shadow-sm text-sm border px-2 py-1"
                           {...register(`lines.${index}.unit_id`)}
                           onChange={(e) => {
                             register(`lines.${index}.unit_id`).onChange(e);
@@ -10237,12 +11534,12 @@ export default function InvoiceBuilderPage() {
                         </select>
                       </td>
                       <td className="px-3 py-2">
-                        <input type="number" step="any" className="block w-full text-right rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.rate`)} />
+                        <input type="number" step="any" className="block w-full text-right rounded border-input shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.rate`)} />
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex space-x-1">
-                          <input type="number" step="any" className="block w-full text-right rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.discount_value`)} />
-                          <select className="block rounded border-gray-300 shadow-sm text-xs border px-1 py-1 bg-gray-50" {...register(`lines.${index}.discount_type`)}>
+                          <input type="number" step="any" className="block w-full text-right rounded border-input shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.discount_value`)} />
+                          <select className="block rounded border-input shadow-sm text-xs border px-1 py-1 bg-muted/50" {...register(`lines.${index}.discount_type`)}>
                             <option value="NONE">None</option>
                             <option value="PERCENT">%</option>
                             <option value="FIXED">₹</option>
@@ -10250,9 +11547,9 @@ export default function InvoiceBuilderPage() {
                         </div>
                       </td>
                       <td className="px-3 py-2">
-                        <input type="number" step="any" className="block w-full text-right rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.gst_rate`)} />
+                        <input type="number" step="any" className="block w-full text-right rounded border-input shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.gst_rate`)} />
                       </td>
-                      <td className="px-3 py-2 text-right font-medium text-gray-900 bg-gray-50">
+                      <td className="px-3 py-2 text-right font-medium text-foreground bg-muted/50">
                         {calculateMutation.isPending ? '...' : (calculatedLine?.line_total ? `₹${calculatedLine.line_total.toFixed(2)}` : '₹0.00')}
                       </td>
                       <td className="px-3 py-2 text-center">
@@ -10278,20 +11575,20 @@ export default function InvoiceBuilderPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Customer Notes</label>
-              <textarea rows={3} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('notes')} />
+              <label className="block text-sm font-medium text-muted-foreground mb-1">Customer Notes</label>
+              <textarea rows={3} className="block w-full rounded-lg border text-sm px-3 py-2 outline-none transition-colors bg-background border-input focus:border-slate-500" {...register('notes')} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Terms & Conditions</label>
-              <textarea rows={3} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('terms')} />
+              <label className="block text-sm font-medium text-muted-foreground mb-1">Terms & Conditions</label>
+              <textarea rows={3} className="block w-full rounded-lg border text-sm px-3 py-2 outline-none transition-colors bg-background border-input focus:border-slate-500" {...register('terms')} />
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Invoice Summary</h3>
+          <div className="bg-card p-6 rounded-lg shadow-sm border">
+            <h3 className="text-lg font-medium text-foreground border-b pb-2 mb-4">Invoice Summary</h3>
             
             <div className="space-y-3 text-sm">
-              <div className="flex justify-between text-gray-600">
+              <div className="flex justify-between text-muted-foreground">
                 <span>Subtotal</span>
                 <span>₹{(calcData?.subtotal || 0).toFixed(2)}</span>
               </div>
@@ -10299,36 +11596,36 @@ export default function InvoiceBuilderPage() {
                 <span>Discount</span>
                 <span>- ₹{(calcData?.discount_total || 0).toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-gray-800 font-medium pt-2 border-t">
+              <div className="flex justify-between text-foreground font-medium pt-2 border-t">
                 <span>Taxable Value</span>
                 <span>₹{(calcData?.taxable_total || 0).toFixed(2)}</span>
               </div>
               
               {(calcData?.igst_total || 0) > 0 ? (
-                <div className="flex justify-between text-gray-600">
+                <div className="flex justify-between text-muted-foreground">
                   <span>IGST</span>
                   <span>₹{(calcData?.igst_total || 0).toFixed(2)}</span>
                 </div>
               ) : (
                 <>
-                  <div className="flex justify-between text-gray-600">
+                  <div className="flex justify-between text-muted-foreground">
                     <span>CGST</span>
                     <span>₹{(calcData?.cgst_total || 0).toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between text-gray-600">
+                  <div className="flex justify-between text-muted-foreground">
                     <span>SGST / UTGST</span>
                     <span>₹{(calcData?.sgst_total || 0).toFixed(2)}</span>
                   </div>
                 </>
               )}
 
-              <div className="flex justify-between text-xl font-bold text-gray-900 pt-4 border-t mt-4">
+              <div className="flex justify-between text-xl font-bold text-foreground pt-4 border-t mt-4">
                 <span>Grand Total</span>
                 <span>₹{(calcData?.grand_total || 0).toFixed(2)}</span>
               </div>
 
               {calcData?.amount_in_words && (
-                <div className="text-xs text-gray-500 text-right italic mt-1">
+                <div className="text-xs text-muted-foreground text-right italic mt-1">
                   Rupees {calcData.amount_in_words}
                 </div>
               )}
@@ -10336,7 +11633,7 @@ export default function InvoiceBuilderPage() {
           </div>
         </div>
 
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-lg flex justify-end space-x-4 z-10 md:ml-64">
+        <div className="fixed bottom-0 left-0 right-0 bg-card border-t p-4 shadow-lg flex justify-end space-x-4 z-10 md:ml-64">
           <Button type="button" variant="secondary" onClick={() => navigate('/')}>Cancel</Button>
           <Button type="submit" isLoading={createMutation.isPending} disabled={calculateMutation.isPending || !calcData?.grand_total}>
             Save Draft Invoice
@@ -10408,8 +11705,8 @@ export default function InvoiceListPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">{pageTitle}</h2>
-          <p className="mt-1 text-sm text-gray-500">Manage your {pageTitle.toLowerCase()}.</p>
+          <h2 className="text-2xl font-bold text-foreground">{pageTitle}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Manage your {pageTitle.toLowerCase()}.</p>
         </div>
         {!isPurchase && (
           <Link to="/invoices/new" className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 font-medium text-sm">
@@ -10421,27 +11718,27 @@ export default function InvoiceListPage() {
       {isLoading ? (
         <div>Loading invoices...</div>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="bg-card rounded-xl shadow-sm border border overflow-hidden">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted/50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{isPurchase ? 'Bill #' : 'Invoice #'}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{partyLabel}</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">{isPurchase ? 'Bill #' : 'Invoice #'}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">{partyLabel}</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-card divide-y divide-border">
               {invoices.map((inv) => (
-                <tr key={inv.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                <tr key={inv.id} className="hover:bg-muted/50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">
                     {inv.invoice_number.startsWith('DRAFT-') ? <span className="text-gray-400 italic">DRAFT</span> : inv.invoice_number}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{inv.invoice_date}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{inv.customer_name_snapshot}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-right text-gray-900">₹{inv.grand_total.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{inv.invoice_date}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{inv.customer_name_snapshot}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-right text-foreground">₹{inv.grand_total.toFixed(2)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
                       ${inv.invoice_status === 'DRAFT' ? 'bg-yellow-100 text-yellow-800' : 
@@ -10462,7 +11759,7 @@ export default function InvoiceListPage() {
               ))}
               {invoices.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">
                     No invoices found.
                   </td>
                 </tr>
@@ -10476,16 +11773,16 @@ export default function InvoiceListPage() {
       {selectedInvoice && (
         <div className="fixed inset-0 z-10 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={() => setSelectedInvoice(null)}></div>
+            <div className="fixed inset-0 transition-opacity bg-black/60" onClick={() => setSelectedInvoice(null)}></div>
             <span className="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
-            <div className="inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full sm:p-6">
+            <div className="inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-card rounded-xl shadow-xl sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full sm:p-6">
               
               <div className="flex justify-between items-start mb-6">
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900">
+                  <h3 className="text-xl font-bold text-foreground">
                     {selectedInvoice.invoice_status === 'DRAFT' ? 'Draft Invoice' : `Tax Invoice: ${selectedInvoice.invoice_number}`}
                   </h3>
-                  <p className="text-sm text-gray-500">Date: {selectedInvoice.invoice_date}</p>
+                  <p className="text-sm text-muted-foreground">Date: {selectedInvoice.invoice_date}</p>
                 </div>
                 <div className={`px-3 py-1 rounded text-sm font-bold 
                   ${selectedInvoice.invoice_status === 'FINALIZED' ? 'bg-green-100 text-green-800' : 
@@ -10494,15 +11791,15 @@ export default function InvoiceListPage() {
                 </div>
               </div>
 
-              <div className="border rounded-md p-4 mb-6 bg-gray-50">
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">{isPurchase ? 'From Supplier:' : 'Billed To:'}</h4>
-                <p className="font-medium text-gray-900">{selectedInvoice.customer_name_snapshot}</p>
-                <p className="text-sm text-gray-600">Place of Supply: {selectedInvoice.place_of_supply}</p>
+              <div className="border rounded-md p-4 mb-6 bg-muted/50">
+                <h4 className="text-sm font-semibold text-muted-foreground mb-2">{isPurchase ? 'From Supplier:' : 'Billed To:'}</h4>
+                <p className="font-medium text-foreground">{selectedInvoice.customer_name_snapshot}</p>
+                <p className="text-sm text-muted-foreground">Place of Supply: {selectedInvoice.place_of_supply}</p>
               </div>
 
               <div className="overflow-x-auto mb-6">
                 <table className="min-w-full text-sm">
-                  <thead className="bg-gray-100">
+                  <thead className="bg-muted/50">
                     <tr>
                       <th className="px-3 py-2 text-left">Item</th>
                       <th className="px-3 py-2 text-right">Qty</th>
@@ -10511,7 +11808,7 @@ export default function InvoiceListPage() {
                       <th className="px-3 py-2 text-right">Total</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody className="divide-y divide-border">
                     {selectedInvoice.lines.map((line: any) => (
                       <tr key={line.id}>
                         <td className="px-3 py-2">{line.item_name}</td>
@@ -10528,11 +11825,11 @@ export default function InvoiceListPage() {
               <div className="flex justify-end mb-6">
                 <div className="w-64 space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Subtotal:</span>
+                    <span className="text-muted-foreground">Subtotal:</span>
                     <span className="font-medium">₹{selectedInvoice.subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Taxable Value:</span>
+                    <span className="text-muted-foreground">Taxable Value:</span>
                     <span className="font-medium">₹{selectedInvoice.taxable_total.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
@@ -10556,7 +11853,7 @@ export default function InvoiceListPage() {
                 {selectedInvoice.invoice_status === 'FINALIZED' && (
                   <Button 
                     type="button" 
-                    variant="danger" 
+                    variant="destructive" 
                     onClick={() => handleCancel(selectedInvoice.id)}
                     isLoading={cancelMutation.isPending}
                   >
@@ -10674,8 +11971,8 @@ export default function ItemsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Products & Services</h2>
-          <p className="mt-1 text-sm text-gray-500">Manage your inventory, pricing, and HSN/SAC codes.</p>
+          <h2 className="text-2xl font-bold text-foreground">Products & Services</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Manage your inventory, pricing, and HSN/SAC codes.</p>
         </div>
         <Button onClick={() => setIsModalOpen(true)}>Add New Item</Button>
       </div>
@@ -10683,31 +11980,31 @@ export default function ItemsPage() {
       {itemsLoading ? (
         <div>Loading items...</div>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="bg-card rounded-xl shadow-sm border border overflow-hidden">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted/50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name / SKU</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type & HSN</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Sale Price</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Item Name / SKU</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Type & HSN</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Sale Price</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Stock</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-card divide-y divide-border">
               {items.map((item) => (
                 <tr key={item.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{item.name}</div>
-                    <div className="text-xs text-gray-500">{item.sku || 'No SKU'}</div>
+                    <div className="text-sm font-medium text-foreground">{item.name}</div>
+                    <div className="text-xs text-muted-foreground">{item.sku || 'No SKU'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.type === 'Service' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
                       {item.type}
                     </span>
-                    <div className="text-xs text-gray-500 mt-1">{item.hsn_sac ? `HSN: ${item.hsn_sac}` : '-'}</div>
+                    <div className="text-xs text-muted-foreground mt-1">{item.hsn_sac ? `HSN: ${item.hsn_sac}` : '-'}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900 font-medium">
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-foreground font-medium">
                     ₹{item.sale_price.toFixed(2)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
@@ -10735,7 +12032,7 @@ export default function ItemsPage() {
               ))}
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
                     No items found. Click "Add New Item" to create one.
                   </td>
                 </tr>
@@ -10748,10 +12045,10 @@ export default function ItemsPage() {
       {isModalOpen && (
         <div className="fixed inset-0 z-10 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={() => setIsModalOpen(false)}></div>
+            <div className="fixed inset-0 transition-opacity bg-black/60" onClick={() => setIsModalOpen(false)}></div>
             <span className="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
-            <div className="inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full sm:p-6">
-              <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4 border-b pb-2">Add New Item</h3>
+            <div className="inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-card rounded-xl shadow-xl sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full sm:p-6">
+              <h3 className="text-lg font-medium leading-6 text-foreground mb-4 border-b pb-2">Add New Item</h3>
               
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 {apiError && (
@@ -10764,8 +12061,8 @@ export default function ItemsPage() {
                   {/* Basic Details */}
                   <div className="space-y-4 md:col-span-2 grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Item Type</label>
-                      <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('type')}>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">Item Type</label>
+                      <select className="block w-full rounded-lg border text-sm px-3 py-2 outline-none transition-colors bg-background border-input focus:border-slate-500" {...register('type')}>
                         <option value="Product">Product (Goods)</option>
                         <option value="Service">Service</option>
                       </select>
@@ -10781,8 +12078,8 @@ export default function ItemsPage() {
                   </div>
 
                   {/* Pricing Details */}
-                  <div className="md:col-span-2 bg-gray-50 p-4 rounded-md border border-gray-200">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Pricing & Tax</h4>
+                  <div className="md:col-span-2 bg-muted p-4 rounded-md border border">
+                    <h4 className="text-sm font-semibold text-muted-foreground mb-3">Pricing & Tax</h4>
                     <div className="grid grid-cols-2 gap-4">
                       <Input label="Sale Price" type="number" step="0.01" {...register('sale_price')} error={errors.sale_price?.message} />
                       <Input label="Purchase Price" type="number" step="0.01" {...register('purchase_price')} error={errors.purchase_price?.message} />
@@ -10795,8 +12092,8 @@ export default function ItemsPage() {
                   <div className="md:col-span-2">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Primary Unit</label>
-                        <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('unit_id')}>
+                        <label className="block text-sm font-medium text-muted-foreground mb-1">Primary Unit</label>
+                        <select className="block w-full rounded-lg border text-sm px-3 py-2 outline-none transition-colors bg-background border-input focus:border-slate-500" {...register('unit_id')}>
                           <option value="">Select a unit...</option>
                           {units.map(u => (
                             <option key={u.id} value={u.id}>{u.name} ({u.abbreviation})</option>
@@ -10913,8 +12210,8 @@ export default function PartiesPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Customers & Suppliers</h2>
-          <p className="mt-1 text-sm text-gray-500">Manage your sundry debtors and creditors.</p>
+          <h2 className="text-2xl font-bold text-foreground">Customers & Suppliers</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Manage your sundry debtors and creditors.</p>
         </div>
         <Button onClick={() => { setIsModalOpen(true); reset(); setGstinValid(false); }}>Add New Party</Button>
       </div>
@@ -10922,23 +12219,23 @@ export default function PartiesPage() {
       {isLoading ? (
         <div>Loading parties...</div>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="bg-card rounded-xl shadow-sm border border overflow-hidden">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted/50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Party Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">GSTIN / Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">State</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Party Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Type</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">GSTIN / Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Contact</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">State</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-card divide-y divide-border">
               {parties.map((party) => (
                 <tr key={party.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{party.legal_name}</div>
-                    {party.trade_name && <div className="text-xs text-gray-500">{party.trade_name}</div>}
+                    <div className="text-sm font-medium text-foreground">{party.legal_name}</div>
+                    {party.trade_name && <div className="text-xs text-muted-foreground">{party.trade_name}</div>}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${party.account_type === 'CUSTOMER' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
@@ -10946,21 +12243,21 @@ export default function PartiesPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{party.gstin || 'No GSTIN'}</div>
-                    <div className="text-xs text-gray-500">{party.gst_registration_type}</div>
+                    <div className="text-sm text-foreground">{party.gstin || 'No GSTIN'}</div>
+                    <div className="text-xs text-muted-foreground">{party.gst_registration_type}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                     <div>{party.contact_person || '-'}</div>
                     <div>{party.mobile || '-'}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                     {party.state} ({party.state_code})
                   </td>
                 </tr>
               ))}
               {parties.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
                     No parties found. Click "Add New Party" to create one.
                   </td>
                 </tr>
@@ -10973,10 +12270,10 @@ export default function PartiesPage() {
       {isModalOpen && (
         <div className="fixed inset-0 z-10 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={() => setIsModalOpen(false)}></div>
+            <div className="fixed inset-0 transition-opacity bg-black/60" onClick={() => setIsModalOpen(false)}></div>
             <span className="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
-            <div className="inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full sm:p-6">
-              <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4 border-b pb-2">Add New Party</h3>
+            <div className="inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-card rounded-xl shadow-xl sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full sm:p-6">
+              <h3 className="text-lg font-medium leading-6 text-foreground mb-4 border-b pb-2">Add New Party</h3>
               
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 {apiError && (
@@ -10989,15 +12286,15 @@ export default function PartiesPage() {
                   {/* Basic Details */}
                   <div className="md:col-span-2 grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Account Type</label>
-                      <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('account_type')}>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">Account Type</label>
+                      <select className="block w-full rounded-lg border text-sm px-3 py-2 outline-none transition-colors bg-background border-input focus:border-slate-500" {...register('account_type')}>
                         <option value="CUSTOMER">Customer (Debtor)</option>
                         <option value="VENDOR">Vendor (Creditor)</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Party Type</label>
-                      <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('party_type')}>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">Party Type</label>
+                      <select className="block w-full rounded-lg border text-sm px-3 py-2 outline-none transition-colors bg-background border-input focus:border-slate-500" {...register('party_type')}>
                         <option value="BUSINESS">Business (B2B)</option>
                         <option value="INDIVIDUAL">Individual (B2C)</option>
                       </select>
@@ -11008,12 +12305,12 @@ export default function PartiesPage() {
                   <Input label="Trade Name (Optional)" {...register('trade_name')} error={errors.trade_name?.message} />
                   
                   {/* Tax Details */}
-                  <div className="md:col-span-2 bg-gray-50 p-4 rounded-md border border-gray-200">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Tax & Location Details</h4>
+                  <div className="md:col-span-2 bg-muted p-4 rounded-md border border">
+                    <h4 className="text-sm font-semibold text-muted-foreground mb-3">Tax & Location Details</h4>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">GST Registration</label>
-                        <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('gst_registration_type')}>
+                        <label className="block text-sm font-medium text-muted-foreground mb-1">GST Registration</label>
+                        <select className="block w-full rounded-lg border text-sm px-3 py-2 outline-none transition-colors bg-background border-input focus:border-slate-500" {...register('gst_registration_type')}>
                           <option value="REGISTERED">Registered Regular</option>
                           <option value="COMPOSITION">Registered Composition</option>
                           <option value="UNREGISTERED">Unregistered</option>
@@ -11061,7 +12358,7 @@ export default function PartiesPage() {
                           error={errors.state?.message} 
                           placeholder="e.g. Karnataka"
                           readOnly={gstinValid}
-                          className={gstinValid ? "bg-gray-100 cursor-not-allowed" : ""}
+                          className={gstinValid ? "bg-muted cursor-not-allowed" : ""}
                         />
                         <Input 
                           label="State Code" 
@@ -11069,7 +12366,7 @@ export default function PartiesPage() {
                           error={errors.state_code?.message} 
                           placeholder="e.g. 29"
                           readOnly={gstinValid}
-                          className={gstinValid ? "bg-gray-100 cursor-not-allowed" : ""}
+                          className={gstinValid ? "bg-muted cursor-not-allowed" : ""}
                         />
                       </div>
                     </div>
@@ -11077,7 +12374,7 @@ export default function PartiesPage() {
 
                   {/* Bank Details */}
                   <div className="md:col-span-2">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Bank Information</h4>
+                    <h4 className="text-sm font-semibold text-muted-foreground mb-3">Bank Information</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <BankAccountTypeSelect 
                         label="Bank Account Type" 
@@ -11089,7 +12386,7 @@ export default function PartiesPage() {
 
                   {/* Contact Details */}
                   <div className="md:col-span-2">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Contact Information</h4>
+                    <h4 className="text-sm font-semibold text-muted-foreground mb-3">Contact Information</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Input label="Contact Person" {...register('contact_person')} error={errors.contact_person?.message} />
                       
@@ -11097,7 +12394,7 @@ export default function PartiesPage() {
                         label="Mobile Number" 
                         value={watch('mobile') || ''} 
                         countryCode={watch('mobile_country_code') || '+91'} 
-                        onValueChange={(phone, cc, e164) => { 
+                        onValueChange={(phone, cc, e164, _iso) => { 
                           setValue('mobile', phone); 
                           setValue('mobile_country_code', cc); 
                           setValue('mobile_e164', e164); 
@@ -11110,7 +12407,7 @@ export default function PartiesPage() {
                         optional 
                         value={watch('office_phone') || ''} 
                         countryCode={watch('office_phone_country_code') || '+91'} 
-                        onValueChange={(phone, cc, e164) => { 
+                        onValueChange={(phone, cc, e164, _iso) => { 
                           setValue('office_phone', phone); 
                           setValue('office_phone_country_code', cc); 
                           setValue('office_phone_e164', e164); 
@@ -11214,8 +12511,8 @@ export default function UnitsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Units of Measurement</h2>
-          <p className="mt-1 text-sm text-gray-500">Manage base units, derived units, and custom conversion formulas.</p>
+          <h2 className="text-2xl font-bold text-foreground">Units of Measurement</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Manage base units, derived units, and custom conversion formulas.</p>
         </div>
         <Button onClick={() => setIsModalOpen(true)}>Add New Unit</Button>
       </div>
@@ -11223,34 +12520,34 @@ export default function UnitsPage() {
       {isLoading ? (
         <div>Loading units...</div>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="bg-card rounded-xl shadow-sm border border overflow-hidden">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted/50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Abbreviation</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Formula / Multiplier</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Unit</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Abbreviation</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Category</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Type</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Formula / Multiplier</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-card divide-y divide-border">
               {units.map((unit) => (
                 <tr key={unit.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{unit.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{unit.abbreviation}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{unit.category}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">{unit.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{unit.abbreviation}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{unit.category}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                     {unit.is_base_unit ? (
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Base</span>
                     ) : (
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">Derived</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                     {unit.formula ? (
-                      <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{unit.formula}</code>
+                      <code className="text-xs bg-muted px-1 py-0.5 rounded">{unit.formula}</code>
                     ) : unit.multiplier !== 1 ? (
                       `${unit.multiplier}x Base`
                     ) : '-'}
@@ -11277,10 +12574,10 @@ export default function UnitsPage() {
       {isModalOpen && (
         <div className="fixed inset-0 z-10 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={() => setIsModalOpen(false)}></div>
+            <div className="fixed inset-0 transition-opacity bg-black/60" onClick={() => setIsModalOpen(false)}></div>
             <span className="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
-            <div className="inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
-              <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Add New Unit</h3>
+            <div className="inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-card rounded-xl shadow-xl sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+              <h3 className="text-lg font-medium leading-6 text-foreground mb-4">Add New Unit</h3>
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 {apiError && (
                   <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm border border-red-100">
@@ -11296,15 +12593,15 @@ export default function UnitsPage() {
                 <Input label="Category (e.g. Weight)" {...register('category')} error={errors.category?.message} />
                 
                 <div className="flex items-center h-10 mt-2">
-                  <input type="checkbox" id="is_base_unit" className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded" {...register('is_base_unit')} />
-                  <label htmlFor="is_base_unit" className="ml-2 block text-sm text-gray-900 font-medium">This is a Base Unit</label>
+                  <input type="checkbox" id="is_base_unit" className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-input rounded" {...register('is_base_unit')} />
+                  <label htmlFor="is_base_unit" className="ml-2 block text-sm text-foreground font-medium">This is a Base Unit</label>
                 </div>
 
                 {!isBaseUnit && (
-                  <div className="space-y-4 p-4 bg-gray-50 rounded-md border border-gray-200">
+                  <div className="space-y-4 p-4 bg-muted rounded-md border border">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Base Unit Reference</label>
-                      <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('base_unit_id')}>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">Base Unit Reference</label>
+                      <select className="block w-full rounded-lg border text-sm px-3 py-2 outline-none transition-colors bg-background border-input focus:border-slate-500" {...register('base_unit_id')}>
                         <option value="">Select a base unit...</option>
                         {units.filter(u => u.is_base_unit).map(u => (
                           <option key={u.id} value={u.id}>{u.name} ({u.abbreviation})</option>
@@ -11559,10 +12856,10 @@ export default function OrderBuilderPage() {
     <div className="max-w-6xl mx-auto space-y-6 pb-20">
       <div className="flex justify-between items-center border-b pb-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">
+          <h2 className="text-2xl font-bold text-foreground">
             {isPurchase ? 'Create Supply In (Purchase Order)' : 'Create Supply Out (Sales Order)'}
           </h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             {quotationId ? 'Draft a new order from accepted quotation.' : `Draft a new ${isPurchase ? 'purchase' : 'sales'} order.`}
           </p>
         </div>
@@ -11576,11 +12873,11 @@ export default function OrderBuilderPage() {
         )}
 
         {/* Header Information */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="bg-card p-6 rounded-lg shadow-sm border grid grid-cols-1 md:grid-cols-4 gap-6">
           
           <div className="md:col-span-4 border-b pb-4 mb-2 flex space-x-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Order Type</label>
+              <label className="block text-sm font-medium text-muted-foreground mb-1">Order Type</label>
               <div className="flex items-center space-x-2 mt-2">
                 <input type="radio" value="PURCHASE" disabled {...register('order_type')} /> <span className="text-sm">Purchase Order</span>
                 <input type="radio" value="SALES" disabled {...register('order_type')} className="ml-4" /> <span className="text-sm">Sales Order</span>
@@ -11588,7 +12885,7 @@ export default function OrderBuilderPage() {
             </div>
             
             <div className="pl-6 border-l">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tax Treatment</label>
+              <label className="block text-sm font-medium text-muted-foreground mb-1">Tax Treatment</label>
               <div className="flex items-center space-x-2 mt-2">
                 <input type="radio" value="GST" {...register('tax_treatment')} /> <span className="text-sm">GST</span>
                 <input type="radio" value="WITHOUT_GST" {...register('tax_treatment')} className="ml-4" /> <span className="text-sm">Without GST</span>
@@ -11597,9 +12894,9 @@ export default function OrderBuilderPage() {
           </div>
 
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">{partyLabel}</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-1">{partyLabel}</label>
             <select 
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2"
+              className="block w-full rounded-lg border text-sm px-3 py-2 outline-none transition-colors bg-background border-input focus:border-slate-500"
               {...register('party_id')}
               onChange={(e) => {
                 register('party_id').onChange(e);
@@ -11623,21 +12920,21 @@ export default function OrderBuilderPage() {
         </div>
 
         {/* Invoice Lines */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border space-y-4">
-          <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Items & Services</h3>
+        <div className="bg-card p-6 rounded-lg shadow-sm border space-y-4">
+          <h3 className="text-lg font-medium text-foreground border-b pb-2 mb-4">Items & Services</h3>
           
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border text-sm">
+              <thead className="bg-muted/50">
                 <tr>
-                  <th className="px-3 py-2 text-left font-medium text-gray-500 w-1/4">Item / Product</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-500 w-24">HSN/SKU</th>
-                  <th className="px-3 py-2 text-right font-medium text-gray-500 w-24">Qty</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-500 w-28">Unit</th>
-                  <th className="px-3 py-2 text-right font-medium text-gray-500 w-28">Rate (₹)</th>
-                  <th className="px-3 py-2 text-right font-medium text-gray-500 w-24">Discount</th>
-                  {taxTreatment === 'GST' && <th className="px-3 py-2 text-right font-medium text-gray-500 w-20">GST %</th>}
-                  <th className="px-3 py-2 text-right font-medium text-gray-500 w-32">Amount</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-1/4">Item / Product</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-24">HSN/SKU</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground w-24">Qty</th>
+                  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-28">Unit</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground w-28">Rate (₹)</th>
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground w-24">Discount</th>
+                  {taxTreatment === 'GST' && <th className="px-3 py-2 text-right font-medium text-muted-foreground w-20">GST %</th>}
+                  <th className="px-3 py-2 text-right font-medium text-muted-foreground w-32">Amount</th>
                   <th className="px-3 py-2 w-10"></th>
                 </tr>
               </thead>
@@ -11645,10 +12942,10 @@ export default function OrderBuilderPage() {
                 {fields.map((field, index) => {
                   const calculatedLine = calcData?.lines?.[index];
                   return (
-                    <tr key={field.id} className="hover:bg-gray-50">
+                    <tr key={field.id} className="hover:bg-muted/50">
                       <td className="px-3 py-2">
                         <select 
-                          className="block w-full rounded border-gray-300 shadow-sm text-sm border px-2 py-1 mb-1"
+                          className="block w-full rounded border-input shadow-sm text-sm border px-2 py-1 mb-1"
                           onChange={(e) => handleItemSelect(index, e.target.value)}
                         >
                           <option value="">Select Item...</option>
@@ -11656,18 +12953,18 @@ export default function OrderBuilderPage() {
                             <option key={i.id} value={i.id}>{i.name}</option>
                           ))}
                         </select>
-                        <input type="text" placeholder="Item Name" className="block w-full rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.item_name`)} />
+                        <input type="text" placeholder="Item Name" className="block w-full rounded border-input shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.item_name`)} />
                       </td>
                       <td className="px-3 py-2 space-y-1">
-                        <input type="text" placeholder="HSN" className="block w-full rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.hsn_sac`)} />
-                        <input type="text" placeholder="SKU" className="block w-full rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.sku`)} />
+                        <input type="text" placeholder="HSN" className="block w-full rounded border-input shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.hsn_sac`)} />
+                        <input type="text" placeholder="SKU" className="block w-full rounded border-input shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.sku`)} />
                       </td>
                       <td className="px-3 py-2">
-                        <input type="number" step="any" className="block w-full text-right rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.quantity`)} />
+                        <input type="number" step="any" className="block w-full text-right rounded border-input shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.quantity`)} />
                       </td>
                       <td className="px-3 py-2">
                         <select 
-                          className="block w-full rounded border-gray-300 shadow-sm text-sm border px-2 py-1"
+                          className="block w-full rounded border-input shadow-sm text-sm border px-2 py-1"
                           {...register(`lines.${index}.unit_id`)}
                           onChange={(e) => {
                             register(`lines.${index}.unit_id`).onChange(e);
@@ -11681,12 +12978,12 @@ export default function OrderBuilderPage() {
                         </select>
                       </td>
                       <td className="px-3 py-2">
-                        <input type="number" step="any" className="block w-full text-right rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.rate`)} />
+                        <input type="number" step="any" className="block w-full text-right rounded border-input shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.rate`)} />
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex space-x-1">
-                          <input type="number" step="any" className="block w-full text-right rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.discount_value`)} />
-                          <select className="block rounded border-gray-300 shadow-sm text-xs border px-1 py-1 bg-gray-50" {...register(`lines.${index}.discount_type`)}>
+                          <input type="number" step="any" className="block w-full text-right rounded border-input shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.discount_value`)} />
+                          <select className="block rounded border-input shadow-sm text-xs border px-1 py-1 bg-muted/50" {...register(`lines.${index}.discount_type`)}>
                             <option value="NONE">None</option>
                             <option value="PERCENT">%</option>
                             <option value="FIXED">₹</option>
@@ -11695,10 +12992,10 @@ export default function OrderBuilderPage() {
                       </td>
                       {taxTreatment === 'GST' && (
                         <td className="px-3 py-2">
-                          <input type="number" step="any" className="block w-full text-right rounded border-gray-300 shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.gst_rate`)} />
+                          <input type="number" step="any" className="block w-full text-right rounded border-input shadow-sm text-sm border px-2 py-1" {...register(`lines.${index}.gst_rate`)} />
                         </td>
                       )}
-                      <td className="px-3 py-2 text-right font-medium text-gray-900 bg-gray-50">
+                      <td className="px-3 py-2 text-right font-medium text-foreground bg-muted/50">
                         {calculateMutation.isPending ? '...' : (calculatedLine?.line_total ? `₹${calculatedLine.line_total.toFixed(2)}` : '₹0.00')}
                       </td>
                       <td className="px-3 py-2 text-center">
@@ -11724,20 +13021,20 @@ export default function OrderBuilderPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Order Notes</label>
-              <textarea rows={3} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('notes')} />
+              <label className="block text-sm font-medium text-muted-foreground mb-1">Order Notes</label>
+              <textarea rows={3} className="block w-full rounded-lg border text-sm px-3 py-2 outline-none transition-colors bg-background border-input focus:border-slate-500" {...register('notes')} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Terms & Conditions</label>
-              <textarea rows={3} className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('terms')} />
+              <label className="block text-sm font-medium text-muted-foreground mb-1">Terms & Conditions</label>
+              <textarea rows={3} className="block w-full rounded-lg border text-sm px-3 py-2 outline-none transition-colors bg-background border-input focus:border-slate-500" {...register('terms')} />
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Order Summary</h3>
+          <div className="bg-card p-6 rounded-lg shadow-sm border">
+            <h3 className="text-lg font-medium text-foreground border-b pb-2 mb-4">Order Summary</h3>
             
             <div className="space-y-3 text-sm">
-              <div className="flex justify-between text-gray-600">
+              <div className="flex justify-between text-muted-foreground">
                 <span>Gross Amount</span>
                 <span>₹{(calcData?.subtotal || 0).toFixed(2)}</span>
               </div>
@@ -11745,7 +13042,7 @@ export default function OrderBuilderPage() {
                 <span>Discount</span>
                 <span>- ₹{(calcData?.discount_total || 0).toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-gray-800 font-medium pt-2 border-t">
+              <div className="flex justify-between text-foreground font-medium pt-2 border-t">
                 <span>{taxTreatment === 'GST' ? 'Taxable Value' : 'Net Amount'}</span>
                 <span>₹{(calcData?.taxable_total || 0).toFixed(2)}</span>
               </div>
@@ -11753,17 +13050,17 @@ export default function OrderBuilderPage() {
               {taxTreatment === 'GST' && (
                 <>
                   {(calcData?.igst_total || 0) > 0 ? (
-                    <div className="flex justify-between text-gray-600">
+                    <div className="flex justify-between text-muted-foreground">
                       <span>IGST</span>
                       <span>₹{(calcData?.igst_total || 0).toFixed(2)}</span>
                     </div>
                   ) : (
                     <>
-                      <div className="flex justify-between text-gray-600">
+                      <div className="flex justify-between text-muted-foreground">
                         <span>CGST</span>
                         <span>₹{(calcData?.cgst_total || 0).toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between text-gray-600">
+                      <div className="flex justify-between text-muted-foreground">
                         <span>SGST / UTGST</span>
                         <span>₹{(calcData?.sgst_total || 0).toFixed(2)}</span>
                       </div>
@@ -11772,13 +13069,13 @@ export default function OrderBuilderPage() {
                 </>
               )}
 
-              <div className="flex justify-between text-xl font-bold text-gray-900 pt-4 border-t mt-4">
+              <div className="flex justify-between text-xl font-bold text-foreground pt-4 border-t mt-4">
                 <span>Grand Total</span>
                 <span>₹{(calcData?.grand_total || 0).toFixed(2)}</span>
               </div>
 
               {calcData?.amount_in_words && (
-                <div className="text-xs text-gray-500 text-right italic mt-1">
+                <div className="text-xs text-muted-foreground text-right italic mt-1">
                   Rupees {calcData.amount_in_words}
                 </div>
               )}
@@ -11786,7 +13083,7 @@ export default function OrderBuilderPage() {
           </div>
         </div>
 
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-lg flex justify-end space-x-4 z-10 md:ml-64">
+        <div className="fixed bottom-0 left-0 right-0 bg-card border-t p-4 shadow-lg flex justify-end space-x-4 z-10 md:ml-64">
           <Button type="button" variant="secondary" onClick={() => navigate(isPurchase ? '/supply-in' : '/supply-out')}>Cancel</Button>
           <Button type="submit" isLoading={createMutation.isPending} disabled={calculateMutation.isPending || !calcData?.grand_total}>
             Save Draft Order
@@ -11844,8 +13141,8 @@ export default function OrderListPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">{pageTitle}</h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <h2 className="text-2xl font-bold text-foreground">{pageTitle}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Manage your {orderType.toLowerCase()} orders.
           </p>
         </div>
@@ -11854,40 +13151,40 @@ export default function OrderListPage() {
         </Link>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="bg-card rounded-xl shadow-sm border border overflow-hidden">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-muted/50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order No</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{partyLabel}</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tax Type</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Order No</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">{partyLabel}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Tax Type</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-card divide-y divide-border">
             {isLoading ? (
-              <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">Loading orders...</td></tr>
+              <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-muted-foreground">Loading orders...</td></tr>
             ) : data?.items.length === 0 ? (
-              <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">No {orderType.toLowerCase()} orders found.</td></tr>
+              <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-muted-foreground">No {orderType.toLowerCase()} orders found.</td></tr>
             ) : (
               data?.items.map((order) => (
-                <tr key={order.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.order_date}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{order.order_number || 'DRAFT'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.party_id.substring(0,8)}...</td>
+                <tr key={order.id} className="hover:bg-muted/50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{order.order_date}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground font-medium">{order.order_number || 'DRAFT'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{order.party_id.substring(0,8)}...</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                      ${order.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' : 
+                      ${order.status === 'DRAFT' ? 'bg-muted text-muted-foreground' : 
                         order.status === 'CONFIRMED' ? 'bg-blue-100 text-blue-800' : 
                         order.status === 'CANCELLED' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
                       {order.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.tax_treatment.replace('_', ' ')}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-bold">₹{order.grand_total.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{order.tax_treatment.replace('_', ' ')}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground text-right font-bold">₹{order.grand_total.toFixed(2)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button onClick={() => setSelectedOrder(order)} className="text-primary-600 hover:text-primary-900">View</button>
                   </td>
@@ -11900,32 +13197,32 @@ export default function OrderListPage() {
 
       {/* View Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+          <div className="bg-card rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
             <div className="p-6 border-b flex justify-between items-center">
               <div>
-                <h3 className="text-xl font-bold text-gray-900">
+                <h3 className="text-xl font-bold text-foreground">
                   {selectedOrder.order_number || 'Draft Order'}
                 </h3>
-                <p className="text-sm text-gray-500">Date: {selectedOrder.order_date} | Type: {selectedOrder.order_type} | Tax: {selectedOrder.tax_treatment.replace('_', ' ')}</p>
+                <p className="text-sm text-muted-foreground">Date: {selectedOrder.order_date} | Type: {selectedOrder.order_type} | Tax: {selectedOrder.tax_treatment.replace('_', ' ')}</p>
               </div>
-              <button onClick={() => setSelectedOrder(null)} className="text-gray-400 hover:text-gray-500 text-2xl font-bold">&times;</button>
+              <button onClick={() => setSelectedOrder(null)} className="text-gray-400 hover:text-muted-foreground text-2xl font-bold">&times;</button>
             </div>
             
             <div className="p-6 overflow-y-auto flex-1">
-              <table className="min-w-full divide-y divide-gray-200 border mb-6 text-sm">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-border border mb-6 text-sm">
+                <thead className="bg-muted/50">
                   <tr>
-                    <th className="px-4 py-2 text-left text-gray-500 font-medium">Item</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Qty</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Rate</th>
+                    <th className="px-4 py-2 text-left text-muted-foreground font-medium">Item</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium">Qty</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium">Rate</th>
                     {selectedOrder.tax_treatment === 'GST' && (
                       <>
-                        <th className="px-4 py-2 text-right text-gray-500 font-medium">Taxable</th>
-                        <th className="px-4 py-2 text-right text-gray-500 font-medium">GST</th>
+                        <th className="px-4 py-2 text-right text-muted-foreground font-medium">Taxable</th>
+                        <th className="px-4 py-2 text-right text-muted-foreground font-medium">GST</th>
                       </>
                     )}
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Total</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -11949,24 +13246,24 @@ export default function OrderListPage() {
               <div className="flex justify-end">
                 <div className="w-64 space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Subtotal</span>
+                    <span className="text-muted-foreground">Subtotal</span>
                     <span>₹{selectedOrder.subtotal.toFixed(2)}</span>
                   </div>
                   {selectedOrder.tax_treatment === 'GST' && (
                     <>
                       {selectedOrder.igst_total > 0 ? (
                         <div className="flex justify-between">
-                          <span className="text-gray-600">IGST</span>
+                          <span className="text-muted-foreground">IGST</span>
                           <span>₹{selectedOrder.igst_total.toFixed(2)}</span>
                         </div>
                       ) : (
                         <>
                           <div className="flex justify-between">
-                            <span className="text-gray-600">CGST</span>
+                            <span className="text-muted-foreground">CGST</span>
                             <span>₹{selectedOrder.cgst_total.toFixed(2)}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-600">SGST</span>
+                            <span className="text-muted-foreground">SGST</span>
                             <span>₹{selectedOrder.sgst_total.toFixed(2)}</span>
                           </div>
                         </>
@@ -11981,7 +13278,7 @@ export default function OrderListPage() {
               </div>
             </div>
 
-            <div className="p-6 border-t bg-gray-50 flex justify-end space-x-3 rounded-b-lg">
+            <div className="p-6 border-t bg-muted flex justify-end space-x-3 rounded-b-lg">
               <Button variant="secondary" onClick={() => setSelectedOrder(null)}>Close</Button>
               {selectedOrder.status === 'DRAFT' && (
                 <Button 
@@ -12112,23 +13409,23 @@ export default function QuotationBuilderPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">
+        <h2 className="text-2xl font-bold text-foreground">
           Create {isSupplyIn ? 'Purchase Quotation' : 'Sales Quotation'}
         </h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm text-muted-foreground">
           Create a non-binding quotation for your {isSupplyIn ? 'supplier' : 'customer'}.
         </p>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border p-6">
+      <div className="bg-card rounded-lg shadow-sm border p-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
                 {isSupplyIn ? 'Supplier' : 'Customer'} *
               </label>
               <select
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                className="w-full rounded-md border-input shadow-sm focus:border-primary-500 focus:ring-primary-500"
                 {...register('party_id')}
               >
                 <option value="">-- Select Party --</option>
@@ -12140,9 +13437,9 @@ export default function QuotationBuilderPage() {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tax Treatment</label>
+              <label className="block text-sm font-medium text-muted-foreground mb-1">Tax Treatment</label>
               <select
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                className="w-full rounded-md border-input shadow-sm focus:border-primary-500 focus:ring-primary-500"
                 {...register('tax_treatment')}
               >
                 <option value="GST">GST</option>
@@ -12168,33 +13465,33 @@ export default function QuotationBuilderPage() {
 
           <div className="mt-8 border-t pt-6">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Quotation Items</h3>
+              <h3 className="text-lg font-medium text-foreground">Quotation Items</h3>
               <Button type="button" variant="secondary" onClick={() => append({ item_name_snapshot: '', quantity: 1, rate: 0, discount_value: 0, gst_rate: 18 })}>
                 + Add Row
               </Button>
             </div>
             
             <div className="overflow-x-auto border rounded-lg">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-border">
+                <thead className="bg-muted/50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item Selection</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-48">Item Name *</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-24">Qty *</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-32">Rate *</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-32">Disc (₹)</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Item Selection</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase w-48">Item Name *</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase w-24">Qty *</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase w-32">Rate *</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase w-32">Disc (₹)</th>
                     {watchTaxTreatment === 'GST' && (
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-24">GST %</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase w-24">GST %</th>
                     )}
                     <th className="px-4 py-3"></th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-card divide-y divide-border">
                   {fields.map((field, index) => (
                     <tr key={field.id}>
                       <td className="px-4 py-2">
                         <select 
-                          className="w-full text-sm rounded border-gray-300"
+                          className="w-full text-sm rounded border-input"
                           onChange={(e) => handleItemSelect(index, e.target.value)}
                         >
                           <option value="">-- Catalog --</option>
@@ -12206,7 +13503,7 @@ export default function QuotationBuilderPage() {
                       <td className="px-4 py-2">
                         <input
                           {...register(`lines.${index}.item_name_snapshot`)}
-                          className="w-full text-sm rounded border-gray-300"
+                          className="w-full text-sm rounded border-input"
                           placeholder="Manual name"
                         />
                       </td>
@@ -12214,21 +13511,21 @@ export default function QuotationBuilderPage() {
                         <input
                           type="number" step="any" min="0"
                           {...register(`lines.${index}.quantity`, { valueAsNumber: true })}
-                          className="w-full text-sm rounded border-gray-300"
+                          className="w-full text-sm rounded border-input"
                         />
                       </td>
                       <td className="px-4 py-2">
                         <input
                           type="number" step="any" min="0"
                           {...register(`lines.${index}.rate`, { valueAsNumber: true })}
-                          className="w-full text-sm rounded border-gray-300"
+                          className="w-full text-sm rounded border-input"
                         />
                       </td>
                       <td className="px-4 py-2">
                         <input
                           type="number" step="any" min="0"
                           {...register(`lines.${index}.discount_value`, { valueAsNumber: true })}
-                          className="w-full text-sm rounded border-gray-300"
+                          className="w-full text-sm rounded border-input"
                         />
                       </td>
                       {watchTaxTreatment === 'GST' && (
@@ -12236,7 +13533,7 @@ export default function QuotationBuilderPage() {
                           <input
                             type="number" step="any" min="0"
                             {...register(`lines.${index}.gst_rate`, { valueAsNumber: true })}
-                            className="w-full text-sm rounded border-gray-300"
+                            className="w-full text-sm rounded border-input"
                           />
                         </td>
                       )}
@@ -12253,19 +13550,19 @@ export default function QuotationBuilderPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Notes / Remarks</label>
+              <label className="block text-sm font-medium text-muted-foreground mb-1">Notes / Remarks</label>
               <textarea
                 {...register('notes')}
                 rows={3}
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                className="w-full rounded-md border-input shadow-sm focus:border-primary-500 focus:ring-primary-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Terms & Conditions</label>
+              <label className="block text-sm font-medium text-muted-foreground mb-1">Terms & Conditions</label>
               <textarea
                 {...register('terms')}
                 rows={3}
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                className="w-full rounded-md border-input shadow-sm focus:border-primary-500 focus:ring-primary-500"
               />
             </div>
           </div>
@@ -12335,8 +13632,8 @@ export default function QuotationListPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">{pageTitle}</h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <h2 className="text-2xl font-bold text-foreground">{pageTitle}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Manage your {quotationType.toLowerCase()} quotations.
           </p>
         </div>
@@ -12345,42 +13642,42 @@ export default function QuotationListPage() {
         </Link>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="bg-card rounded-xl shadow-sm border border overflow-hidden">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-muted/50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quotation No</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{partyLabel}</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Valid Until</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Quotation No</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">{partyLabel}</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Valid Until</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-card divide-y divide-border">
             {isLoading ? (
-              <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">Loading quotations...</td></tr>
+              <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-muted-foreground">Loading quotations...</td></tr>
             ) : data?.items.length === 0 ? (
-              <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">No quotations found.</td></tr>
+              <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-muted-foreground">No quotations found.</td></tr>
             ) : (
               data?.items.map((q) => (
-                <tr key={q.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{new Date(q.quotation_date).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{q.quotation_number || 'DRAFT'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{q.party_id.substring(0,8)}...</td>
+                <tr key={q.id} className="hover:bg-muted/50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{new Date(q.quotation_date).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground font-medium">{q.quotation_number || 'DRAFT'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{q.party_id.substring(0,8)}...</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                     {new Date(q.valid_until).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                      ${q.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' : 
+                      ${q.status === 'DRAFT' ? 'bg-muted text-muted-foreground' : 
                         q.status === 'APPROVED' ? 'bg-blue-100 text-blue-800' : 
                         q.status === 'ACCEPTED' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                       {q.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-bold">₹{q.grand_total.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground text-right font-bold">₹{q.grand_total.toFixed(2)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button onClick={() => setSelectedQuotation(q)} className="text-primary-600 hover:text-primary-900">View</button>
                   </td>
@@ -12393,28 +13690,28 @@ export default function QuotationListPage() {
 
       {/* View Modal */}
       {selectedQuotation && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+          <div className="bg-card rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
             <div className="p-6 border-b flex justify-between items-center">
               <div>
-                <h3 className="text-xl font-bold text-gray-900">
+                <h3 className="text-xl font-bold text-foreground">
                   {selectedQuotation.quotation_number || 'Draft Quotation'}
                 </h3>
-                <p className="text-sm text-gray-500">Rev: {selectedQuotation.revision} | Valid Until: {new Date(selectedQuotation.valid_until).toLocaleDateString()}</p>
+                <p className="text-sm text-muted-foreground">Rev: {selectedQuotation.revision} | Valid Until: {new Date(selectedQuotation.valid_until).toLocaleDateString()}</p>
               </div>
-              <button onClick={() => setSelectedQuotation(null)} className="text-gray-400 hover:text-gray-500 text-2xl font-bold">&times;</button>
+              <button onClick={() => setSelectedQuotation(null)} className="text-gray-400 hover:text-muted-foreground text-2xl font-bold">&times;</button>
             </div>
             
             <div className="p-6 overflow-y-auto flex-1">
-              <table className="min-w-full divide-y divide-gray-200 border mb-6 text-sm">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-border border mb-6 text-sm">
+                <thead className="bg-muted/50">
                   <tr>
-                    <th className="px-4 py-2 text-left text-gray-500 font-medium">Item</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Qty</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Rate</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Discount</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium">GST</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Total</th>
+                    <th className="px-4 py-2 text-left text-muted-foreground font-medium">Item</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium">Qty</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium">Rate</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium">Discount</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium">GST</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -12422,7 +13719,7 @@ export default function QuotationListPage() {
                     <tr key={line.id}>
                       <td className="px-4 py-2">
                         {line.item_name_snapshot}
-                        {line.description && <div className="text-xs text-gray-500">{line.description}</div>}
+                        {line.description && <div className="text-xs text-muted-foreground">{line.description}</div>}
                       </td>
                       <td className="px-4 py-2 text-right">
                         {line.quantity} {line.unit_snapshot}
@@ -12441,7 +13738,7 @@ export default function QuotationListPage() {
               <div className="flex justify-end">
                 <div className="w-64 space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Subtotal</span>
+                    <span className="text-muted-foreground">Subtotal</span>
                     <span>₹{selectedQuotation.subtotal.toFixed(2)}</span>
                   </div>
                   {selectedQuotation.discount_total > 0 && (
@@ -12451,25 +13748,25 @@ export default function QuotationListPage() {
                     </div>
                   )}
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Taxable Value</span>
+                    <span className="text-muted-foreground">Taxable Value</span>
                     <span>₹{selectedQuotation.taxable_total.toFixed(2)}</span>
                   </div>
                   {selectedQuotation.tax_treatment === 'GST' && (
                     <>
                       {selectedQuotation.cgst_total > 0 && (
-                        <div className="flex justify-between text-gray-500 text-xs">
+                        <div className="flex justify-between text-muted-foreground text-xs">
                           <span>CGST</span>
                           <span>₹{selectedQuotation.cgst_total.toFixed(2)}</span>
                         </div>
                       )}
                       {selectedQuotation.sgst_total > 0 && (
-                        <div className="flex justify-between text-gray-500 text-xs">
+                        <div className="flex justify-between text-muted-foreground text-xs">
                           <span>SGST</span>
                           <span>₹{selectedQuotation.sgst_total.toFixed(2)}</span>
                         </div>
                       )}
                       {selectedQuotation.igst_total > 0 && (
-                        <div className="flex justify-between text-gray-500 text-xs">
+                        <div className="flex justify-between text-muted-foreground text-xs">
                           <span>IGST</span>
                           <span>₹{selectedQuotation.igst_total.toFixed(2)}</span>
                         </div>
@@ -12489,14 +13786,14 @@ export default function QuotationListPage() {
                 </div>
               )}
               {selectedQuotation.terms && (
-                <div className="mt-4 p-4 bg-gray-50 text-gray-800 text-sm rounded">
+                <div className="mt-4 p-4 bg-muted text-foreground text-sm rounded">
                   <strong>Terms & Conditions:</strong>
                   <pre className="whitespace-pre-wrap font-sans mt-2">{selectedQuotation.terms}</pre>
                 </div>
               )}
             </div>
 
-            <div className="p-6 border-t bg-gray-50 flex justify-end space-x-3 rounded-b-lg">
+            <div className="p-6 border-t bg-muted flex justify-end space-x-3 rounded-b-lg">
               <Button variant="secondary" onClick={() => setSelectedQuotation(null)}>Close</Button>
               {selectedQuotation.status === 'DRAFT' && (
                 <Button 
@@ -12516,7 +13813,7 @@ export default function QuotationListPage() {
               )}
               {selectedQuotation.status === 'ACCEPTED' && !selectedQuotation.fully_converted && (
                 <Link to={`${isSupplyIn ? '/supply-in' : '/supply-out'}/new?quotation_id=${selectedQuotation.id}`}>
-                  <Button variant="primary">Convert to Order</Button>
+                  <Button variant="default">Convert to Order</Button>
                 </Link>
               )}
             </div>
@@ -12673,22 +13970,22 @@ export default function ReturnBuilderPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">
+        <h2 className="text-2xl font-bold text-foreground">
           Create {isSupplyIn ? 'Purchase Return' : 'Sales Return'}
         </h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm text-muted-foreground">
           Initiate a return against a confirmed {orderType.toLowerCase()} order.
         </p>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border p-6">
+      <div className="bg-card rounded-lg shadow-sm border p-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Select Original Order *</label>
+              <label className="block text-sm font-medium text-muted-foreground mb-1">Select Original Order *</label>
               <select
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                className="w-full rounded-md border-input shadow-sm focus:border-primary-500 focus:ring-primary-500"
                 value={orderId}
                 onChange={handleOrderChange}
                 required
@@ -12710,42 +14007,42 @@ export default function ReturnBuilderPage() {
           </div>
           
           {fetchLinesMutation.isPending && (
-            <div className="text-sm text-gray-500 py-4">Fetching returnable items...</div>
+            <div className="text-sm text-muted-foreground py-4">Fetching returnable items...</div>
           )}
 
           {returnableData && fields.length > 0 && (
             <div className="mt-8">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Return Items</h3>
+              <h3 className="text-lg font-medium text-foreground mb-4">Return Items</h3>
               
               <div className="overflow-x-auto border rounded-lg">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-border">
+                  <thead className="bg-muted/50">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Returnable Max</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Rate</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Condition</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase w-32">Return Qty</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Item</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Returnable Max</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Rate</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Condition</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase w-32">Return Qty</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-card divide-y divide-border">
                     {fields.map((field, index) => {
                       const line = formLines[index];
                       return (
                         <tr key={field.id} className={line.return_quantity > 0 ? 'bg-red-50' : ''}>
-                          <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                          <td className="px-4 py-3 text-sm font-medium text-foreground">
                             {line.item_name_snapshot}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-500 text-right">
+                          <td className="px-4 py-3 text-sm text-muted-foreground text-right">
                             {line.returnable_quantity} {line.unit_snapshot}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-500 text-right">
+                          <td className="px-4 py-3 text-sm text-muted-foreground text-right">
                             ₹{line.rate.toFixed(2)}
                           </td>
                           <td className="px-4 py-3">
                             <select
                               {...register(`lines.${index}.condition`)}
-                              className="text-sm rounded border-gray-300 w-full"
+                              className="text-sm rounded border-input w-full"
                             >
                               <option value="GOOD">Good / Resaleable</option>
                               <option value="DAMAGED">Damaged</option>
@@ -12760,7 +14057,7 @@ export default function ReturnBuilderPage() {
                               min="0"
                               max={line.returnable_quantity}
                               {...register(`lines.${index}.return_quantity`, { valueAsNumber: true })}
-                              className="w-full rounded border-gray-300 text-right text-sm font-medium text-red-600 focus:ring-red-500 focus:border-red-500"
+                              className="w-full rounded border-input text-right text-sm font-medium text-red-600 focus:ring-red-500 focus:border-red-500"
                             />
                           </td>
                         </tr>
@@ -12771,7 +14068,7 @@ export default function ReturnBuilderPage() {
               </div>
 
               <div className="mt-4 flex justify-between items-center text-sm">
-                <div className="text-gray-500 italic">
+                <div className="text-muted-foreground italic">
                   Note: The exact tax reversals will be calculated automatically by the server.
                 </div>
                 <div className="font-medium text-lg">
@@ -12882,8 +14179,8 @@ export default function ReturnListPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">{pageTitle}</h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <h2 className="text-2xl font-bold text-foreground">{pageTitle}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Manage your {returnType.toLowerCase().replace('_', ' ')}s.
           </p>
         </div>
@@ -12892,44 +14189,44 @@ export default function ReturnListPage() {
         </Link>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="bg-card rounded-xl shadow-sm border border overflow-hidden">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-muted/50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Return No</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{partyLabel}</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Financial</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Return No</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">{partyLabel}</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Financial</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-card divide-y divide-border">
             {isLoading ? (
-              <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">Loading returns...</td></tr>
+              <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-muted-foreground">Loading returns...</td></tr>
             ) : data?.items.length === 0 ? (
-              <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">No returns found.</td></tr>
+              <tr><td colSpan={7} className="px-6 py-4 text-center text-sm text-muted-foreground">No returns found.</td></tr>
             ) : (
               data?.items.map((ret) => (
-                <tr key={ret.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{ret.return_date}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{ret.return_number || 'DRAFT'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{ret.party_id.substring(0,8)}...</td>
+                <tr key={ret.id} className="hover:bg-muted/50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{ret.return_date}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground font-medium">{ret.return_number || 'DRAFT'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{ret.party_id.substring(0,8)}...</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                      ${ret.status === 'DRAFT' ? 'bg-gray-100 text-gray-800' : 
+                      ${ret.status === 'DRAFT' ? 'bg-muted text-muted-foreground' : 
                         ret.status === 'APPROVED' ? 'bg-blue-100 text-blue-800' : 
                         ret.status === 'COMPLETED' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                       {ret.status}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-muted text-foreground">
                       {ret.financial_status.replace('_', ' ')}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-bold">₹{ret.grand_total.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground text-right font-bold">₹{ret.grand_total.toFixed(2)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button onClick={() => setSelectedReturn(ret)} className="text-primary-600 hover:text-primary-900">View</button>
                   </td>
@@ -12942,27 +14239,27 @@ export default function ReturnListPage() {
 
       {/* View Modal */}
       {selectedReturn && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+          <div className="bg-card rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
             <div className="p-6 border-b flex justify-between items-center">
               <div>
-                <h3 className="text-xl font-bold text-gray-900">
+                <h3 className="text-xl font-bold text-foreground">
                   {selectedReturn.return_number || 'Draft Return'}
                 </h3>
-                <p className="text-sm text-gray-500">Original Order: {selectedReturn.original_order_id.substring(0, 8)}...</p>
+                <p className="text-sm text-muted-foreground">Original Order: {selectedReturn.original_order_id.substring(0, 8)}...</p>
               </div>
-              <button onClick={() => setSelectedReturn(null)} className="text-gray-400 hover:text-gray-500 text-2xl font-bold">&times;</button>
+              <button onClick={() => setSelectedReturn(null)} className="text-gray-400 hover:text-muted-foreground text-2xl font-bold">&times;</button>
             </div>
             
             <div className="p-6 overflow-y-auto flex-1">
-              <table className="min-w-full divide-y divide-gray-200 border mb-6 text-sm">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-border border mb-6 text-sm">
+                <thead className="bg-muted/50">
                   <tr>
-                    <th className="px-4 py-2 text-left text-gray-500 font-medium">Item</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Return Qty</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Rate</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium">GST</th>
-                    <th className="px-4 py-2 text-right text-gray-500 font-medium">Total</th>
+                    <th className="px-4 py-2 text-left text-muted-foreground font-medium">Item</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium">Return Qty</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium">Rate</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium">GST</th>
+                    <th className="px-4 py-2 text-right text-muted-foreground font-medium">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -12970,7 +14267,7 @@ export default function ReturnListPage() {
                     <tr key={line.id}>
                       <td className="px-4 py-2">
                         {line.item_name_snapshot}
-                        <div className="text-xs text-gray-500">Condition: {line.condition}</div>
+                        <div className="text-xs text-muted-foreground">Condition: {line.condition}</div>
                       </td>
                       <td className="px-4 py-2 text-right font-medium text-red-600">
                         {line.return_quantity} {line.unit_snapshot}
@@ -12985,15 +14282,15 @@ export default function ReturnListPage() {
 
               <div className="flex flex-col md:flex-row justify-between mt-6 pt-4 border-t gap-6">
                 <div className="w-full md:w-1/2">
-                  <h4 className="font-semibold text-gray-900 mb-2">Settlements</h4>
+                  <h4 className="font-semibold text-foreground mb-2">Settlements</h4>
                   {selectedReturn.settlements.length > 0 ? (
                     <div className="space-y-2">
                       {selectedReturn.settlements.map((s: any) => (
-                        <div key={s.id} className="bg-white border rounded p-3 text-sm flex justify-between items-center shadow-sm">
+                        <div key={s.id} className="bg-card border rounded p-3 text-sm flex justify-between items-center shadow-sm">
                           <div>
-                            <div className="font-medium text-gray-900">{s.settlement_type.replace(/_/g, ' ')}</div>
-                            <div className="text-gray-500 text-xs">{new Date(s.settlement_date).toLocaleDateString()} {s.reference_number ? `| Ref: ${s.reference_number}` : ''}</div>
-                            {s.notes && <div className="text-gray-500 text-xs italic">Note: {s.notes}</div>}
+                            <div className="font-medium text-foreground">{s.settlement_type.replace(/_/g, ' ')}</div>
+                            <div className="text-muted-foreground text-xs">{new Date(s.settlement_date).toLocaleDateString()} {s.reference_number ? `| Ref: ${s.reference_number}` : ''}</div>
+                            {s.notes && <div className="text-muted-foreground text-xs italic">Note: {s.notes}</div>}
                           </div>
                           <div className="font-bold text-green-600">
                             ₹{s.amount.toFixed(2)}
@@ -13002,13 +14299,13 @@ export default function ReturnListPage() {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-sm text-gray-500 italic">No settlements recorded yet.</div>
+                    <div className="text-sm text-muted-foreground italic">No settlements recorded yet.</div>
                   )}
                 </div>
                 
-                <div className="w-full md:w-64 space-y-2 text-sm bg-gray-50 p-4 rounded-lg self-start border">
+                <div className="w-full md:w-64 space-y-2 text-sm bg-muted p-4 rounded-lg self-start border">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Subtotal</span>
+                    <span className="text-muted-foreground">Subtotal</span>
                     <span>₹{selectedReturn.subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg pt-2 border-t mt-2">
@@ -13027,7 +14324,7 @@ export default function ReturnListPage() {
               </div>
             </div>
 
-            <div className="p-6 border-t bg-gray-50 flex justify-end space-x-3 rounded-b-lg">
+            <div className="p-6 border-t bg-muted flex justify-end space-x-3 rounded-b-lg">
               <Button variant="secondary" onClick={() => setSelectedReturn(null)}>Close</Button>
               {selectedReturn.status === 'DRAFT' && (
                 <Button 
@@ -13067,17 +14364,17 @@ export default function ReturnListPage() {
 
       {/* Settlement Modal */}
       {showSettlementModal && selectedReturn && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+          <div className="bg-card rounded-lg shadow-xl max-w-md w-full">
             <div className="p-6 border-b flex justify-between items-center">
-              <h3 className="text-xl font-bold text-gray-900">Process Settlement</h3>
-              <button onClick={() => setShowSettlementModal(false)} className="text-gray-400 hover:text-gray-500 text-2xl font-bold">&times;</button>
+              <h3 className="text-xl font-bold text-foreground">Process Settlement</h3>
+              <button onClick={() => setShowSettlementModal(false)} className="text-gray-400 hover:text-muted-foreground text-2xl font-bold">&times;</button>
             </div>
             <form onSubmit={handleSettlementSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Settlement Type</label>
+                <label className="block text-sm font-medium text-muted-foreground">Settlement Type</label>
                 <select 
-                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                  className="mt-1 w-full rounded-md border-input shadow-sm focus:border-primary-500 focus:ring-primary-500"
                   value={settlementForm.settlement_type}
                   onChange={(e) => setSettlementForm({...settlementForm, settlement_type: e.target.value})}
                   required
@@ -13099,12 +14396,12 @@ export default function ReturnListPage() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700">Amount (₹)</label>
+                <label className="block text-sm font-medium text-muted-foreground">Amount (₹)</label>
                 <input 
                   type="number" 
                   step="0.01"
                   min="0.01"
-                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                  className="mt-1 w-full rounded-md border-input shadow-sm focus:border-primary-500 focus:ring-primary-500"
                   value={settlementForm.amount}
                   onChange={(e) => setSettlementForm({...settlementForm, amount: parseFloat(e.target.value)})}
                   required
@@ -13112,19 +14409,19 @@ export default function ReturnListPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Reference Number</label>
+                <label className="block text-sm font-medium text-muted-foreground">Reference Number</label>
                 <input 
                   type="text" 
-                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                  className="mt-1 w-full rounded-md border-input shadow-sm focus:border-primary-500 focus:ring-primary-500"
                   value={settlementForm.reference_number}
                   onChange={(e) => setSettlementForm({...settlementForm, reference_number: e.target.value})}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Notes</label>
+                <label className="block text-sm font-medium text-muted-foreground">Notes</label>
                 <textarea 
-                  className="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                  className="mt-1 w-full rounded-md border-input shadow-sm focus:border-primary-500 focus:ring-primary-500"
                   value={settlementForm.notes}
                   onChange={(e) => setSettlementForm({...settlementForm, notes: e.target.value})}
                   rows={2}
@@ -13148,9 +14445,159 @@ export default function ReturnListPage() {
 // File: frontend/src/index.css
 @import "tailwindcss";
 
+/* ── Enable class-based dark mode for Tailwind v4 ────────────────────────── */
+@variant dark (&:where(.dark, .dark *));
+
+/* ── shadcn/ui CSS variable tokens ───────────────────────────────────────── */
 @layer base {
+  :root {
+    --background:         0 0% 100%;
+    --foreground:         222.2 84% 4.9%;
+
+    --card:               0 0% 100%;
+    --card-foreground:    222.2 84% 4.9%;
+
+    --popover:            0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary:            222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary:          210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted:              210 40% 96.1%;
+    --muted-foreground:   215.4 16.3% 46.9%;
+
+    --accent:             210 40% 96.1%;
+    --accent-foreground:  222.2 47.4% 11.2%;
+
+    --destructive:        0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border:             214.3 31.8% 91.4%;
+    --input:              214.3 31.8% 91.4%;
+    --ring:               222.2 84% 4.9%;
+
+    --radius:             0.5rem;
+
+    /* Sidebar */
+    --sidebar:            0 0% 100%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary:    240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent:     240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border:     220 13% 91%;
+    --sidebar-ring:       217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background:         222.2 84% 4.9%;
+    --foreground:         210 40% 98%;
+
+    --card:               222.2 84% 4.9%;
+    --card-foreground:    210 40% 98%;
+
+    --popover:            222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary:            210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary:          217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted:              217.2 32.6% 17.5%;
+    --muted-foreground:   215 20.2% 65.1%;
+
+    --accent:             217.2 32.6% 17.5%;
+    --accent-foreground:  210 40% 98%;
+
+    --destructive:        0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border:             217.2 32.6% 17.5%;
+    --input:              217.2 32.6% 17.5%;
+    --ring:               212.7 26.8% 83.9%;
+
+    /* Sidebar dark */
+    --sidebar:            222.2 84% 4.9%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary:    224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent:     217.2 32.6% 17.5%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border:     217.2 32.6% 17.5%;
+    --sidebar-ring:       217.2 91.2% 59.8%;
+  }
+}
+
+/* ── Map CSS vars to Tailwind v4 theme ───────────────────────────────────── */
+@theme inline {
+  --color-background:         hsl(var(--background));
+  --color-foreground:         hsl(var(--foreground));
+  --color-card:               hsl(var(--card));
+  --color-card-foreground:    hsl(var(--card-foreground));
+  --color-popover:            hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary:            hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary:          hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted:              hsl(var(--muted));
+  --color-muted-foreground:   hsl(var(--muted-foreground));
+  --color-accent:             hsl(var(--accent));
+  --color-accent-foreground:  hsl(var(--accent-foreground));
+  --color-destructive:        hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border:             hsl(var(--border));
+  --color-input:              hsl(var(--input));
+  --color-ring:               hsl(var(--ring));
+  --color-sidebar:            hsl(var(--sidebar));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary:    hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent:     hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border:     hsl(var(--sidebar-border));
+  --color-sidebar-ring:       hsl(var(--sidebar-ring));
+  --radius-sm:   calc(var(--radius) - 4px);
+  --radius-md:   calc(var(--radius) - 2px);
+  --radius-lg:   var(--radius);
+  --radius-xl:   calc(var(--radius) + 4px);
+}
+
+/* ── Base reset ──────────────────────────────────────────────────────────── */
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+    outline-color: hsl(var(--ring) / 0.5);
+  }
+
   body {
-    @apply bg-gray-50 text-gray-900;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* ── Transition for theme switching ─────────────────────────────────────── */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
+}
+/* Don't animate transforms/sizes */
+[data-slot="dialog-content"], [data-slot="select-content"] {
+  transition: none;
+}
+
+/* ── System prefers-dark: auto-apply before JS loads ────────────────────── */
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) {
+    color-scheme: dark;
   }
 }
 ```
@@ -13158,34 +14605,19 @@ export default function ReturnListPage() {
 ```typescript
 // File: frontend/src/lib/gst/constants.ts
 export const BANK_ACCOUNT_TYPES = [
-  { value: 'CURRENT', label: 'Current Account' },
-  { value: 'SAVINGS', label: 'Savings Account' },
+  { value: 'CURRENT',     label: 'Current Account' },
+  { value: 'SAVINGS',     label: 'Savings Account' },
   { value: 'CASH_CREDIT', label: 'Cash Credit Account' },
-  { value: 'OVERDRAFT', label: 'Overdraft Account' },
-  { value: 'NRE', label: 'NRE Account' },
-  { value: 'NRO', label: 'NRO Account' },
-  { value: 'OTHER', label: 'Other' },
+  { value: 'OVERDRAFT',   label: 'Overdraft Account' },
+  { value: 'NRE',         label: 'NRE Account' },
+  { value: 'NRO',         label: 'NRO Account' },
+  { value: 'OTHER',       label: 'Other' },
 ] as const;
 
-export const COMMON_COUNTRY_CODES = [
-  { code: '+91', country: 'IN', name: 'India', flag: '🇮🇳' },
-  { code: '+1', country: 'US', name: 'United States', flag: '🇺🇸' },
-  { code: '+44', country: 'GB', name: 'United Kingdom', flag: '🇬🇧' },
-  { code: '+971', country: 'AE', name: 'UAE', flag: '🇦🇪' },
-  { code: '+65', country: 'SG', name: 'Singapore', flag: '🇸🇬' },
-  { code: '+60', country: 'MY', name: 'Malaysia', flag: '🇲🇾' },
-  { code: '+61', country: 'AU', name: 'Australia', flag: '🇦🇺' },
-  { code: '+49', country: 'DE', name: 'Germany', flag: '🇩🇪' },
-  { code: '+33', country: 'FR', name: 'France', flag: '🇫🇷' },
-  { code: '+81', country: 'JP', name: 'Japan', flag: '🇯🇵' },
-  { code: '+86', country: 'CN', name: 'China', flag: '🇨🇳' },
-  { code: '+880', country: 'BD', name: 'Bangladesh', flag: '🇧🇩' },
-  { code: '+94', country: 'LK', name: 'Sri Lanka', flag: '🇱🇰' },
-  { code: '+977', country: 'NP', name: 'Nepal', flag: '🇳🇵' },
-  { code: '+92', country: 'PK', name: 'Pakistan', flag: '🇵🇰' },
-] as const;
+export type BankAccountTypeValue = typeof BANK_ACCOUNT_TYPES[number]['value'];
 
-export type CountryCode = typeof COMMON_COUNTRY_CODES[number];
+// Country code list removed — PhoneInput now uses libphonenumber-js
+// getCountries() + getCountryCallingCode() for the full dynamic list.
 ```
 
 ```typescript
@@ -13360,6 +14792,16 @@ export function parseGSTIN(raw: string): GSTINParseResult | null {
     defaultCharacter: gstin[13],
     checkDigit: gstin[14],
   };
+}
+```
+
+```typescript
+// File: frontend/src/lib/utils.ts
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
 }
 ```
 

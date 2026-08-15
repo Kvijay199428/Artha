@@ -141,22 +141,22 @@ export default function ReturnBuilderPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">
+        <h2 className="text-2xl font-bold text-foreground">
           Create {isSupplyIn ? 'Purchase Return' : 'Sales Return'}
         </h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm text-muted-foreground">
           Initiate a return against a confirmed {orderType.toLowerCase()} order.
         </p>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border p-6">
+      <div className="bg-card rounded-lg shadow-sm border p-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Select Original Order *</label>
+              <label className="block text-sm font-medium text-muted-foreground mb-1">Select Original Order *</label>
               <select
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                className="w-full rounded-md border-input shadow-sm focus:border-primary-500 focus:ring-primary-500"
                 value={orderId}
                 onChange={handleOrderChange}
                 required
@@ -178,42 +178,42 @@ export default function ReturnBuilderPage() {
           </div>
           
           {fetchLinesMutation.isPending && (
-            <div className="text-sm text-gray-500 py-4">Fetching returnable items...</div>
+            <div className="text-sm text-muted-foreground py-4">Fetching returnable items...</div>
           )}
 
           {returnableData && fields.length > 0 && (
             <div className="mt-8">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Return Items</h3>
+              <h3 className="text-lg font-medium text-foreground mb-4">Return Items</h3>
               
               <div className="overflow-x-auto border rounded-lg">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-border">
+                  <thead className="bg-muted/50">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Returnable Max</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Rate</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Condition</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase w-32">Return Qty</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Item</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Returnable Max</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Rate</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Condition</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase w-32">Return Qty</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-card divide-y divide-border">
                     {fields.map((field, index) => {
                       const line = formLines[index];
                       return (
                         <tr key={field.id} className={line.return_quantity > 0 ? 'bg-red-50' : ''}>
-                          <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                          <td className="px-4 py-3 text-sm font-medium text-foreground">
                             {line.item_name_snapshot}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-500 text-right">
+                          <td className="px-4 py-3 text-sm text-muted-foreground text-right">
                             {line.returnable_quantity} {line.unit_snapshot}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-500 text-right">
+                          <td className="px-4 py-3 text-sm text-muted-foreground text-right">
                             ₹{line.rate.toFixed(2)}
                           </td>
                           <td className="px-4 py-3">
                             <select
                               {...register(`lines.${index}.condition`)}
-                              className="text-sm rounded border-gray-300 w-full"
+                              className="text-sm rounded border-input w-full"
                             >
                               <option value="GOOD">Good / Resaleable</option>
                               <option value="DAMAGED">Damaged</option>
@@ -228,7 +228,7 @@ export default function ReturnBuilderPage() {
                               min="0"
                               max={line.returnable_quantity}
                               {...register(`lines.${index}.return_quantity`, { valueAsNumber: true })}
-                              className="w-full rounded border-gray-300 text-right text-sm font-medium text-red-600 focus:ring-red-500 focus:border-red-500"
+                              className="w-full rounded border-input text-right text-sm font-medium text-red-600 focus:ring-red-500 focus:border-red-500"
                             />
                           </td>
                         </tr>
@@ -239,7 +239,7 @@ export default function ReturnBuilderPage() {
               </div>
 
               <div className="mt-4 flex justify-between items-center text-sm">
-                <div className="text-gray-500 italic">
+                <div className="text-muted-foreground italic">
                   Note: The exact tax reversals will be calculated automatically by the server.
                 </div>
                 <div className="font-medium text-lg">

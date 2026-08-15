@@ -86,8 +86,8 @@ export default function ItemsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Products & Services</h2>
-          <p className="mt-1 text-sm text-gray-500">Manage your inventory, pricing, and HSN/SAC codes.</p>
+          <h2 className="text-2xl font-bold text-foreground">Products & Services</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Manage your inventory, pricing, and HSN/SAC codes.</p>
         </div>
         <Button onClick={() => setIsModalOpen(true)}>Add New Item</Button>
       </div>
@@ -95,31 +95,31 @@ export default function ItemsPage() {
       {itemsLoading ? (
         <div>Loading items...</div>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="bg-card rounded-xl shadow-sm border border overflow-hidden">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted/50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name / SKU</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type & HSN</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Sale Price</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Item Name / SKU</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Type & HSN</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Sale Price</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Stock</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-card divide-y divide-border">
               {items.map((item) => (
                 <tr key={item.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{item.name}</div>
-                    <div className="text-xs text-gray-500">{item.sku || 'No SKU'}</div>
+                    <div className="text-sm font-medium text-foreground">{item.name}</div>
+                    <div className="text-xs text-muted-foreground">{item.sku || 'No SKU'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.type === 'Service' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
                       {item.type}
                     </span>
-                    <div className="text-xs text-gray-500 mt-1">{item.hsn_sac ? `HSN: ${item.hsn_sac}` : '-'}</div>
+                    <div className="text-xs text-muted-foreground mt-1">{item.hsn_sac ? `HSN: ${item.hsn_sac}` : '-'}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900 font-medium">
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-foreground font-medium">
                     ₹{item.sale_price.toFixed(2)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
@@ -147,7 +147,7 @@ export default function ItemsPage() {
               ))}
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
                     No items found. Click "Add New Item" to create one.
                   </td>
                 </tr>
@@ -160,10 +160,10 @@ export default function ItemsPage() {
       {isModalOpen && (
         <div className="fixed inset-0 z-10 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={() => setIsModalOpen(false)}></div>
+            <div className="fixed inset-0 transition-opacity bg-black/60" onClick={() => setIsModalOpen(false)}></div>
             <span className="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
-            <div className="inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-white rounded-lg shadow-xl sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full sm:p-6">
-              <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4 border-b pb-2">Add New Item</h3>
+            <div className="inline-block px-4 pt-5 pb-4 overflow-hidden text-left align-bottom transition-all transform bg-card rounded-xl shadow-xl sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full sm:p-6">
+              <h3 className="text-lg font-medium leading-6 text-foreground mb-4 border-b pb-2">Add New Item</h3>
               
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 {apiError && (
@@ -176,8 +176,8 @@ export default function ItemsPage() {
                   {/* Basic Details */}
                   <div className="space-y-4 md:col-span-2 grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Item Type</label>
-                      <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('type')}>
+                      <label className="block text-sm font-medium text-muted-foreground mb-1">Item Type</label>
+                      <select className="block w-full rounded-lg border text-sm px-3 py-2 outline-none transition-colors bg-background border-input focus:border-slate-500" {...register('type')}>
                         <option value="Product">Product (Goods)</option>
                         <option value="Service">Service</option>
                       </select>
@@ -193,8 +193,8 @@ export default function ItemsPage() {
                   </div>
 
                   {/* Pricing Details */}
-                  <div className="md:col-span-2 bg-gray-50 p-4 rounded-md border border-gray-200">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Pricing & Tax</h4>
+                  <div className="md:col-span-2 bg-muted p-4 rounded-md border border">
+                    <h4 className="text-sm font-semibold text-muted-foreground mb-3">Pricing & Tax</h4>
                     <div className="grid grid-cols-2 gap-4">
                       <Input label="Sale Price" type="number" step="0.01" {...register('sale_price')} error={errors.sale_price?.message} />
                       <Input label="Purchase Price" type="number" step="0.01" {...register('purchase_price')} error={errors.purchase_price?.message} />
@@ -207,8 +207,8 @@ export default function ItemsPage() {
                   <div className="md:col-span-2">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Primary Unit</label>
-                        <select className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border px-3 py-2" {...register('unit_id')}>
+                        <label className="block text-sm font-medium text-muted-foreground mb-1">Primary Unit</label>
+                        <select className="block w-full rounded-lg border text-sm px-3 py-2 outline-none transition-colors bg-background border-input focus:border-slate-500" {...register('unit_id')}>
                           <option value="">Select a unit...</option>
                           {units.map(u => (
                             <option key={u.id} value={u.id}>{u.name} ({u.abbreviation})</option>

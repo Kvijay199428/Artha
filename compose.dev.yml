@@ -11,6 +11,7 @@ services:
     environment:
       - DATABASE_URL=sqlite:///./storage/artha.db
       - JWT_SECRET_KEY=dev_secret_key
+      - CORS_ORIGINS=http://localhost:5173,http://localhost:3000,http://localhost:4173,http://localhost:28031
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend_dev:

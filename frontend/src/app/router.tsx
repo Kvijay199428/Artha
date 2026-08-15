@@ -1,6 +1,6 @@
-import { createBrowserRouter, Navigate, Link } from 'react-router-dom';
+import { createBrowserRouter, Navigate, Link, useLocation } from 'react-router-dom';
 import App from '../App';
-import { useAuth } from './providers';
+import { useAuth, useTheme } from './providers';
 import LoginPage from '../features/auth/LoginPage';
 import SetupPage from '../features/auth/SetupPage';
 import PinChangePage from '../features/auth/PinChangePage';
@@ -18,55 +18,155 @@ import QuotationBuilderPage from '../features/quotations/QuotationBuilderPage';
 import BOQListPage from '../features/boqs/BOQListPage';
 import EstimateListPage from '../features/estimates/EstimateListPage';
 
+// ── Guards ────────────────────────────────────────────────────────────────────
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isLoading } = useAuth();
-  
-  if (isLoading) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  const { isAuthenticated } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" />;
-  
   return <>{children}</>;
 };
 
+// ── Theme toggle button ───────────────────────────────────────────────────────
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme();
+  const icons = { light: '☀️', dark: '🌙', system: '💻' };
+  const next: Record<string, 'dark' | 'system' | 'light'> = { light: 'dark', dark: 'system', system: 'light' };
+  return (
+    <button
+      onClick={() => setTheme(next[theme])}
+      title={`Theme: ${theme} — click to change`}
+      className="text-xs px-2 py-1 rounded-md bg-muted text-muted-foreground hover:bg-accent transition-colors border border"
+    >
+      {icons[theme]}
+    </button>
+  );
+}
+
+// ── Nav link ──────────────────────────────────────────────────────────────────
+function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
+  const loc = useLocation();
+  const active = loc.pathname === to || (to !== '/' && loc.pathname.startsWith(to));
+  return (
+    <Link
+      to={to}
+      className={`block px-3 py-2 rounded-md text-sm transition-colors ${
+        active ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium' : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+      }`}
+    >
+      {children}
+    </Link>
+  );
+}
+
+// ── Dashboard Shell ───────────────────────────────────────────────────────────
 const DashboardShell = ({ children }: { children: React.ReactNode }) => {
   const { logout } = useAuth();
+
   return (
-    <div className="min-h-screen flex bg-gray-50">
-      <div className="w-64 bg-white border-r hidden md:block">
-        <div className="h-16 flex items-center px-6 font-bold text-xl text-primary-600 border-b">
-          Artha Billing
+    <div className="min-h-screen flex bg-background">
+      {/* Sidebar */}
+      <aside className="w-64 bg-sidebar border-r border-sidebar-border hidden md:flex flex-col">
+        {/* Logo */}
+        <div className="h-16 flex items-center justify-between px-5 border-b border-sidebar-border flex-shrink-0">
+          <Link to="/" className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-slate-900 dark:bg-white flex items-center justify-center">
+              <span className="text-white dark:text-slate-900 text-xs font-black">A</span>
+            </div>
+            <span className="font-black tracking-widest text-foreground text-sm uppercase">ARTHA</span>
+          </Link>
+          <ThemeToggle />
         </div>
-        <nav className="p-4 space-y-2">
-          <Link to="/" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Dashboard</Link>
-          <Link to="/invoices/new" className="block px-4 py-2 text-blue-700 hover:bg-blue-50 font-medium rounded-md bg-blue-50">+ Create Invoice</Link>
-          <Link to="/invoices" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Sales Invoices</Link>
-          <Link to="/purchase-bills" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Purchase Bills</Link>
-          <Link to="/supply-in" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Supply In</Link>
-          <Link to="/supply-in/quotations" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md pl-8">↳ Quotations</Link>
-          <Link to="/supply-in/returns" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md pl-8">↳ Returns</Link>
-          <Link to="/supply-out" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Supply Out</Link>
-          <Link to="/supply-out/quotations" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md pl-8">↳ Quotations</Link>
-          <Link to="/supply-out/returns" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md pl-8">↳ Returns</Link>
-          <Link to="/boqs" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">BOQ</Link>
-          <Link to="/estimates" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Estimates</Link>
-          <Link to="/parties" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Customers & Vendors</Link>
-          <Link to="/items" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Items & Products</Link>
-          <Link to="/units" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Units</Link>
-          <Link to="/pin-change" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Security PIN</Link>
-          <button onClick={logout} className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded-md">Logout</button>
+
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
+          <NavLink to="/">Dashboard</NavLink>
+
+          <div className="pt-3 pb-1">
+            <p className="px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Sales</p>
+          </div>
+          <NavLink to="/invoices/new">+ Create Invoice</NavLink>
+          <NavLink to="/invoices">Sales Invoices</NavLink>
+
+          <div className="pt-3 pb-1">
+            <p className="px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Purchases</p>
+          </div>
+          <NavLink to="/purchase-bills">Purchase Bills</NavLink>
+
+          <div className="pt-3 pb-1">
+            <p className="px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Supply</p>
+          </div>
+          <NavLink to="/supply-in">Supply In</NavLink>
+          <NavLink to="/supply-in/quotations">↳ Quotations</NavLink>
+          <NavLink to="/supply-in/returns">↳ Returns</NavLink>
+          <NavLink to="/supply-out">Supply Out</NavLink>
+          <NavLink to="/supply-out/quotations">↳ Quotations</NavLink>
+          <NavLink to="/supply-out/returns">↳ Returns</NavLink>
+
+          <div className="pt-3 pb-1">
+            <p className="px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Documents</p>
+          </div>
+          <NavLink to="/boqs">BOQ</NavLink>
+          <NavLink to="/estimates">Estimates</NavLink>
+
+          <div className="pt-3 pb-1">
+            <p className="px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Master</p>
+          </div>
+          <NavLink to="/parties">Customers & Vendors</NavLink>
+          <NavLink to="/items">Items & Products</NavLink>
+          <NavLink to="/units">Units</NavLink>
         </nav>
-      </div>
-      <div className="flex-1">
-        <header className="h-16 bg-white border-b flex items-center px-6 md:hidden justify-between">
-          <span className="font-bold text-xl text-primary-600">Artha</span>
-          <button onClick={logout} className="text-sm text-red-600 font-medium">Logout</button>
+
+        {/* Footer */}
+        <div className="p-3 border-t border-sidebar-border space-y-1 flex-shrink-0">
+          <NavLink to="/pin-change">🔐 Security PIN</NavLink>
+          <button
+            onClick={logout}
+            className="w-full text-left block px-3 py-2 rounded-md text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+          >
+            ← Logout
+          </button>
+        </div>
+      </aside>
+
+      {/* Main area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Mobile header */}
+        <header className="h-14 bg-sidebar border-b border-sidebar-border flex items-center justify-between px-4 md:hidden">
+          <Link to="/" className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-slate-900 dark:bg-white flex items-center justify-center">
+              <span className="text-white dark:text-slate-900 text-xs font-black">A</span>
+            </div>
+            <span className="font-black tracking-widest text-foreground text-sm uppercase">ARTHA</span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <button
+              onClick={logout}
+              className="text-sm text-red-500 font-medium px-3 py-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            >
+              Logout
+            </button>
+          </div>
         </header>
-        <main className="p-6">
+
+        {/* Page content */}
+        <main className="flex-1 p-4 md:p-6 overflow-auto">
           {children}
         </main>
       </div>
     </div>
   );
 };
+
+// ── Helpers for themed page elements ─────────────────────────────────────────
+// Re-exported for use in page components
+export { DashboardShell };
+
+// ── Router ────────────────────────────────────────────────────────────────────
+const wrap = (element: React.ReactNode) => (
+  <ProtectedRoute>
+    <DashboardShell>{element}</DashboardShell>
+  </ProtectedRoute>
+);
 
 export const router = createBrowserRouter([
   {
@@ -75,239 +175,44 @@ export const router = createBrowserRouter([
     children: [
       {
         path: '/',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-                <h1 className="text-2xl font-bold mb-4">Welcome to Artha</h1>
-                <p className="text-gray-600 mb-6">This is your secure billing dashboard. Choose a module from the sidebar to begin.</p>
-                <div className="flex space-x-4">
-                  <Link to="/invoices/new" className="px-4 py-2 bg-primary-600 text-white rounded-md font-medium">Create Invoice</Link>
-                  <Link to="/invoices" className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md font-medium hover:bg-gray-50">View Invoices</Link>
-                </div>
-              </div>
-            </DashboardShell>
-          </ProtectedRoute>
+        element: wrap(
+          <div className="bg-card rounded-xl shadow-sm border border p-6">
+            <h1 className="text-2xl font-bold text-foreground mb-2">Welcome to ARTHA</h1>
+            <p className="text-muted-foreground mb-6">Your secure GST billing dashboard. Choose a module from the sidebar.</p>
+            <div className="flex flex-wrap gap-3">
+              <Link to="/invoices/new" className="px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity">
+                Create Invoice
+              </Link>
+              <Link to="/invoices" className="px-4 py-2 bg-muted text-foreground rounded-lg font-medium text-sm border border hover:bg-accent transition-colors">
+                View Invoices
+              </Link>
+            </div>
+          </div>
         ),
       },
-      {
-        path: 'invoices/new',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <InvoiceBuilderPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'invoices',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <InvoiceListPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'purchase-bills',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <InvoiceListPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'supply-in',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <OrderListPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'supply-in/quotations',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <QuotationListPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'supply-in/quotations/new',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <QuotationBuilderPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'supply-in/returns',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <ReturnListPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'supply-in/returns/new',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <ReturnBuilderPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'supply-in/new',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <OrderBuilderPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'supply-out',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <OrderListPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'supply-out/quotations',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <QuotationListPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'supply-out/quotations/new',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <QuotationBuilderPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'supply-out/returns',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <ReturnListPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'supply-out/returns/new',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <ReturnBuilderPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'boqs',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <BOQListPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'estimates',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <EstimateListPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'supply-out/new',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <OrderBuilderPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'parties',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <PartiesPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'items',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <ItemsPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'units',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <UnitsPage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'pin-change',
-        element: (
-          <ProtectedRoute>
-            <DashboardShell>
-              <PinChangePage />
-            </DashboardShell>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'login',
-        element: <LoginPage />,
-      },
-      {
-        path: 'setup',
-        element: <SetupPage />,
-      }
+      { path: 'invoices/new',              element: wrap(<InvoiceBuilderPage />) },
+      { path: 'invoices',                  element: wrap(<InvoiceListPage />) },
+      { path: 'purchase-bills',            element: wrap(<InvoiceListPage />) },
+      { path: 'supply-in',                 element: wrap(<OrderListPage />) },
+      { path: 'supply-in/quotations',      element: wrap(<QuotationListPage />) },
+      { path: 'supply-in/quotations/new',  element: wrap(<QuotationBuilderPage />) },
+      { path: 'supply-in/returns',         element: wrap(<ReturnListPage />) },
+      { path: 'supply-in/returns/new',     element: wrap(<ReturnBuilderPage />) },
+      { path: 'supply-in/new',             element: wrap(<OrderBuilderPage />) },
+      { path: 'supply-out',                element: wrap(<OrderListPage />) },
+      { path: 'supply-out/quotations',     element: wrap(<QuotationListPage />) },
+      { path: 'supply-out/quotations/new', element: wrap(<QuotationBuilderPage />) },
+      { path: 'supply-out/returns',        element: wrap(<ReturnListPage />) },
+      { path: 'supply-out/returns/new',    element: wrap(<ReturnBuilderPage />) },
+      { path: 'supply-out/new',            element: wrap(<OrderBuilderPage />) },
+      { path: 'boqs',                      element: wrap(<BOQListPage />) },
+      { path: 'estimates',                 element: wrap(<EstimateListPage />) },
+      { path: 'parties',                   element: wrap(<PartiesPage />) },
+      { path: 'items',                     element: wrap(<ItemsPage />) },
+      { path: 'units',                     element: wrap(<UnitsPage />) },
+      { path: 'pin-change',                element: wrap(<PinChangePage />) },
+      { path: 'login',                     element: <LoginPage /> },
+      { path: 'setup',                     element: <SetupPage /> },
     ],
   },
 ]);

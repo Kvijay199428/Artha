@@ -47,12 +47,12 @@ export default function PinChangePage() {
   };
 
   return (
-    <div className="max-w-md mx-auto space-y-8 bg-white p-10 rounded-xl shadow border border-gray-100 mt-12">
+    <div className="max-w-md mx-auto space-y-8 bg-card p-10 rounded-xl shadow border mt-12">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
+        <h2 className="text-2xl font-bold text-foreground tracking-tight">
           Change Security PIN
         </h2>
-        <p className="mt-2 text-sm text-gray-600">
+        <p className="mt-2 text-sm text-muted-foreground">
           Update your 4-digit PIN for dashboard access.
         </p>
       </div>

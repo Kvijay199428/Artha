@@ -23,9 +23,12 @@ class CompanyService:
             status="ACTIVE",
             mobile=data.mobile,
             mobile_country_code=data.mobile_country_code,
+            mobile_e164=data.mobile_e164,
             office_phone=data.office_phone,
             office_phone_country_code=data.office_phone_country_code,
+            office_phone_e164=data.office_phone_e164,
             email=data.email,
+            website=data.website,
             authorized_person_name=data.authorized_person_name,
             authorized_person_designation=data.authorized_person_designation,
         )
@@ -71,18 +74,19 @@ class CompanyService:
         )
         db.add(address)
         
-        # Bank account
-        bank = CompanyBankAccount(
-            company_id=company.id,
-            account_holder_name=data.bank_account_holder_name,
-            account_number=data.bank_account_number,
-            ifsc=data.bank_ifsc.upper(),
-            bank_name=data.bank_name,
-            branch=data.bank_branch,
-            account_type=data.bank_account_type,
-            is_primary=True,
-        )
-        db.add(bank)
+        # Bank account — optional, only create if details provided
+        if data.bank_account_number and data.bank_ifsc and data.bank_account_holder_name:
+            bank = CompanyBankAccount(
+                company_id=company.id,
+                account_holder_name=data.bank_account_holder_name,
+                account_number=data.bank_account_number,
+                ifsc=data.bank_ifsc.upper(),
+                bank_name=data.bank_name,
+                branch=data.bank_branch or "",
+                account_type=data.bank_account_type or "CURRENT",
+                is_primary=True,
+            )
+            db.add(bank)
         
         # Auth
         auth = CompanyAuth(
