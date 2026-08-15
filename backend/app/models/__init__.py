@@ -13,7 +13,8 @@ from app.models.adjustment import AdjustmentNote, AdjustmentNoteLine, NoteAlloca
 from app.models.order import SupplyOrder, SupplyOrderLine
 from app.models.return_order import ReturnOrder, ReturnOrderLine, ReturnSettlement
 from app.models.quotation import Quotation, QuotationLine, QuotationStatus, QuotationType
-from app.models.boq import BOQ, BOQLine, BOQStatus, BOQItemType, DocumentLink
+from app.models.boq import BOQ, BOQLine, BOQStatus, BOQItemType
+from app.models.document_link import DocumentLink, DocumentLineLink
 from app.models.estimate import Estimate, EstimateLine, EstimateStatus
 from app.models.audit import AuditLog
 from app.models.master import GSTStateCode, GSTRate, HSNSACCode
@@ -30,7 +31,12 @@ __all__ = [
     "SupplyOrder", "SupplyOrderLine",
     "ReturnOrder", "ReturnOrderLine", "ReturnSettlement",
     "Quotation", "QuotationLine", "QuotationStatus", "QuotationType",
-    "BOQ", "BOQLine", "BOQStatus", "BOQItemType", "DocumentLink",
+    "BOQ",
+    "BOQLine",
+    "BOQStatus",
+    "BOQItemType",
+    "DocumentLink",
+    "DocumentLineLink",
     "Estimate", "EstimateLine", "EstimateStatus",
     "AuditLog",
     "GSTStateCode", "GSTRate", "HSNSACCode",

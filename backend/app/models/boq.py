@@ -8,25 +8,6 @@ from app.core.database import Base
 def utc_now():
     return datetime.now(timezone.utc)
 
-class DocumentLink(Base):
-    __tablename__ = "document_links"
-    
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    company_id = Column(String(36), ForeignKey("companies.id"), nullable=False)
-    
-    source_type = Column(String(50), nullable=False)
-    source_id = Column(String(36), nullable=False)
-    source_revision = Column(Integer, nullable=True)
-    
-    target_type = Column(String(50), nullable=False)
-    target_id = Column(String(36), nullable=False)
-    target_revision = Column(Integer, nullable=True)
-    
-    relationship_type = Column(String(50), nullable=False) # e.g. "ESTIMATED_FROM_BOQ", "QUOTED_FROM_ESTIMATE", "CONVERTED_TO_ORDER"
-    
-    created_by = Column(String(36), nullable=True)
-    created_at = Column(DateTime, default=utc_now)
-
 class BOQStatus(enum.Enum):
     DRAFT = "DRAFT"
     REVIEW = "REVIEW"

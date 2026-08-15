@@ -31,6 +31,17 @@ class Invoice(Base):
     place_of_supply = Column(String(100), nullable=False)
     
     # Seller snapshots (For SALES, this is the company. For PURCHASE, this is the party)
+    shipping_address_id = Column(String(36), ForeignKey("addresses.id"), nullable=True)
+    
+    financial_year = Column(String(20), nullable=True)
+    
+    # Pre-invoice genealogy fields
+    origin_document_type = Column(String(50), nullable=True)
+    origin_document_id = Column(String(36), nullable=True)
+    origin_document_number = Column(String(100), nullable=True)
+    
+    source_order_id = Column(String(36), nullable=True)
+    source_order_number = Column(String(100), nullable=True)
     seller_id = Column(String(36), ForeignKey("parties.id"), nullable=True)
     seller_name_snapshot = Column(String(200), nullable=False)
     seller_gstin_snapshot = Column(String(15), nullable=True)

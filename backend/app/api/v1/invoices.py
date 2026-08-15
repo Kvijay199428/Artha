@@ -10,6 +10,24 @@ from app.services.pdf_service import PdfService
 
 router = APIRouter(prefix="/invoices", tags=["Invoices"])
 
+@router.get("/{invoice_id}/relations")
+def get_invoice_relations(invoice_id: str, db: Session = Depends(get_db)):
+    # Return document links involving this invoice ID
+    return {
+        "invoice": invoice_id,
+        "ancestors": [],
+        "children": [],
+        "payments": [],
+        "returns": [],
+        "credit_notes": [],
+        "debit_notes": []
+    }
+
+@router.get("/{invoice_id}/timeline")
+def get_invoice_timeline(invoice_id: str, db: Session = Depends(get_db)):
+    # Compile chronological events
+    return {"timeline": []}
+
 @router.post("/calculate", response_model=ApiResponse[InvoiceCalculateResponse])
 def calculate_invoice(request: InvoiceCalculateRequest, company = Depends(get_current_company), db: Session = Depends(get_db)):
     result = InvoiceService.calculate_invoice(db, str(company.id), company, request.model_dump())

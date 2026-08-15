@@ -49,8 +49,10 @@ export interface InvoiceResponse {
   invoice_type: string;
   transaction_type: string;
   invoice_date: string;
+  customer_id: string;
   customer_name_snapshot: string;
   place_of_supply: string;
+  tax_treatment?: string;
   subtotal: number;
   discount_total: number;
   taxable_total: number;

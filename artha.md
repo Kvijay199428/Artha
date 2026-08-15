@@ -73,7 +73,7 @@ datefmt = %H:%M:%S
 ```python
 // File: backend/app/api/v1/__init__.py
 from fastapi import APIRouter
-from app.api.v1 import auth, company, units, items, parties, invoices, master, orders, returns, quotations, boq, estimates, gst, adjustments
+from app.api.v1 import auth, company, units, items, parties, invoices, master, orders, returns, quotations, boq, estimates, gst, adjustments, documents
 
 api_router = APIRouter(prefix="/v1")
 api_router.include_router(auth.router)
@@ -90,6 +90,7 @@ api_router.include_router(boq.router)
 api_router.include_router(estimates.router)
 api_router.include_router(gst.router)
 api_router.include_router(adjustments.router)
+api_router.include_router(documents.router)
 ```
 
 ```python
@@ -420,6 +421,21 @@ def get_company_logo(company = Depends(get_current_company), db: Session = Depen
 ```
 
 ```python
+// File: backend/app/api/v1/documents.py
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from app.api import deps
+# Use models and schemas
+
+router = APIRouter()
+
+@router.get("/search")
+def search_documents(q: str, db: Session = Depends(deps.get_db)):
+    # Search logic across invoices, notes, quotes, etc. based on `q`
+    return {"results": []}
+```
+
+```python
 // File: backend/app/api/v1/estimates.py
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -536,6 +552,24 @@ from app.services.invoice_service import InvoiceService
 from app.services.pdf_service import PdfService
 
 router = APIRouter(prefix="/invoices", tags=["Invoices"])
+
+@router.get("/{invoice_id}/relations")
+def get_invoice_relations(invoice_id: str, db: Session = Depends(get_db)):
+    # Return document links involving this invoice ID
+    return {
+        "invoice": invoice_id,
+        "ancestors": [],
+        "children": [],
+        "payments": [],
+        "returns": [],
+        "credit_notes": [],
+        "debit_notes": []
+    }
+
+@router.get("/{invoice_id}/timeline")
+def get_invoice_timeline(invoice_id: str, db: Session = Depends(get_db)):
+    # Compile chronological events
+    return {"timeline": []}
 
 @router.post("/calculate", response_model=ApiResponse[InvoiceCalculateResponse])
 def calculate_invoice(request: InvoiceCalculateRequest, company = Depends(get_current_company), db: Session = Depends(get_db)):
@@ -1882,7 +1916,8 @@ from app.models.adjustment import AdjustmentNote, AdjustmentNoteLine, NoteAlloca
 from app.models.order import SupplyOrder, SupplyOrderLine
 from app.models.return_order import ReturnOrder, ReturnOrderLine, ReturnSettlement
 from app.models.quotation import Quotation, QuotationLine, QuotationStatus, QuotationType
-from app.models.boq import BOQ, BOQLine, BOQStatus, BOQItemType, DocumentLink
+from app.models.boq import BOQ, BOQLine, BOQStatus, BOQItemType
+from app.models.document_link import DocumentLink, DocumentLineLink
 from app.models.estimate import Estimate, EstimateLine, EstimateStatus
 from app.models.audit import AuditLog
 from app.models.master import GSTStateCode, GSTRate, HSNSACCode
@@ -1899,7 +1934,12 @@ __all__ = [
     "SupplyOrder", "SupplyOrderLine",
     "ReturnOrder", "ReturnOrderLine", "ReturnSettlement",
     "Quotation", "QuotationLine", "QuotationStatus", "QuotationType",
-    "BOQ", "BOQLine", "BOQStatus", "BOQItemType", "DocumentLink",
+    "BOQ",
+    "BOQLine",
+    "BOQStatus",
+    "BOQItemType",
+    "DocumentLink",
+    "DocumentLineLink",
     "Estimate", "EstimateLine", "EstimateStatus",
     "AuditLog",
     "GSTStateCode", "GSTRate", "HSNSACCode",
@@ -1929,6 +1969,12 @@ class AdjustmentNote(Base):
     source_type = Column(String(50), nullable=True)
     source_id = Column(String(36), nullable=True)
     source_number = Column(String(50), nullable=True)
+    
+    invoice_id = Column(String(36), ForeignKey("invoices.id"), nullable=True)
+    invoice_number_snapshot = Column(String(50), nullable=True)
+    
+    original_invoice_id = Column(String(36), nullable=True)
+    original_invoice_number = Column(String(100), nullable=True)
     
     party_id = Column(String(36), ForeignKey("parties.id"), nullable=False)
     party_role = Column(String(20), nullable=False) # CUSTOMER, SUPPLIER
@@ -2071,25 +2117,6 @@ from app.core.database import Base
 
 def utc_now():
     return datetime.now(timezone.utc)
-
-class DocumentLink(Base):
-    __tablename__ = "document_links"
-    
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    company_id = Column(String(36), ForeignKey("companies.id"), nullable=False)
-    
-    source_type = Column(String(50), nullable=False)
-    source_id = Column(String(36), nullable=False)
-    source_revision = Column(Integer, nullable=True)
-    
-    target_type = Column(String(50), nullable=False)
-    target_id = Column(String(36), nullable=False)
-    target_revision = Column(Integer, nullable=True)
-    
-    relationship_type = Column(String(50), nullable=False) # e.g. "ESTIMATED_FROM_BOQ", "QUOTED_FROM_ESTIMATE", "CONVERTED_TO_ORDER"
-    
-    created_by = Column(String(36), nullable=True)
-    created_at = Column(DateTime, default=utc_now)
 
 class BOQStatus(enum.Enum):
     DRAFT = "DRAFT"
@@ -2333,6 +2360,63 @@ class CompanySession(Base):
 ```
 
 ```python
+// File: backend/app/models/document_link.py
+import uuid
+from datetime import datetime, timezone
+from sqlalchemy import Column, String, DateTime, Integer, ForeignKey, Numeric
+from app.core.database import Base
+
+def utc_now():
+    return datetime.now(timezone.utc)
+
+class DocumentLink(Base):
+    __tablename__ = "document_links"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    company_id = Column(String(36), ForeignKey("companies.id"), nullable=False)
+    
+    source_type = Column(String(50), nullable=False)
+    source_id = Column(String(36), nullable=False)
+    source_number = Column(String(100), nullable=True)
+    source_revision = Column(Integer, nullable=True)
+    
+    target_type = Column(String(50), nullable=False)
+    target_id = Column(String(36), nullable=False)
+    target_number = Column(String(100), nullable=True)
+    target_revision = Column(Integer, nullable=True)
+    
+    relationship_type = Column(String(50), nullable=False)
+    
+    quantity = Column(Numeric(15, 5), nullable=True)
+    amount = Column(Numeric(15, 2), nullable=True)
+    
+    created_by = Column(String(36), nullable=True)
+    created_at = Column(DateTime, default=utc_now)
+
+
+class DocumentLineLink(Base):
+    __tablename__ = "document_line_links"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    
+    source_document_type = Column(String(50), nullable=False)
+    source_document_id = Column(String(36), nullable=False)
+    source_line_id = Column(String(36), nullable=False)
+    
+    target_document_type = Column(String(50), nullable=False)
+    target_document_id = Column(String(36), nullable=False)
+    target_line_id = Column(String(36), nullable=False)
+    
+    source_quantity = Column(Numeric(15, 5), nullable=True)
+    converted_quantity = Column(Numeric(15, 5), nullable=True)
+    
+    source_amount = Column(Numeric(15, 2), nullable=True)
+    converted_amount = Column(Numeric(15, 2), nullable=True)
+    
+    created_at = Column(DateTime, default=utc_now)
+```
+
+```python
 // File: backend/app/models/estimate.py
 import uuid
 from datetime import datetime, timezone
@@ -2444,6 +2528,17 @@ class Invoice(Base):
     place_of_supply = Column(String(100), nullable=False)
     
     # Seller snapshots (For SALES, this is the company. For PURCHASE, this is the party)
+    shipping_address_id = Column(String(36), ForeignKey("addresses.id"), nullable=True)
+    
+    financial_year = Column(String(20), nullable=True)
+    
+    # Pre-invoice genealogy fields
+    origin_document_type = Column(String(50), nullable=True)
+    origin_document_id = Column(String(36), nullable=True)
+    origin_document_number = Column(String(100), nullable=True)
+    
+    source_order_id = Column(String(36), nullable=True)
+    source_order_number = Column(String(100), nullable=True)
     seller_id = Column(String(36), ForeignKey("parties.id"), nullable=True)
     seller_name_snapshot = Column(String(200), nullable=False)
     seller_gstin_snapshot = Column(String(15), nullable=True)
@@ -5099,6 +5194,40 @@ class GSTCalculationService:
                 "igst": tax_amount,
                 "cess": Decimal('0')
             }
+```
+
+```python
+// File: backend/app/services/invoice_creation_service.py
+from sqlalchemy.orm import Session
+from app.models.invoice import Invoice, InvoiceLine
+from app.models.document_link import DocumentLink
+import uuid
+from datetime import datetime, timezone
+
+def utc_now():
+    return datetime.now(timezone.utc)
+
+class InvoiceCreationService:
+    def __init__(self, db: Session):
+        self.db = db
+        
+    def _calculate_gst(self, items):
+        # Implementation to centralize GST logic
+        pass
+
+    def create_from_order(self, order_id: str, company_id: str, created_by: str) -> Invoice:
+        # Fetch supply order and validate
+        # Then create draft invoice with proper origin links
+        # Create DocumentLink record
+        # Return draft invoice
+        pass
+
+    def convert_to_final(self, invoice_id: str):
+        # BEGIN TRANSACTION logic
+        # Assign series number
+        # Set FINALIZED
+        # COMMIT
+        pass
 ```
 
 ```python
@@ -8231,8 +8360,10 @@ export interface InvoiceResponse {
   invoice_type: string;
   transaction_type: string;
   invoice_date: string;
+  customer_id: string;
   customer_name_snapshot: string;
   place_of_supply: string;
+  tax_treatment?: string;
   subtotal: number;
   discount_total: number;
   taxable_total: number;
@@ -8914,6 +9045,7 @@ import ItemsPage from '../features/master/ItemsPage';
 import PartiesPage from '../features/master/PartiesPage';
 import InvoiceBuilderPage from '../features/invoices/InvoiceBuilderPage';
 import InvoiceListPage from '../features/invoices/InvoiceListPage';
+import InvoiceDetailPage from '../features/invoices/InvoiceDetailPage';
 import OrderListPage from '../features/orders/OrderListPage';
 import OrderBuilderPage from '../features/orders/OrderBuilderPage';
 import ReturnListPage from '../features/returns/ReturnListPage';
@@ -9103,8 +9235,9 @@ export const router = createBrowserRouter([
           </div>
         ),
       },
-      { path: 'invoices/new',              element: wrap(<InvoiceBuilderPage />) },
       { path: 'invoices',                  element: wrap(<InvoiceListPage />) },
+      { path: 'invoices/new',              element: wrap(<InvoiceBuilderPage />) },
+      { path: 'invoices/:id',              element: wrap(<InvoiceDetailPage />) },
       { path: 'purchase-bills',            element: wrap(<InvoiceListPage />) },
       { path: 'supply-in',                 element: wrap(<OrderListPage />) },
       { path: 'supply-in/quotations',      element: wrap(<QuotationListPage />) },
@@ -9774,6 +9907,72 @@ export { BankAccountTypeSelect } from './BankAccountTypeSelect';
 ```
 
 ```tsx
+// File: frontend/src/components/invoice/InvoiceReferenceSelector.tsx
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Input } from '../ui/input';
+import { Card } from '../ui/card';
+import { invoicesApi, type InvoiceResponse } from '../../api/invoices';
+
+interface Props {
+  onSelect: (invoice: InvoiceResponse) => void;
+  title?: string;
+  transactionType?: 'SALES' | 'PURCHASE';
+}
+
+export function InvoiceReferenceSelector({ onSelect, title = "Select Source Invoice", transactionType = 'SALES' }: Props) {
+  const [search, setSearch] = useState('');
+  
+  const { data, isLoading } = useQuery({
+    queryKey: ['invoices', transactionType, search],
+    queryFn: () => invoicesApi.getAll(transactionType),
+  });
+
+  const invoices = data?.items?.filter((inv: any) => 
+    inv.invoice_number.toLowerCase().includes(search.toLowerCase()) ||
+    inv.customer_name_snapshot.toLowerCase().includes(search.toLowerCase())
+  ) || [];
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-6 mt-8">
+      <div>
+        <h2 className="text-2xl font-bold">{title}</h2>
+        <p className="text-muted-foreground">Search by Invoice Number or Customer/Supplier</p>
+      </div>
+
+      <Input 
+        placeholder="Search..." 
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="w-full text-lg p-6"
+      />
+
+      <div className="space-y-4">
+        {isLoading ? (
+          <p>Loading...</p>
+        ) : (
+          invoices.map((inv: any) => (
+            <Card key={inv.id} className="p-4 hover:border-primary cursor-pointer transition-colors" onClick={() => onSelect(inv)}>
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="font-bold text-lg">{inv.invoice_number}</h3>
+                  <p className="text-muted-foreground">{inv.customer_name_snapshot}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-medium">₹{inv.grand_total.toFixed(2)}</p>
+                  <p className="text-sm text-muted-foreground">{inv.invoice_date}</p>
+                </div>
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+```
+
+```tsx
 // File: frontend/src/components/ui/badge.tsx
 import * as React from 'react';
 import { cn } from '../../lib/utils';
@@ -10368,6 +10567,7 @@ export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, Tabl
 
 ```tsx
 // File: frontend/src/features/adjustmentNotes/AdjustmentNoteBuilderPage.tsx
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -10376,6 +10576,8 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
+import { InvoiceReferenceSelector } from '../../components/invoice/InvoiceReferenceSelector';
+import { type InvoiceResponse } from '../../api/invoices';
 
 const schema = z.object({
   party_id: z.string().min(1, "Party is required"),
@@ -10390,13 +10592,18 @@ type FormData = z.infer<typeof schema>;
 
 export default function AdjustmentNoteBuilderPage({ noteType }: { noteType: 'CREDIT_NOTE' | 'DEBIT_NOTE' }) {
   const navigate = useNavigate();
+  const [sourceInvoice, setSourceInvoice] = useState<InvoiceResponse | null>(null);
+
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: {
+    values: sourceInvoice ? {
+      party_id: sourceInvoice.customer_id,
       party_role: 'CUSTOMER',
-      tax_treatment: 'GST',
       note_date: new Date().toISOString().split('T')[0],
-    }
+      reason_code: 'SALES_RETURN',
+      tax_treatment: sourceInvoice.tax_treatment as any,
+      place_of_supply: sourceInvoice.place_of_supply || '',
+    } : undefined
   });
 
   const createMutation = useMutation({
@@ -10414,19 +10621,47 @@ export default function AdjustmentNoteBuilderPage({ noteType }: { noteType: 'CRE
     });
   };
 
+  if (!sourceInvoice) {
+    return (
+      <InvoiceReferenceSelector 
+        onSelect={setSourceInvoice} 
+        title={`Select Invoice for ${noteType === 'CREDIT_NOTE' ? 'Credit Note' : 'Debit Note'}`}
+      />
+    );
+  }
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold">New {noteType === 'CREDIT_NOTE' ? 'Credit Note' : 'Debit Note'}</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">New {noteType === 'CREDIT_NOTE' ? 'Credit Note' : 'Debit Note'}</h1>
+        <Button variant="outline" onClick={() => setSourceInvoice(null)}>Change Invoice</Button>
+      </div>
+
+      <div className="bg-muted p-4 rounded-lg flex justify-between">
+        <div>
+          <p className="text-sm text-muted-foreground">Original Invoice</p>
+          <p className="font-bold">{sourceInvoice.invoice_number}</p>
+        </div>
+        <div>
+          <p className="text-sm text-muted-foreground">Customer</p>
+          <p className="font-bold">{sourceInvoice.customer_name_snapshot}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-sm text-muted-foreground">Amount</p>
+          <p className="font-bold">₹{sourceInvoice.grand_total.toFixed(2)}</p>
+        </div>
+      </div>
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Party ID</label>
-            <Input {...register('party_id')} />
+            <Input {...register('party_id')} disabled />
             {errors.party_id && <p className="text-red-500 text-xs mt-1">{errors.party_id.message}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Party Role</label>
-            <select {...register('party_role')} className="w-full p-2 border rounded-md">
+            <select {...register('party_role')} className="w-full p-2 border rounded-md" disabled>
               <option value="CUSTOMER">Customer</option>
               <option value="SUPPLIER">Supplier</option>
             </select>
@@ -12254,6 +12489,148 @@ export default function InvoiceBuilderPage() {
           </Button>
         </div>
       </form>
+    </div>
+  );
+}
+```
+
+```tsx
+// File: frontend/src/features/invoices/InvoiceDetailPage.tsx
+import { useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { invoicesApi } from '../../api/invoices';
+import { Button } from '../../components/ui/button';
+
+export default function InvoiceDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const [activeTab, setActiveTab] = useState('overview');
+
+  const { data: invoice, isLoading } = useQuery({
+    queryKey: ['invoice', id],
+    queryFn: async () => {
+      // Replace with a dedicated GET endpoint for a single invoice in the future.
+      const res = await invoicesApi.getAll('SALES');
+      return res.items.find((i: any) => i.id === id) || null;
+    }
+  });
+
+  if (isLoading) return <div>Loading...</div>;
+  if (!invoice) return <div>Invoice not found.</div>;
+
+  const tabs = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'items', label: 'Items' },
+    { id: 'payments', label: 'Payments' },
+    { id: 'returns', label: 'Returns' },
+    { id: 'credit_notes', label: 'Credit Notes' },
+    { id: 'debit_notes', label: 'Debit Notes' },
+    { id: 'documents', label: 'Documents' },
+    { id: 'timeline', label: 'Timeline' },
+  ];
+
+  return (
+    <div className="max-w-5xl mx-auto space-y-6 mt-4">
+      <div className="flex justify-between items-start">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold">{invoice.invoice_number}</h1>
+            <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold">
+              {invoice.invoice_status}
+            </span>
+          </div>
+          <p className="text-muted-foreground mt-1">{invoice.customer_name_snapshot} • {invoice.invoice_date}</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline">Payment</Button>
+          <Button variant="outline">Credit Note</Button>
+          <Button variant="outline" onClick={() => invoicesApi.getPdf(invoice.id)}>Download PDF</Button>
+        </div>
+      </div>
+
+      <div className="border-b">
+        <nav className="flex space-x-8 overflow-x-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors
+                ${activeTab === tab.id 
+                  ? 'border-primary text-primary' 
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted'
+                }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      <div className="pt-4">
+        {activeTab === 'overview' && (
+          <div className="grid grid-cols-3 gap-6">
+            <div className="bg-card border p-4 rounded-lg">
+              <p className="text-sm text-muted-foreground mb-1">Invoice Amount</p>
+              <p className="text-2xl font-bold">₹{invoice.grand_total.toFixed(2)}</p>
+            </div>
+            <div className="bg-card border p-4 rounded-lg">
+              <p className="text-sm text-muted-foreground mb-1">Outstanding</p>
+              <p className="text-2xl font-bold text-red-500">₹{invoice.grand_total.toFixed(2)}</p>
+            </div>
+            <div className="bg-card border p-4 rounded-lg">
+              <p className="text-sm text-muted-foreground mb-1">Status</p>
+              <p className="text-xl font-medium">{invoice.payment_status || 'UNPAID'}</p>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'documents' && (
+          <div className="p-6 bg-card border rounded-lg">
+            <h3 className="font-bold mb-6">DOCUMENT HISTORY</h3>
+            <div className="flex flex-col items-center space-y-4">
+              <div className="w-64 p-4 border rounded shadow-sm text-center">
+                <p className="text-xs text-muted-foreground font-bold uppercase">Supply Out</p>
+                <p className="font-medium">SO-000083</p>
+              </div>
+              <div className="h-6 w-px bg-border"></div>
+              <div className="w-64 p-4 border-2 border-primary rounded shadow-md text-center bg-primary/5">
+                <p className="text-xs text-primary font-bold uppercase">Invoice</p>
+                <p className="font-bold">{invoice.invoice_number}</p>
+              </div>
+              <div className="h-6 w-px bg-border"></div>
+              <div className="grid grid-cols-2 gap-8 relative">
+                <div className="w-48 p-4 border rounded shadow-sm text-center">
+                  <p className="text-xs text-muted-foreground font-bold uppercase">Payment</p>
+                  <p className="font-medium text-green-600">PAY-000315</p>
+                </div>
+                <div className="w-48 p-4 border rounded shadow-sm text-center">
+                  <p className="text-xs text-muted-foreground font-bold uppercase">Credit Note</p>
+                  <p className="font-medium text-orange-600">CN-000025</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'timeline' && (
+          <div className="space-y-4">
+             <div className="flex gap-4">
+               <div className="w-24 text-sm text-muted-foreground mt-1">Today 10:00</div>
+               <div className="border-l-2 pl-4 pb-6 border-border">
+                 <p className="font-medium">Invoice Finalized</p>
+                 <p className="text-sm text-muted-foreground">Invoice number {invoice.invoice_number} was assigned.</p>
+               </div>
+             </div>
+             <div className="flex gap-4">
+               <div className="w-24 text-sm text-muted-foreground mt-1">Yesterday</div>
+               <div className="border-l-2 pl-4 pb-6 border-transparent">
+                 <p className="font-medium">Invoice Draft Created</p>
+                 <p className="text-sm text-muted-foreground">Draft was created.</p>
+               </div>
+             </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

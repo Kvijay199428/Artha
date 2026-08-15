@@ -9,6 +9,7 @@ import ItemsPage from '../features/master/ItemsPage';
 import PartiesPage from '../features/master/PartiesPage';
 import InvoiceBuilderPage from '../features/invoices/InvoiceBuilderPage';
 import InvoiceListPage from '../features/invoices/InvoiceListPage';
+import InvoiceDetailPage from '../features/invoices/InvoiceDetailPage';
 import OrderListPage from '../features/orders/OrderListPage';
 import OrderBuilderPage from '../features/orders/OrderBuilderPage';
 import ReturnListPage from '../features/returns/ReturnListPage';
@@ -198,8 +199,9 @@ export const router = createBrowserRouter([
           </div>
         ),
       },
-      { path: 'invoices/new',              element: wrap(<InvoiceBuilderPage />) },
       { path: 'invoices',                  element: wrap(<InvoiceListPage />) },
+      { path: 'invoices/new',              element: wrap(<InvoiceBuilderPage />) },
+      { path: 'invoices/:id',              element: wrap(<InvoiceDetailPage />) },
       { path: 'purchase-bills',            element: wrap(<InvoiceListPage />) },
       { path: 'supply-in',                 element: wrap(<OrderListPage />) },
       { path: 'supply-in/quotations',      element: wrap(<QuotationListPage />) },

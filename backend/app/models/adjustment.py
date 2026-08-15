@@ -20,6 +20,12 @@ class AdjustmentNote(Base):
     source_id = Column(String(36), nullable=True)
     source_number = Column(String(50), nullable=True)
     
+    invoice_id = Column(String(36), ForeignKey("invoices.id"), nullable=True)
+    invoice_number_snapshot = Column(String(50), nullable=True)
+    
+    original_invoice_id = Column(String(36), nullable=True)
+    original_invoice_number = Column(String(100), nullable=True)
+    
     party_id = Column(String(36), ForeignKey("parties.id"), nullable=False)
     party_role = Column(String(20), nullable=False) # CUSTOMER, SUPPLIER
     
