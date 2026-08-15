@@ -1,25 +1,28 @@
 import { createBrowserRouter, Navigate, Link, useLocation } from 'react-router-dom';
 import App from '../App';
 import { useAuth, useTheme } from './providers';
-import LoginPage from '../features/auth/LoginPage';
-import SetupPage from '../features/auth/SetupPage';
-import PinChangePage from '../features/auth/PinChangePage';
-import UnitsPage from '../features/master/UnitsPage';
-import ItemsPage from '../features/master/ItemsPage';
-import PartiesPage from '../features/master/PartiesPage';
-import InvoiceBuilderPage from '../features/invoices/InvoiceBuilderPage';
-import InvoiceListPage from '../features/invoices/InvoiceListPage';
-import InvoiceDetailPage from '../features/invoices/InvoiceDetailPage';
-import OrderListPage from '../features/orders/OrderListPage';
-import OrderBuilderPage from '../features/orders/OrderBuilderPage';
-import ReturnListPage from '../features/returns/ReturnListPage';
-import ReturnBuilderPage from '../features/returns/ReturnBuilderPage';
-import QuotationListPage from '../features/quotations/QuotationListPage';
-import QuotationBuilderPage from '../features/quotations/QuotationBuilderPage';
-import BOQListPage from '../features/boqs/BOQListPage';
-import EstimateListPage from '../features/estimates/EstimateListPage';
-import AdjustmentNoteListPage from '../features/adjustmentNotes/AdjustmentNoteListPage';
-import AdjustmentNoteBuilderPage from '../features/adjustmentNotes/AdjustmentNoteBuilderPage';
+import { lazy, Suspense } from 'react';
+import { PageLoading } from '../components/common/PageLoading';
+
+const LoginPage = lazy(() => import('../features/auth/LoginPage'));
+const SetupPage = lazy(() => import('../features/auth/SetupPage'));
+const PinChangePage = lazy(() => import('../features/auth/PinChangePage'));
+const UnitsPage = lazy(() => import('../features/master/UnitsPage'));
+const ItemsPage = lazy(() => import('../features/master/ItemsPage'));
+const PartiesPage = lazy(() => import('../features/master/PartiesPage'));
+const InvoiceBuilderPage = lazy(() => import('../features/invoices/InvoiceBuilderPage'));
+const InvoiceListPage = lazy(() => import('../features/invoices/InvoiceListPage'));
+const InvoiceDetailPage = lazy(() => import('../features/invoices/InvoiceDetailPage'));
+const OrderListPage = lazy(() => import('../features/orders/OrderListPage'));
+const OrderBuilderPage = lazy(() => import('../features/orders/OrderBuilderPage'));
+const ReturnListPage = lazy(() => import('../features/returns/ReturnListPage'));
+const ReturnBuilderPage = lazy(() => import('../features/returns/ReturnBuilderPage'));
+const QuotationListPage = lazy(() => import('../features/quotations/QuotationListPage'));
+const QuotationBuilderPage = lazy(() => import('../features/quotations/QuotationBuilderPage'));
+const BOQListPage = lazy(() => import('../features/boqs/BOQListPage'));
+const EstimateListPage = lazy(() => import('../features/estimates/EstimateListPage'));
+const AdjustmentNoteListPage = lazy(() => import('../features/adjustmentNotes/AdjustmentNoteListPage'));
+const AdjustmentNoteBuilderPage = lazy(() => import('../features/adjustmentNotes/AdjustmentNoteBuilderPage'));
 
 // ── Guards ────────────────────────────────────────────────────────────────────
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -159,7 +162,9 @@ const DashboardShell = ({ children }: { children: React.ReactNode }) => {
 
         {/* Page content */}
         <main className="flex-1 p-4 md:p-6 overflow-auto">
-          {children}
+          <Suspense fallback={<PageLoading />}>
+            {children}
+          </Suspense>
         </main>
       </div>
     </div>
@@ -225,8 +230,8 @@ export const router = createBrowserRouter([
       { path: 'items',                     element: wrap(<ItemsPage />) },
       { path: 'units',                     element: wrap(<UnitsPage />) },
       { path: 'pin-change',                element: wrap(<PinChangePage />) },
-      { path: 'login',                     element: <LoginPage /> },
-      { path: 'setup',                     element: <SetupPage /> },
+      { path: 'login',                     element: <Suspense fallback={<PageLoading />}><LoginPage /></Suspense> },
+      { path: 'setup',                     element: <Suspense fallback={<PageLoading />}><SetupPage /></Suspense> },
     ],
   },
 ]);

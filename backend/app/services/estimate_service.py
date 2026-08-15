@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models.estimate import Estimate, EstimateLine, EstimateStatus
-from app.models.boq import DocumentLink, BOQItemType
+from app.models.boq import BOQItemType
+from app.models import DocumentLink
 from app.core.exceptions import NotFoundException, ValidationException
 import uuid
 from datetime import datetime, timezone

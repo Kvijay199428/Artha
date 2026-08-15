@@ -8,7 +8,7 @@ from app.models.company import Company
 from app.models.invoice import Invoice, InvoiceLine
 from app.models.party import Party
 from app.models.quotation import Quotation, QuotationStatus
-from app.models.boq import DocumentLink
+from app.models import DocumentLink
 from app.core.exceptions import NotFoundException, ValidationException
 from app.utils.currency import amount_in_words
 

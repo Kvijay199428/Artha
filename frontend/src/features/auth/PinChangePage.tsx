@@ -33,7 +33,7 @@ export default function PinChangePage() {
     onSuccess: () => {
       setSuccess(true);
       reset();
-      setTimeout(() => navigate('/'), 2000);
+      navigate('/');
     },
     onError: (error: any) => {
       setApiError(error.message || 'Failed to change PIN.');

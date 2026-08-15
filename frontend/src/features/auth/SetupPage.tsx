@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -75,54 +75,7 @@ const TABS = [
   { id: 5, label: 'Bank',      icon: '🏦', optional: true },
 ];
 
-// ── Completion transition screen ─────────────────────────────────────────────
-function CreationTransition({ onDone }: { onDone: () => void }) {
-  const [tick, setTick] = useState(0);
-
-  useEffect(() => {
-    const dotTimer = setInterval(() => setTick(t => t + 1), 500);
-    const doneTimer = setTimeout(onDone, 5000);
-    return () => { clearInterval(dotTimer); clearTimeout(doneTimer); };
-  }, [onDone]);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ backdropFilter: 'blur(12px)', backgroundColor: 'rgba(15,23,42,0.75)' }}
-    >
-      <div className="bg-white/10 border border-white/20 rounded-3xl p-12 text-center shadow-2xl max-w-sm w-full mx-4">
-        {/* Animated logo */}
-        <div className="flex justify-center mb-6">
-          <div
-            className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center shadow-lg"
-            style={{ animation: 'logoPulse 2s ease-in-out infinite' }}
-          >
-            <span className="text-slate-900 text-2xl font-black">A</span>
-          </div>
-        </div>
-        <h2 className="text-2xl font-black tracking-widest text-white uppercase mb-3">ARTHA</h2>
-        <p className="text-white/80 text-sm mb-6">Company creation is in progress…</p>
-        <div className="flex justify-center gap-2 mb-6">
-          {[0, 1, 2].map(i => (
-            <div
-              key={i}
-              className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
-                tick % 3 === i ? 'bg-white scale-125' : 'bg-white/30'
-              }`}
-            />
-          ))}
-        </div>
-        <p className="text-white/40 text-xs">Redirecting to login…</p>
-      </div>
-      <style>{`
-        @keyframes logoPulse {
-          0%, 100% { transform: scale(1); box-shadow: 0 4px 24px rgba(255,255,255,0.2); }
-          50%       { transform: scale(1.06); box-shadow: 0 8px 32px rgba(255,255,255,0.35); }
-        }
-      `}</style>
-    </div>
-  );
-}
+// Removed CreationTransition
 
 // ── Main wizard ───────────────────────────────────────────────────────────────
 export default function SetupPage() {
@@ -130,7 +83,6 @@ export default function SetupPage() {
   const [tab, setTab]                 = useState(0);
   const [apiError, setApiError]       = useState<string | null>(null);
   const [gstinValid, setGstinValid]   = useState(false);
-  const [showCreation, setShowCreation] = useState(false);
   const [skipBank, setSkipBank]       = useState(false);
 
   const {
@@ -151,7 +103,7 @@ export default function SetupPage() {
 
   const mutation = useMutation({
     mutationFn: authApi.setup,
-    onSuccess: () => setShowCreation(true),
+    onSuccess: () => navigate('/login'),
     onError: (error: any) => {
       setApiError(error.message || 'Setup failed. Please check your inputs.');
     },
@@ -201,10 +153,6 @@ export default function SetupPage() {
 
   return (
     <>
-      {showCreation && (
-        <CreationTransition onDone={() => navigate('/login')} />
-      )}
-
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 py-8 px-4">
 
         {/* ── Header / Branding ── */}

@@ -1,3 +1,4 @@
+import time
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -19,6 +20,7 @@ class PinResetRequest(BaseModel):
 @router.post("/setup", response_model=ApiResponse[CompanyProfileResponse])
 def setup_company(request: CompanySetupRequest, db: Session = Depends(get_db)):
     company = CompanyService.create_company(db, request)
+    time.sleep(5)  # 5-second backend artificial delay
     return ApiResponse(success=True, data=CompanyProfileResponse(
         id=company.id,
         company_name=company.company_name,
@@ -40,6 +42,7 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
         raise ValidationException("No company found. Please complete setup first.")
     
     token = AuthService.authenticate(db, company.id, request.pin)
+    time.sleep(5)  # 5-second backend artificial delay
     return ApiResponse(success=True, data=LoginResponse(
         token=token,
         company_name=company.company_name,

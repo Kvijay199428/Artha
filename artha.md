@@ -143,6 +143,7 @@ def post_adjustment_note(
 
 ```python
 // File: backend/app/api/v1/auth.py
+import time
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -164,6 +165,7 @@ class PinResetRequest(BaseModel):
 @router.post("/setup", response_model=ApiResponse[CompanyProfileResponse])
 def setup_company(request: CompanySetupRequest, db: Session = Depends(get_db)):
     company = CompanyService.create_company(db, request)
+    time.sleep(5)  # 5-second backend artificial delay
     return ApiResponse(success=True, data=CompanyProfileResponse(
         id=company.id,
         company_name=company.company_name,
@@ -185,6 +187,7 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
         raise ValidationException("No company found. Please complete setup first.")
     
     token = AuthService.authenticate(db, company.id, request.pin)
+    time.sleep(5)  # 5-second backend artificial delay
     return ApiResponse(success=True, data=LoginResponse(
         token=token,
         company_name=company.company_name,
@@ -424,13 +427,13 @@ def get_company_logo(company = Depends(get_current_company), db: Session = Depen
 // File: backend/app/api/v1/documents.py
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from app.api import deps
+from app.core.database import get_db
 # Use models and schemas
 
 router = APIRouter()
 
 @router.get("/search")
-def search_documents(q: str, db: Session = Depends(deps.get_db)):
+def search_documents(q: str, db: Session = Depends(get_db)):
     # Search logic across invoices, notes, quotes, etc. based on `q`
     return {"results": []}
 ```
@@ -4875,7 +4878,8 @@ class CompanyService:
 // File: backend/app/services/estimate_service.py
 from sqlalchemy.orm import Session
 from app.models.estimate import Estimate, EstimateLine, EstimateStatus
-from app.models.boq import DocumentLink, BOQItemType
+from app.models.boq import BOQItemType
+from app.models import DocumentLink
 from app.core.exceptions import NotFoundException, ValidationException
 import uuid
 from datetime import datetime, timezone
@@ -5748,7 +5752,7 @@ from app.models.company import Company
 from app.models.invoice import Invoice, InvoiceLine
 from app.models.party import Party
 from app.models.quotation import Quotation, QuotationStatus
-from app.models.boq import DocumentLink
+from app.models import DocumentLink
 from app.core.exceptions import NotFoundException, ValidationException
 from app.utils.currency import amount_in_words
 
@@ -9037,25 +9041,28 @@ export const AppProviders = ({ children }: { children: ReactNode }) => {
 import { createBrowserRouter, Navigate, Link, useLocation } from 'react-router-dom';
 import App from '../App';
 import { useAuth, useTheme } from './providers';
-import LoginPage from '../features/auth/LoginPage';
-import SetupPage from '../features/auth/SetupPage';
-import PinChangePage from '../features/auth/PinChangePage';
-import UnitsPage from '../features/master/UnitsPage';
-import ItemsPage from '../features/master/ItemsPage';
-import PartiesPage from '../features/master/PartiesPage';
-import InvoiceBuilderPage from '../features/invoices/InvoiceBuilderPage';
-import InvoiceListPage from '../features/invoices/InvoiceListPage';
-import InvoiceDetailPage from '../features/invoices/InvoiceDetailPage';
-import OrderListPage from '../features/orders/OrderListPage';
-import OrderBuilderPage from '../features/orders/OrderBuilderPage';
-import ReturnListPage from '../features/returns/ReturnListPage';
-import ReturnBuilderPage from '../features/returns/ReturnBuilderPage';
-import QuotationListPage from '../features/quotations/QuotationListPage';
-import QuotationBuilderPage from '../features/quotations/QuotationBuilderPage';
-import BOQListPage from '../features/boqs/BOQListPage';
-import EstimateListPage from '../features/estimates/EstimateListPage';
-import AdjustmentNoteListPage from '../features/adjustmentNotes/AdjustmentNoteListPage';
-import AdjustmentNoteBuilderPage from '../features/adjustmentNotes/AdjustmentNoteBuilderPage';
+import { lazy, Suspense } from 'react';
+import { PageLoading } from '../components/common/PageLoading';
+
+const LoginPage = lazy(() => import('../features/auth/LoginPage'));
+const SetupPage = lazy(() => import('../features/auth/SetupPage'));
+const PinChangePage = lazy(() => import('../features/auth/PinChangePage'));
+const UnitsPage = lazy(() => import('../features/master/UnitsPage'));
+const ItemsPage = lazy(() => import('../features/master/ItemsPage'));
+const PartiesPage = lazy(() => import('../features/master/PartiesPage'));
+const InvoiceBuilderPage = lazy(() => import('../features/invoices/InvoiceBuilderPage'));
+const InvoiceListPage = lazy(() => import('../features/invoices/InvoiceListPage'));
+const InvoiceDetailPage = lazy(() => import('../features/invoices/InvoiceDetailPage'));
+const OrderListPage = lazy(() => import('../features/orders/OrderListPage'));
+const OrderBuilderPage = lazy(() => import('../features/orders/OrderBuilderPage'));
+const ReturnListPage = lazy(() => import('../features/returns/ReturnListPage'));
+const ReturnBuilderPage = lazy(() => import('../features/returns/ReturnBuilderPage'));
+const QuotationListPage = lazy(() => import('../features/quotations/QuotationListPage'));
+const QuotationBuilderPage = lazy(() => import('../features/quotations/QuotationBuilderPage'));
+const BOQListPage = lazy(() => import('../features/boqs/BOQListPage'));
+const EstimateListPage = lazy(() => import('../features/estimates/EstimateListPage'));
+const AdjustmentNoteListPage = lazy(() => import('../features/adjustmentNotes/AdjustmentNoteListPage'));
+const AdjustmentNoteBuilderPage = lazy(() => import('../features/adjustmentNotes/AdjustmentNoteBuilderPage'));
 
 // ── Guards ────────────────────────────────────────────────────────────────────
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -9195,7 +9202,9 @@ const DashboardShell = ({ children }: { children: React.ReactNode }) => {
 
         {/* Page content */}
         <main className="flex-1 p-4 md:p-6 overflow-auto">
-          {children}
+          <Suspense fallback={<PageLoading />}>
+            {children}
+          </Suspense>
         </main>
       </div>
     </div>
@@ -9261,8 +9270,8 @@ export const router = createBrowserRouter([
       { path: 'items',                     element: wrap(<ItemsPage />) },
       { path: 'units',                     element: wrap(<UnitsPage />) },
       { path: 'pin-change',                element: wrap(<PinChangePage />) },
-      { path: 'login',                     element: <LoginPage /> },
-      { path: 'setup',                     element: <SetupPage /> },
+      { path: 'login',                     element: <Suspense fallback={<PageLoading />}><LoginPage /></Suspense> },
+      { path: 'setup',                     element: <Suspense fallback={<PageLoading />}><SetupPage /></Suspense> },
     ],
   },
 ]);
@@ -9290,6 +9299,17 @@ export type { ButtonProps } from '../ui/button';
 // Re-export from shadcn ui/ — keeps all existing import paths working
 export { Input } from '../ui/input';
 export type { InputProps } from '../ui/input';
+```
+
+```tsx
+// File: frontend/src/components/common/PageLoading.tsx
+export function PageLoading() {
+  return (
+    <div className="flex items-center justify-center p-12 text-slate-500">
+      Loading...
+    </div>
+  );
+}
 ```
 
 ```tsx
@@ -11015,7 +11035,7 @@ export default function PinChangePage() {
     onSuccess: () => {
       setSuccess(true);
       reset();
-      setTimeout(() => navigate('/'), 2000);
+      navigate('/');
     },
     onError: (error: any) => {
       setApiError(error.message || 'Failed to change PIN.');
@@ -11100,7 +11120,7 @@ export default function PinChangePage() {
 
 ```tsx
 // File: frontend/src/features/auth/SetupPage.tsx
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11177,54 +11197,7 @@ const TABS = [
   { id: 5, label: 'Bank',      icon: '🏦', optional: true },
 ];
 
-// ── Completion transition screen ─────────────────────────────────────────────
-function CreationTransition({ onDone }: { onDone: () => void }) {
-  const [tick, setTick] = useState(0);
-
-  useEffect(() => {
-    const dotTimer = setInterval(() => setTick(t => t + 1), 500);
-    const doneTimer = setTimeout(onDone, 5000);
-    return () => { clearInterval(dotTimer); clearTimeout(doneTimer); };
-  }, [onDone]);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ backdropFilter: 'blur(12px)', backgroundColor: 'rgba(15,23,42,0.75)' }}
-    >
-      <div className="bg-white/10 border border-white/20 rounded-3xl p-12 text-center shadow-2xl max-w-sm w-full mx-4">
-        {/* Animated logo */}
-        <div className="flex justify-center mb-6">
-          <div
-            className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center shadow-lg"
-            style={{ animation: 'logoPulse 2s ease-in-out infinite' }}
-          >
-            <span className="text-slate-900 text-2xl font-black">A</span>
-          </div>
-        </div>
-        <h2 className="text-2xl font-black tracking-widest text-white uppercase mb-3">ARTHA</h2>
-        <p className="text-white/80 text-sm mb-6">Company creation is in progress…</p>
-        <div className="flex justify-center gap-2 mb-6">
-          {[0, 1, 2].map(i => (
-            <div
-              key={i}
-              className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
-                tick % 3 === i ? 'bg-white scale-125' : 'bg-white/30'
-              }`}
-            />
-          ))}
-        </div>
-        <p className="text-white/40 text-xs">Redirecting to login…</p>
-      </div>
-      <style>{`
-        @keyframes logoPulse {
-          0%, 100% { transform: scale(1); box-shadow: 0 4px 24px rgba(255,255,255,0.2); }
-          50%       { transform: scale(1.06); box-shadow: 0 8px 32px rgba(255,255,255,0.35); }
-        }
-      `}</style>
-    </div>
-  );
-}
+// Removed CreationTransition
 
 // ── Main wizard ───────────────────────────────────────────────────────────────
 export default function SetupPage() {
@@ -11232,7 +11205,6 @@ export default function SetupPage() {
   const [tab, setTab]                 = useState(0);
   const [apiError, setApiError]       = useState<string | null>(null);
   const [gstinValid, setGstinValid]   = useState(false);
-  const [showCreation, setShowCreation] = useState(false);
   const [skipBank, setSkipBank]       = useState(false);
 
   const {
@@ -11253,7 +11225,7 @@ export default function SetupPage() {
 
   const mutation = useMutation({
     mutationFn: authApi.setup,
-    onSuccess: () => setShowCreation(true),
+    onSuccess: () => navigate('/login'),
     onError: (error: any) => {
       setApiError(error.message || 'Setup failed. Please check your inputs.');
     },
@@ -11303,10 +11275,6 @@ export default function SetupPage() {
 
   return (
     <>
-      {showCreation && (
-        <CreationTransition onDone={() => navigate('/login')} />
-      )}
-
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 py-8 px-4">
 
         {/* ── Header / Branding ── */}
