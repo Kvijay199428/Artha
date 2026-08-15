@@ -17,6 +17,8 @@ import QuotationListPage from '../features/quotations/QuotationListPage';
 import QuotationBuilderPage from '../features/quotations/QuotationBuilderPage';
 import BOQListPage from '../features/boqs/BOQListPage';
 import EstimateListPage from '../features/estimates/EstimateListPage';
+import AdjustmentNoteListPage from '../features/adjustmentNotes/AdjustmentNoteListPage';
+import AdjustmentNoteBuilderPage from '../features/adjustmentNotes/AdjustmentNoteBuilderPage';
 
 // ── Guards ────────────────────────────────────────────────────────────────────
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -106,6 +108,12 @@ const DashboardShell = ({ children }: { children: React.ReactNode }) => {
           </div>
           <NavLink to="/boqs">BOQ</NavLink>
           <NavLink to="/estimates">Estimates</NavLink>
+
+          <div className="pt-3 pb-1">
+            <p className="px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Accounting</p>
+          </div>
+          <NavLink to="/credit-notes">Credit Notes</NavLink>
+          <NavLink to="/debit-notes">Debit Notes</NavLink>
 
           <div className="pt-3 pb-1">
             <p className="px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Master</p>
@@ -207,6 +215,10 @@ export const router = createBrowserRouter([
       { path: 'supply-out/new',            element: wrap(<OrderBuilderPage />) },
       { path: 'boqs',                      element: wrap(<BOQListPage />) },
       { path: 'estimates',                 element: wrap(<EstimateListPage />) },
+      { path: 'credit-notes',              element: wrap(<AdjustmentNoteListPage noteType="CREDIT_NOTE" />) },
+      { path: 'credit-notes/new',          element: wrap(<AdjustmentNoteBuilderPage noteType="CREDIT_NOTE" />) },
+      { path: 'debit-notes',               element: wrap(<AdjustmentNoteListPage noteType="DEBIT_NOTE" />) },
+      { path: 'debit-notes/new',           element: wrap(<AdjustmentNoteBuilderPage noteType="DEBIT_NOTE" />) },
       { path: 'parties',                   element: wrap(<PartiesPage />) },
       { path: 'items',                     element: wrap(<ItemsPage />) },
       { path: 'units',                     element: wrap(<UnitsPage />) },

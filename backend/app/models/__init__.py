@@ -7,9 +7,9 @@ from app.models.unit import Unit, UnitAlias, UnitVersion
 from app.models.item import Item, ItemVersion
 from app.models.party import Party, PartyAddress, PartyBankAccount, PartyLedgerEntry, PaymentAllocation
 from app.models.invoice import (
-    Invoice, InvoiceLine, InvoiceSeries, Payment,
-    CreditNote, DebitNote
+    Invoice, InvoiceLine, InvoiceSeries, Payment
 )
+from app.models.adjustment import AdjustmentNote, AdjustmentNoteLine, NoteAllocation
 from app.models.order import SupplyOrder, SupplyOrderLine
 from app.models.return_order import ReturnOrder, ReturnOrderLine, ReturnSettlement
 from app.models.quotation import Quotation, QuotationLine, QuotationStatus, QuotationType
@@ -25,7 +25,8 @@ __all__ = [
     "Unit", "UnitAlias", "UnitVersion",
     "Item", "ItemVersion",
     "Party", "PartyAddress", "PartyBankAccount", "PartyLedgerEntry", "PaymentAllocation",
-    "Invoice", "InvoiceLine", "InvoiceSeries", "Payment", "CreditNote", "DebitNote",
+    "Invoice", "InvoiceLine", "InvoiceSeries", "Payment", 
+    "AdjustmentNote", "AdjustmentNoteLine", "NoteAllocation",
     "SupplyOrder", "SupplyOrderLine",
     "ReturnOrder", "ReturnOrderLine", "ReturnSettlement",
     "Quotation", "QuotationLine", "QuotationStatus", "QuotationType",

@@ -73,7 +73,7 @@ datefmt = %H:%M:%S
 ```python
 // File: backend/app/api/v1/__init__.py
 from fastapi import APIRouter
-from app.api.v1 import auth, company, units, items, parties, invoices, master, orders, returns, quotations, boq, estimates, gst
+from app.api.v1 import auth, company, units, items, parties, invoices, master, orders, returns, quotations, boq, estimates, gst, adjustments
 
 api_router = APIRouter(prefix="/v1")
 api_router.include_router(auth.router)
@@ -89,6 +89,55 @@ api_router.include_router(quotations.router)
 api_router.include_router(boq.router)
 api_router.include_router(estimates.router)
 api_router.include_router(gst.router)
+api_router.include_router(adjustments.router)
+```
+
+```python
+// File: backend/app/api/v1/adjustments.py
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from typing import List
+
+from app.core.database import get_db
+from app.schemas.adjustment import AdjustmentNoteCreate, AdjustmentNoteResponse, NoteAllocationCreate, NoteAllocationResponse
+from app.services.adjustment import FinancialAdjustmentService
+from app.models.adjustment import AdjustmentNote
+from app.dependencies.auth import get_current_company
+
+router = APIRouter(prefix="/adjustment-notes", tags=["Adjustments"])
+
+@router.post("/credit-notes", response_model=AdjustmentNoteResponse)
+def create_credit_note(
+    *,
+    db: Session = Depends(get_db),
+    note_in: AdjustmentNoteCreate,
+    current_company = Depends(get_current_company)
+):
+    service = FinancialAdjustmentService(db)
+    return service.create_credit_note(note_in=note_in, company_id=current_company.id)
+
+@router.post("/debit-notes", response_model=AdjustmentNoteResponse)
+def create_debit_note(
+    *,
+    db: Session = Depends(get_db),
+    note_in: AdjustmentNoteCreate,
+    current_company = Depends(get_current_company)
+):
+    service = FinancialAdjustmentService(db)
+    return service.create_debit_note(note_in=note_in, company_id=current_company.id)
+
+@router.post("/{note_id}/post", response_model=AdjustmentNoteResponse)
+def post_adjustment_note(
+    *,
+    db: Session = Depends(get_db),
+    note_id: str,
+    current_company = Depends(get_current_company)
+):
+    service = FinancialAdjustmentService(db)
+    note = service.post_note(note_id=note_id)
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    return note
 ```
 
 ```python
@@ -1827,9 +1876,9 @@ from app.models.unit import Unit, UnitAlias, UnitVersion
 from app.models.item import Item, ItemVersion
 from app.models.party import Party, PartyAddress, PartyBankAccount, PartyLedgerEntry, PaymentAllocation
 from app.models.invoice import (
-    Invoice, InvoiceLine, InvoiceSeries, Payment,
-    CreditNote, DebitNote
+    Invoice, InvoiceLine, InvoiceSeries, Payment
 )
+from app.models.adjustment import AdjustmentNote, AdjustmentNoteLine, NoteAllocation
 from app.models.order import SupplyOrder, SupplyOrderLine
 from app.models.return_order import ReturnOrder, ReturnOrderLine, ReturnSettlement
 from app.models.quotation import Quotation, QuotationLine, QuotationStatus, QuotationType
@@ -1845,7 +1894,8 @@ __all__ = [
     "Unit", "UnitAlias", "UnitVersion",
     "Item", "ItemVersion",
     "Party", "PartyAddress", "PartyBankAccount", "PartyLedgerEntry", "PaymentAllocation",
-    "Invoice", "InvoiceLine", "InvoiceSeries", "Payment", "CreditNote", "DebitNote",
+    "Invoice", "InvoiceLine", "InvoiceSeries", "Payment", 
+    "AdjustmentNote", "AdjustmentNoteLine", "NoteAllocation",
     "SupplyOrder", "SupplyOrderLine",
     "ReturnOrder", "ReturnOrderLine", "ReturnSettlement",
     "Quotation", "QuotationLine", "QuotationStatus", "QuotationType",
@@ -1854,6 +1904,128 @@ __all__ = [
     "AuditLog",
     "GSTStateCode", "GSTRate", "HSNSACCode",
 ]
+```
+
+```python
+// File: backend/app/models/adjustment.py
+import uuid
+from datetime import datetime, timezone
+from sqlalchemy import Column, String, DateTime, Boolean, ForeignKey, Numeric, Text
+from sqlalchemy.orm import relationship
+from app.core.database import Base
+
+def utc_now():
+    return datetime.now(timezone.utc)
+
+class AdjustmentNote(Base):
+    __tablename__ = "adjustment_notes"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    company_id = Column(String(36), ForeignKey("companies.id"), nullable=False)
+    
+    note_number = Column(String(50), nullable=False)
+    note_type = Column(String(20), nullable=False) # CREDIT_NOTE, DEBIT_NOTE
+    
+    source_type = Column(String(50), nullable=True)
+    source_id = Column(String(36), nullable=True)
+    source_number = Column(String(50), nullable=True)
+    
+    party_id = Column(String(36), ForeignKey("parties.id"), nullable=False)
+    party_role = Column(String(20), nullable=False) # CUSTOMER, SUPPLIER
+    
+    note_date = Column(DateTime, nullable=False)
+    reason_code = Column(String(50), nullable=False)
+    reason_description = Column(String(200), nullable=True)
+    
+    tax_treatment = Column(String(20), nullable=False) # GST, WITHOUT_GST
+    gst_document = Column(Boolean, default=True)
+    is_accounting_only = Column(Boolean, default=False)
+    
+    place_of_supply = Column(String(100), nullable=True)
+    reverse_charge = Column(Boolean, default=False)
+    
+    subtotal = Column(Numeric(15, 2), default=0)
+    discount_total = Column(Numeric(15, 2), default=0)
+    taxable_total = Column(Numeric(15, 2), default=0)
+    
+    cgst_total = Column(Numeric(15, 2), default=0)
+    sgst_total = Column(Numeric(15, 2), default=0)
+    igst_total = Column(Numeric(15, 2), default=0)
+    cess_total = Column(Numeric(15, 2), default=0)
+    
+    round_off = Column(Numeric(15, 2), default=0)
+    grand_total = Column(Numeric(15, 2), default=0)
+    
+    status = Column(String(20), default="DRAFT") # DRAFT, APPROVED, POSTED, CANCELLED, REJECTED
+    
+    created_by = Column(String(36), nullable=True)
+    approved_by = Column(String(36), nullable=True)
+    posted_by = Column(String(36), nullable=True)
+    
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+    posted_at = Column(DateTime, nullable=True)
+    
+    lines = relationship("AdjustmentNoteLine", back_populates="adjustment_note", cascade="all, delete-orphan")
+    allocations = relationship("NoteAllocation", back_populates="adjustment_note", cascade="all, delete-orphan")
+
+
+class AdjustmentNoteLine(Base):
+    __tablename__ = "adjustment_note_lines"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    adjustment_note_id = Column(String(36), ForeignKey("adjustment_notes.id"), nullable=False)
+    
+    source_line_id = Column(String(36), nullable=True)
+    item_id = Column(String(36), nullable=True)
+    
+    item_name_snapshot = Column(String(200), nullable=False)
+    sku_snapshot = Column(String(100), nullable=True)
+    hsn_sac_snapshot = Column(String(20), nullable=True)
+    
+    description = Column(Text, nullable=True)
+    
+    quantity = Column(Numeric(15, 5), nullable=False)
+    unit_id = Column(String(36), nullable=True)
+    unit_snapshot = Column(String(50), nullable=True)
+    
+    rate = Column(Numeric(15, 4), nullable=False)
+    
+    discount_type = Column(String(20), nullable=True)
+    discount_value = Column(Numeric(15, 4), default=0)
+    discount_amount = Column(Numeric(15, 2), default=0)
+    
+    tax_treatment = Column(String(20), nullable=True)
+    gst_rate = Column(Numeric(5, 2), default=0)
+    
+    taxable_value = Column(Numeric(15, 2), default=0)
+    cgst_amount = Column(Numeric(15, 2), default=0)
+    sgst_amount = Column(Numeric(15, 2), default=0)
+    igst_amount = Column(Numeric(15, 2), default=0)
+    cess_amount = Column(Numeric(15, 2), default=0)
+    
+    line_total = Column(Numeric(15, 2), default=0)
+    
+    adjustment_note = relationship("AdjustmentNote", back_populates="lines")
+
+
+class NoteAllocation(Base):
+    __tablename__ = "note_allocations"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    note_id = Column(String(36), ForeignKey("adjustment_notes.id"), nullable=False)
+    party_id = Column(String(36), ForeignKey("parties.id"), nullable=False)
+    
+    target_type = Column(String(50), nullable=False)
+    target_id = Column(String(36), nullable=False)
+    
+    allocated_amount = Column(Numeric(15, 2), nullable=False)
+    allocation_date = Column(DateTime, nullable=False)
+    
+    created_by = Column(String(36), nullable=True)
+    created_at = Column(DateTime, default=utc_now)
+
+    adjustment_note = relationship("AdjustmentNote", back_populates="allocations")
 ```
 
 ```python
@@ -2371,44 +2543,6 @@ class Payment(Base):
     bank_account_id = Column(String(36), nullable=True)
     notes = Column(Text, nullable=True)
     status = Column(String(20), default="COMPLETED")
-    created_at = Column(DateTime, default=utc_now)
-
-class CreditNote(Base):
-    __tablename__ = "credit_notes"
-    
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    company_id = Column(String(36), ForeignKey("companies.id"), nullable=False)
-    credit_note_number = Column(String(50), nullable=False)
-    original_invoice_id = Column(String(36), ForeignKey("invoices.id"), nullable=False)
-    party_id = Column(String(36), ForeignKey("parties.id"), nullable=False)
-    note_date = Column(DateTime, nullable=False)
-    reason = Column(String(200), nullable=False)
-    taxable_amount = Column(Numeric(15, 2), default=0)
-    cgst = Column(Numeric(15, 2), default=0)
-    sgst = Column(Numeric(15, 2), default=0)
-    igst = Column(Numeric(15, 2), default=0)
-    cess = Column(Numeric(15, 2), default=0)
-    total_amount = Column(Numeric(15, 2), default=0)
-    status = Column(String(20), default="ACTIVE")
-    created_at = Column(DateTime, default=utc_now)
-
-class DebitNote(Base):
-    __tablename__ = "debit_notes"
-    
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    company_id = Column(String(36), ForeignKey("companies.id"), nullable=False)
-    debit_note_number = Column(String(50), nullable=False)
-    original_invoice_id = Column(String(36), ForeignKey("invoices.id"), nullable=False)
-    party_id = Column(String(36), ForeignKey("parties.id"), nullable=False)
-    note_date = Column(DateTime, nullable=False)
-    reason = Column(String(200), nullable=False)
-    taxable_amount = Column(Numeric(15, 2), default=0)
-    cgst = Column(Numeric(15, 2), default=0)
-    sgst = Column(Numeric(15, 2), default=0)
-    igst = Column(Numeric(15, 2), default=0)
-    cess = Column(Numeric(15, 2), default=0)
-    total_amount = Column(Numeric(15, 2), default=0)
-    status = Column(String(20), default="ACTIVE")
     created_at = Column(DateTime, default=utc_now)
 ```
 
@@ -3082,6 +3216,106 @@ class UnitVersion(Base):
     effective_to = Column(DateTime, nullable=True)
     
     unit = relationship("Unit", back_populates="versions")
+```
+
+```python
+// File: backend/app/schemas/adjustment.py
+from pydantic import BaseModel
+from typing import List, Optional
+from datetime import datetime
+from decimal import Decimal
+
+class AdjustmentNoteLineBase(BaseModel):
+    source_line_id: Optional[str] = None
+    item_id: Optional[str] = None
+    item_name_snapshot: str
+    sku_snapshot: Optional[str] = None
+    hsn_sac_snapshot: Optional[str] = None
+    description: Optional[str] = None
+    quantity: Decimal
+    unit_id: Optional[str] = None
+    unit_snapshot: Optional[str] = None
+    rate: Decimal
+    discount_type: Optional[str] = None
+    discount_value: Decimal = Decimal('0')
+    discount_amount: Decimal = Decimal('0')
+    tax_treatment: Optional[str] = None
+    gst_rate: Decimal = Decimal('0')
+    taxable_value: Decimal = Decimal('0')
+    cgst_amount: Decimal = Decimal('0')
+    sgst_amount: Decimal = Decimal('0')
+    igst_amount: Decimal = Decimal('0')
+    cess_amount: Decimal = Decimal('0')
+    line_total: Decimal = Decimal('0')
+
+class AdjustmentNoteLineCreate(AdjustmentNoteLineBase):
+    pass
+
+class AdjustmentNoteLineResponse(AdjustmentNoteLineBase):
+    id: str
+    adjustment_note_id: str
+
+    class Config:
+        from_attributes = True
+
+class AdjustmentNoteBase(BaseModel):
+    note_type: str
+    source_type: Optional[str] = None
+    source_id: Optional[str] = None
+    source_number: Optional[str] = None
+    party_id: str
+    party_role: str
+    note_date: datetime
+    reason_code: str
+    reason_description: Optional[str] = None
+    tax_treatment: str
+    gst_document: bool = True
+    is_accounting_only: bool = False
+    place_of_supply: Optional[str] = None
+    reverse_charge: bool = False
+    subtotal: Decimal = Decimal('0')
+    discount_total: Decimal = Decimal('0')
+    taxable_total: Decimal = Decimal('0')
+    cgst_total: Decimal = Decimal('0')
+    sgst_total: Decimal = Decimal('0')
+    igst_total: Decimal = Decimal('0')
+    cess_total: Decimal = Decimal('0')
+    round_off: Decimal = Decimal('0')
+    grand_total: Decimal = Decimal('0')
+
+class AdjustmentNoteCreate(AdjustmentNoteBase):
+    lines: List[AdjustmentNoteLineCreate]
+
+class AdjustmentNoteResponse(AdjustmentNoteBase):
+    id: str
+    company_id: str
+    note_number: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+    posted_at: Optional[datetime] = None
+    lines: List[AdjustmentNoteLineResponse] = []
+
+    class Config:
+        from_attributes = True
+
+class NoteAllocationBase(BaseModel):
+    target_type: str
+    target_id: str
+    allocated_amount: Decimal
+    allocation_date: datetime
+
+class NoteAllocationCreate(NoteAllocationBase):
+    pass
+
+class NoteAllocationResponse(NoteAllocationBase):
+    id: str
+    note_id: str
+    party_id: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 ```
 
 ```python
@@ -4139,6 +4373,54 @@ if __name__ == "__main__":
 ```
 
 ```python
+// File: backend/app/services/adjustment.py
+from sqlalchemy.orm import Session
+from app.models.adjustment import AdjustmentNote, AdjustmentNoteLine
+from app.schemas.adjustment import AdjustmentNoteCreate
+from app.models.audit import AuditLog
+
+class FinancialAdjustmentService:
+    def __init__(self, db: Session):
+        self.db = db
+        
+    def create_credit_note(self, note_in: AdjustmentNoteCreate, company_id: str) -> AdjustmentNote:
+        # Business logic for credit note
+        return self._create_note(note_in, company_id, "CREDIT_NOTE")
+        
+    def create_debit_note(self, note_in: AdjustmentNoteCreate, company_id: str) -> AdjustmentNote:
+        # Business logic for debit note
+        return self._create_note(note_in, company_id, "DEBIT_NOTE")
+        
+    def _create_note(self, note_in: AdjustmentNoteCreate, company_id: str, note_type: str) -> AdjustmentNote:
+        note_data = note_in.dict(exclude={"lines"})
+        note = AdjustmentNote(
+            **note_data,
+            company_id=company_id,
+            note_type=note_type,
+            note_number=f"{'CN' if note_type == 'CREDIT_NOTE' else 'DN'}-TMP"
+        )
+        self.db.add(note)
+        self.db.flush()
+        
+        for line_in in note_in.lines:
+            line = AdjustmentNoteLine(**line_in.dict(), adjustment_note_id=note.id)
+            self.db.add(line)
+            
+        self.db.commit()
+        self.db.refresh(note)
+        return note
+        
+    def post_note(self, note_id: str) -> AdjustmentNote:
+        # Implement Ledger Posting
+        note = self.db.query(AdjustmentNote).filter(AdjustmentNote.id == note_id).first()
+        if note:
+            note.status = "POSTED"
+            self.db.commit()
+            self.db.refresh(note)
+        return note
+```
+
+```python
 // File: backend/app/services/audit_service.py
 from sqlalchemy.orm import Session
 from app.models.audit import AuditLog
@@ -4788,6 +5070,35 @@ class FileStorageService:
         except ValueError:
             raise ValidationException("Invalid file path")
         return target
+```
+
+```python
+// File: backend/app/services/gst.py
+from decimal import Decimal
+
+class GSTCalculationService:
+    @staticmethod
+    def determine_supply_type(company_state: str, place_of_supply: str) -> str:
+        return "INTRA_STATE" if company_state == place_of_supply else "INTER_STATE"
+        
+    @staticmethod
+    def calculate_tax(taxable_value: Decimal, gst_rate: Decimal, supply_type: str) -> dict:
+        tax_amount = taxable_value * (gst_rate / Decimal('100'))
+        if supply_type == "INTRA_STATE":
+            half_tax = tax_amount / Decimal('2')
+            return {
+                "cgst": half_tax,
+                "sgst": half_tax,
+                "igst": Decimal('0'),
+                "cess": Decimal('0')
+            }
+        else:
+            return {
+                "cgst": Decimal('0'),
+                "sgst": Decimal('0'),
+                "igst": tax_amount,
+                "cess": Decimal('0')
+            }
 ```
 
 ```python
@@ -7092,6 +7403,7 @@ server {
   "dependencies": {
     "@hookform/resolvers": "^5.7.1",
     "@tanstack/react-query": "^5.101.4",
+    "@tanstack/react-table": "^8.21.3",
     "axios": "^1.19.0",
     "libphonenumber-js": "^1.13.11",
     "react": "^19.2.8",
@@ -7377,6 +7689,102 @@ function App() {
 }
 
 export default App;
+```
+
+```typescript
+// File: frontend/src/api/adjustmentNotes.ts
+import { apiClient } from './client';
+
+export interface AdjustmentNoteLineCreate {
+  item_id?: string | null;
+  item_name_snapshot: string;
+  description?: string | null;
+  quantity: number;
+  unit_id: string;
+  unit_snapshot: string;
+  rate: number;
+  discount_type?: string;
+  discount_value?: number;
+  gst_rate?: number;
+}
+
+export interface AdjustmentNoteCreateRequest {
+  note_type: 'CREDIT_NOTE' | 'DEBIT_NOTE';
+  source_type?: string | null;
+  source_id?: string | null;
+  source_number?: string | null;
+  party_id: string;
+  party_role: 'CUSTOMER' | 'SUPPLIER';
+  note_date: string;
+  reason_code: string;
+  reason_description?: string | null;
+  tax_treatment: 'GST' | 'WITHOUT_GST';
+  place_of_supply: string;
+  lines: AdjustmentNoteLineCreate[];
+}
+
+export interface AdjustmentNoteResponse {
+  id: string;
+  note_number: string;
+  note_type: 'CREDIT_NOTE' | 'DEBIT_NOTE';
+  source_type?: string | null;
+  source_id?: string | null;
+  source_number?: string | null;
+  party_id: string;
+  party_role: 'CUSTOMER' | 'SUPPLIER';
+  note_date: string;
+  reason_code: string;
+  reason_description?: string | null;
+  tax_treatment: 'GST' | 'WITHOUT_GST';
+  subtotal: number;
+  discount_total: number;
+  taxable_total: number;
+  cgst_total: number;
+  sgst_total: number;
+  igst_total: number;
+  grand_total: number;
+  status: string;
+  lines: any[];
+  created_at: string;
+}
+
+export const adjustmentNotesApi = {
+  create: async (data: AdjustmentNoteCreateRequest) => {
+    const response = await apiClient.post<AdjustmentNoteResponse>('/adjustment-notes', data);
+    return response.data;
+  },
+  getAll: async (note_type?: string) => {
+    const params = new URLSearchParams();
+    if (note_type) params.append('note_type', note_type);
+    const response = await apiClient.get<{items: AdjustmentNoteResponse[], total: number}>(`/adjustment-notes?${params.toString()}`);
+    return response.data;
+  },
+  getById: async (id: string) => {
+    const response = await apiClient.get<AdjustmentNoteResponse>(`/adjustment-notes/${id}`);
+    return response.data;
+  },
+  approve: async (id: string) => {
+    const response = await apiClient.post<AdjustmentNoteResponse>(`/adjustment-notes/${id}/approve`, {});
+    return response.data;
+  },
+  post: async (id: string) => {
+    const response = await apiClient.post<AdjustmentNoteResponse>(`/adjustment-notes/${id}/post`, {});
+    return response.data;
+  },
+  cancel: async (id: string) => {
+    const response = await apiClient.post<AdjustmentNoteResponse>(`/adjustment-notes/${id}/cancel`, {});
+    return response.data;
+  },
+  reverse: async (id: string) => {
+    const response = await apiClient.post<AdjustmentNoteResponse>(`/adjustment-notes/${id}/reverse`, {});
+    return response.data;
+  },
+  getPdf: async (id: string) => {
+    const response = await apiClient.get(`/adjustment-notes/${id}/pdf`, { responseType: 'blob' });
+    const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+    window.open(url, '_blank');
+  }
+};
 ```
 
 ```typescript
@@ -8514,6 +8922,8 @@ import QuotationListPage from '../features/quotations/QuotationListPage';
 import QuotationBuilderPage from '../features/quotations/QuotationBuilderPage';
 import BOQListPage from '../features/boqs/BOQListPage';
 import EstimateListPage from '../features/estimates/EstimateListPage';
+import AdjustmentNoteListPage from '../features/adjustmentNotes/AdjustmentNoteListPage';
+import AdjustmentNoteBuilderPage from '../features/adjustmentNotes/AdjustmentNoteBuilderPage';
 
 // ── Guards ────────────────────────────────────────────────────────────────────
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -8603,6 +9013,12 @@ const DashboardShell = ({ children }: { children: React.ReactNode }) => {
           </div>
           <NavLink to="/boqs">BOQ</NavLink>
           <NavLink to="/estimates">Estimates</NavLink>
+
+          <div className="pt-3 pb-1">
+            <p className="px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Accounting</p>
+          </div>
+          <NavLink to="/credit-notes">Credit Notes</NavLink>
+          <NavLink to="/debit-notes">Debit Notes</NavLink>
 
           <div className="pt-3 pb-1">
             <p className="px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Master</p>
@@ -8704,6 +9120,10 @@ export const router = createBrowserRouter([
       { path: 'supply-out/new',            element: wrap(<OrderBuilderPage />) },
       { path: 'boqs',                      element: wrap(<BOQListPage />) },
       { path: 'estimates',                 element: wrap(<EstimateListPage />) },
+      { path: 'credit-notes',              element: wrap(<AdjustmentNoteListPage noteType="CREDIT_NOTE" />) },
+      { path: 'credit-notes/new',          element: wrap(<AdjustmentNoteBuilderPage noteType="CREDIT_NOTE" />) },
+      { path: 'debit-notes',               element: wrap(<AdjustmentNoteListPage noteType="DEBIT_NOTE" />) },
+      { path: 'debit-notes/new',           element: wrap(<AdjustmentNoteBuilderPage noteType="DEBIT_NOTE" />) },
       { path: 'parties',                   element: wrap(<PartiesPage />) },
       { path: 'items',                     element: wrap(<ItemsPage />) },
       { path: 'units',                     element: wrap(<UnitsPage />) },
@@ -9944,6 +10364,200 @@ function TableCaption({ className, ...props }: React.HTMLAttributes<HTMLTableCap
 }
 
 export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow };
+```
+
+```tsx
+// File: frontend/src/features/adjustmentNotes/AdjustmentNoteBuilderPage.tsx
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { adjustmentNotesApi } from '../../api/adjustmentNotes';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { useNavigate } from 'react-router-dom';
+import { useMutation } from '@tanstack/react-query';
+
+const schema = z.object({
+  party_id: z.string().min(1, "Party is required"),
+  party_role: z.enum(['CUSTOMER', 'SUPPLIER']),
+  note_date: z.string().min(1, "Date is required"),
+  reason_code: z.string().min(1, "Reason is required"),
+  tax_treatment: z.enum(['GST', 'WITHOUT_GST']),
+  place_of_supply: z.string().min(1, "Place of supply is required"),
+});
+
+type FormData = z.infer<typeof schema>;
+
+export default function AdjustmentNoteBuilderPage({ noteType }: { noteType: 'CREDIT_NOTE' | 'DEBIT_NOTE' }) {
+  const navigate = useNavigate();
+  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      party_role: 'CUSTOMER',
+      tax_treatment: 'GST',
+      note_date: new Date().toISOString().split('T')[0],
+    }
+  });
+
+  const createMutation = useMutation({
+    mutationFn: adjustmentNotesApi.create,
+    onSuccess: () => {
+      navigate(`/${noteType === 'CREDIT_NOTE' ? 'credit-notes' : 'debit-notes'}`);
+    }
+  });
+
+  const onSubmit = (data: FormData) => {
+    createMutation.mutate({
+      note_type: noteType,
+      ...data,
+      lines: [] // Expand with a LineItem builder component
+    });
+  };
+
+  return (
+    <div className="max-w-3xl mx-auto space-y-6">
+      <h1 className="text-2xl font-bold">New {noteType === 'CREDIT_NOTE' ? 'Credit Note' : 'Debit Note'}</h1>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Party ID</label>
+            <Input {...register('party_id')} />
+            {errors.party_id && <p className="text-red-500 text-xs mt-1">{errors.party_id.message}</p>}
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Party Role</label>
+            <select {...register('party_role')} className="w-full p-2 border rounded-md">
+              <option value="CUSTOMER">Customer</option>
+              <option value="SUPPLIER">Supplier</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Date</label>
+            <Input type="date" {...register('note_date')} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Reason Code</label>
+            <select {...register('reason_code')} className="w-full p-2 border rounded-md">
+              <option value="SALES_RETURN">Sales Return</option>
+              <option value="EXCESS_BILLING">Excess Billing</option>
+              <option value="EXCESS_TAX">Excess Tax</option>
+              <option value="POST_SALE_DISCOUNT">Post-Sale Discount</option>
+              <option value="UNDER_BILLING">Under Billing</option>
+              <option value="SHORT_CHARGED_TAX">Short-charged Tax</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="flex justify-end pt-4">
+          <Button type="submit" disabled={createMutation.isPending}>
+            {createMutation.isPending ? 'Saving...' : 'Create Note'}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+```
+
+```tsx
+// File: frontend/src/features/adjustmentNotes/AdjustmentNoteListPage.tsx
+import { useQuery } from '@tanstack/react-query';
+import { adjustmentNotesApi, type AdjustmentNoteResponse } from '../../api/adjustmentNotes';
+import { Link } from 'react-router-dom';
+import { Button } from '../../components/ui/button';
+import {
+  useReactTable,
+  getCoreRowModel,
+  flexRender,
+  createColumnHelper
+} from '@tanstack/react-table';
+
+const columnHelper = createColumnHelper<AdjustmentNoteResponse>();
+
+export default function AdjustmentNoteListPage({ noteType }: { noteType: 'CREDIT_NOTE' | 'DEBIT_NOTE' }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['adjustmentNotes', noteType],
+    queryFn: () => adjustmentNotesApi.getAll(noteType),
+  });
+
+  const columns = [
+    columnHelper.accessor('note_number', {
+      header: 'Note Number',
+      cell: info => info.getValue(),
+    }),
+    columnHelper.accessor('note_date', {
+      header: 'Date',
+      cell: info => new Date(info.getValue()).toLocaleDateString(),
+    }),
+    columnHelper.accessor('grand_total', {
+      header: 'Amount',
+      cell: info => `₹${info.getValue().toFixed(2)}`,
+    }),
+    columnHelper.accessor('status', {
+      header: 'Status',
+      cell: info => <span className="uppercase text-xs font-semibold">{info.getValue()}</span>,
+    }),
+    columnHelper.display({
+      id: 'actions',
+      cell: info => (
+        <Link to={`/${noteType === 'CREDIT_NOTE' ? 'credit-notes' : 'debit-notes'}/${info.row.original.id}`}>
+          <Button variant="outline" size="sm">View</Button>
+        </Link>
+      )
+    })
+  ];
+
+  const table = useReactTable({
+    data: data?.items || [],
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">
+          {noteType === 'CREDIT_NOTE' ? 'Credit Notes' : 'Debit Notes'}
+        </h1>
+        <Link to={`/${noteType === 'CREDIT_NOTE' ? 'credit-notes' : 'debit-notes'}/new`}>
+          <Button>Create {noteType === 'CREDIT_NOTE' ? 'Credit Note' : 'Debit Note'}</Button>
+        </Link>
+      </div>
+
+      {isLoading ? (
+        <p>Loading...</p>
+      ) : (
+        <div className="border rounded-md">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-muted">
+              {table.getHeaderGroups().map(headerGroup => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map(header => (
+                    <th key={header.id} className="p-3 font-semibold border-b">
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                    </th>
+                  ))}
+                </tr>
+              ))}
+            </thead>
+            <tbody>
+              {table.getRowModel().rows.map(row => (
+                <tr key={row.id} className="border-b hover:bg-muted/50">
+                  {row.getVisibleCells().map(cell => (
+                    <td key={cell.id} className="p-3">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
 ```
 
 ```tsx
