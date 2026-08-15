@@ -95,39 +95,57 @@ api_router.include_router(documents.router)
 
 ```python
 // File: backend/app/api/v1/adjustments.py
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 
 from app.core.database import get_db
-from app.schemas.adjustment import AdjustmentNoteCreate, AdjustmentNoteResponse, NoteAllocationCreate, NoteAllocationResponse
+from app.schemas.adjustment import AdjustmentNoteCreate, AdjustmentNoteResponse, AdjustmentNoteListResponse, NoteAllocationCreate, NoteAllocationResponse
+from app.schemas.common import ApiResponse
 from app.services.adjustment import FinancialAdjustmentService
-from app.models.adjustment import AdjustmentNote
 from app.dependencies.auth import get_current_company
 
 router = APIRouter(prefix="/adjustment-notes", tags=["Adjustments"])
 
-@router.post("/credit-notes", response_model=AdjustmentNoteResponse)
-def create_credit_note(
+@router.get("", response_model=ApiResponse[AdjustmentNoteListResponse])
+def get_adjustment_notes(
+    *,
+    db: Session = Depends(get_db),
+    note_type: Optional[str] = None,
+    current_company = Depends(get_current_company)
+):
+    service = FinancialAdjustmentService(db)
+    items, total = service.get_notes(company_id=current_company.id, note_type=note_type)
+    return ApiResponse(success=True, data=AdjustmentNoteListResponse(items=items, total=total))
+
+@router.post("", response_model=ApiResponse[AdjustmentNoteResponse])
+def create_adjustment_note(
     *,
     db: Session = Depends(get_db),
     note_in: AdjustmentNoteCreate,
     current_company = Depends(get_current_company)
 ):
     service = FinancialAdjustmentService(db)
-    return service.create_credit_note(note_in=note_in, company_id=current_company.id)
+    if note_in.note_type == "CREDIT_NOTE":
+        note = service.create_credit_note(note_in=note_in, company_id=current_company.id)
+    else:
+        note = service.create_debit_note(note_in=note_in, company_id=current_company.id)
+    return ApiResponse(success=True, data=note)
 
-@router.post("/debit-notes", response_model=AdjustmentNoteResponse)
-def create_debit_note(
+@router.get("/{note_id}", response_model=ApiResponse[AdjustmentNoteResponse])
+def get_adjustment_note(
     *,
     db: Session = Depends(get_db),
-    note_in: AdjustmentNoteCreate,
+    note_id: str,
     current_company = Depends(get_current_company)
 ):
     service = FinancialAdjustmentService(db)
-    return service.create_debit_note(note_in=note_in, company_id=current_company.id)
+    note = service.get_note(note_id=note_id, company_id=current_company.id)
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    return ApiResponse(success=True, data=note)
 
-@router.post("/{note_id}/post", response_model=AdjustmentNoteResponse)
+@router.post("/{note_id}/post", response_model=ApiResponse[AdjustmentNoteResponse])
 def post_adjustment_note(
     *,
     db: Session = Depends(get_db),
@@ -135,10 +153,58 @@ def post_adjustment_note(
     current_company = Depends(get_current_company)
 ):
     service = FinancialAdjustmentService(db)
-    note = service.post_note(note_id=note_id)
+    note = service.post_note(note_id=note_id, company_id=current_company.id)
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
-    return note
+    return ApiResponse(success=True, data=note)
+
+@router.post("/{note_id}/approve", response_model=ApiResponse[AdjustmentNoteResponse])
+def approve_adjustment_note(
+    *,
+    db: Session = Depends(get_db),
+    note_id: str,
+    current_company = Depends(get_current_company)
+):
+    service = FinancialAdjustmentService(db)
+    note = service.approve_note(note_id=note_id, company_id=current_company.id)
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    return ApiResponse(success=True, data=note)
+
+@router.post("/{note_id}/cancel", response_model=ApiResponse[AdjustmentNoteResponse])
+def cancel_adjustment_note(
+    *,
+    db: Session = Depends(get_db),
+    note_id: str,
+    current_company = Depends(get_current_company)
+):
+    service = FinancialAdjustmentService(db)
+    note = service.cancel_note(note_id=note_id, company_id=current_company.id)
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    return ApiResponse(success=True, data=note)
+
+@router.post("/{note_id}/reverse", response_model=ApiResponse[AdjustmentNoteResponse])
+def reverse_adjustment_note(
+    *,
+    db: Session = Depends(get_db),
+    note_id: str,
+    current_company = Depends(get_current_company)
+):
+    service = FinancialAdjustmentService(db)
+    note = service.reverse_note(note_id=note_id, company_id=current_company.id)
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    return ApiResponse(success=True, data=note)
+
+@router.get("/{note_id}/pdf")
+def get_adjustment_note_pdf(
+    *,
+    db: Session = Depends(get_db),
+    note_id: str,
+    current_company = Depends(get_current_company)
+):
+    raise HTTPException(status_code=501, detail="PDF generation not implemented yet")
 ```
 
 ```python
@@ -3397,6 +3463,10 @@ class AdjustmentNoteResponse(AdjustmentNoteBase):
     class Config:
         from_attributes = True
 
+class AdjustmentNoteListResponse(BaseModel):
+    items: List[AdjustmentNoteResponse]
+    total: int
+
 class NoteAllocationBase(BaseModel):
     target_type: str
     target_id: str
@@ -4476,17 +4546,30 @@ from sqlalchemy.orm import Session
 from app.models.adjustment import AdjustmentNote, AdjustmentNoteLine
 from app.schemas.adjustment import AdjustmentNoteCreate
 from app.models.audit import AuditLog
+from typing import Optional, Tuple, List
 
 class FinancialAdjustmentService:
     def __init__(self, db: Session):
         self.db = db
         
+    def get_notes(self, company_id: str, note_type: Optional[str] = None) -> Tuple[List[AdjustmentNote], int]:
+        query = self.db.query(AdjustmentNote).filter(AdjustmentNote.company_id == company_id)
+        if note_type:
+            query = query.filter(AdjustmentNote.note_type == note_type)
+        total = query.count()
+        items = query.order_by(AdjustmentNote.created_at.desc()).all()
+        return items, total
+
+    def get_note(self, note_id: str, company_id: str) -> Optional[AdjustmentNote]:
+        return self.db.query(AdjustmentNote).filter(
+            AdjustmentNote.id == note_id,
+            AdjustmentNote.company_id == company_id
+        ).first()
+
     def create_credit_note(self, note_in: AdjustmentNoteCreate, company_id: str) -> AdjustmentNote:
-        # Business logic for credit note
         return self._create_note(note_in, company_id, "CREDIT_NOTE")
         
     def create_debit_note(self, note_in: AdjustmentNoteCreate, company_id: str) -> AdjustmentNote:
-        # Business logic for debit note
         return self._create_note(note_in, company_id, "DEBIT_NOTE")
         
     def _create_note(self, note_in: AdjustmentNoteCreate, company_id: str, note_type: str) -> AdjustmentNote:
@@ -4495,7 +4578,8 @@ class FinancialAdjustmentService:
             **note_data,
             company_id=company_id,
             note_type=note_type,
-            note_number=f"{'CN' if note_type == 'CREDIT_NOTE' else 'DN'}-TMP"
+            note_number=f"{'CN' if note_type == 'CREDIT_NOTE' else 'DN'}-TMP",
+            status="DRAFT"
         )
         self.db.add(note)
         self.db.flush()
@@ -4508,11 +4592,36 @@ class FinancialAdjustmentService:
         self.db.refresh(note)
         return note
         
-    def post_note(self, note_id: str) -> AdjustmentNote:
-        # Implement Ledger Posting
-        note = self.db.query(AdjustmentNote).filter(AdjustmentNote.id == note_id).first()
-        if note:
+    def post_note(self, note_id: str, company_id: str) -> Optional[AdjustmentNote]:
+        note = self.get_note(note_id, company_id)
+        if note and note.status in ["DRAFT", "APPROVED"]:
             note.status = "POSTED"
+            # Implement Ledger Posting later
+            self.db.commit()
+            self.db.refresh(note)
+        return note
+
+    def approve_note(self, note_id: str, company_id: str) -> Optional[AdjustmentNote]:
+        note = self.get_note(note_id, company_id)
+        if note and note.status == "DRAFT":
+            note.status = "APPROVED"
+            self.db.commit()
+            self.db.refresh(note)
+        return note
+
+    def cancel_note(self, note_id: str, company_id: str) -> Optional[AdjustmentNote]:
+        note = self.get_note(note_id, company_id)
+        if note and note.status in ["DRAFT", "APPROVED"]:
+            note.status = "CANCELLED"
+            self.db.commit()
+            self.db.refresh(note)
+        return note
+
+    def reverse_note(self, note_id: str, company_id: str) -> Optional[AdjustmentNote]:
+        note = self.get_note(note_id, company_id)
+        if note and note.status == "POSTED":
+            note.status = "REVERSED"
+            # Implement Ledger Reversal later
             self.db.commit()
             self.db.refresh(note)
         return note
@@ -7292,6 +7401,31 @@ def extract_pan_from_gstin(gstin: str) -> str:
     if len(normalized) >= 12:
         return normalized[2:12]
     return ""
+```
+
+```python
+// File: backend/fix_slashes.py
+import os
+import glob
+import re
+
+directory = "/root/artha/backend/app/api/v1"
+
+for filepath in glob.glob(os.path.join(directory, "*.py")):
+    with open(filepath, 'r') as f:
+        content = f.read()
+
+    # Replace @router.get("/") with @router.get("")
+    content = re.sub(r'@router\.get\("/"\)', '@router.get("")', content)
+    # Replace @router.post("/") with @router.post("")
+    content = re.sub(r'@router\.post\("/"\)', '@router.post("")', content)
+    # Replace @router.put("/") with @router.put("")
+    content = re.sub(r'@router\.put\("/"\)', '@router.put("")', content)
+
+    with open(filepath, 'w') as f:
+        f.write(content)
+
+print("Fixed trailing slashes!")
 ```
 
 ```sql

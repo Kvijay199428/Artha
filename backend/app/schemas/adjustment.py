@@ -77,6 +77,10 @@ class AdjustmentNoteResponse(AdjustmentNoteBase):
     class Config:
         from_attributes = True
 
+class AdjustmentNoteListResponse(BaseModel):
+    items: List[AdjustmentNoteResponse]
+    total: int
+
 class NoteAllocationBase(BaseModel):
     target_type: str
     target_id: str
