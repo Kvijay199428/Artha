@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { FileText, Trash2, Plus, IndianRupee, Receipt, Edit3, TrendingUp, Search, Copy, X, CheckCircle, Clock, AlertTriangle, MessageCircle, Mail, StickyNote, Send, Package, Download, Printer, Ban, Undo2, Eye } from 'lucide-react';
+import { FileText, Trash2, Plus, IndianRupee, Receipt, Edit3, TrendingUp, Search, Copy, X, CheckCircle, Clock, AlertTriangle, MessageCircle, Mail, StickyNote, Send, Package, Download, Printer, Ban, Undo2, Eye, CalendarX } from 'lucide-react';
 import HelpButton from './HelpButton';
 import { getAllBills, saveBill, getAllProducts, applyStockChanges, getProfile, getAllClients, getStockAlertSettings, saveReceipt, deleteReceipt, getAllReceipts, markSavedPdfCancelled } from '../store';
 import { formatCurrency, INVOICE_TYPES, getFYOptions, numberToWords, belongsToProfile, salesSign, isCancelledBill, markPaidPatch, markUnpaidPatch, stockEffect, appliedStock, stockDelta, SALES_INVOICE_TYPES, localToday, amountDue, paymentStatusFor } from '../utils';
@@ -1136,6 +1136,11 @@ export default function Dashboard({ onNew, onEdit, onPrint, onDuplicate, onConve
     setSearch(''); setTypeFilter('all'); setStatusFilter('all'); setFyFilter('all'); setDateFrom(''); setDateTo('');
   };
 
+  const clearDateFilter = () => {
+    setDateFrom('');
+    setDateTo('');
+  };
+
   // v1.10.4 — trivial boolean, still cheap but consistent with the rest.
   const hasFilters = useMemo(
     () => Boolean(search || typeFilter !== 'all' || statusFilter !== 'all' || fyFilter !== 'all' || dateFrom || dateTo),
@@ -1430,9 +1435,22 @@ export default function Dashboard({ onNew, onEdit, onPrint, onDuplicate, onConve
             {/* v1.10.74 - rows can be Cancelled, so the filter needs it too */}
             <option value="cancelled">Cancelled</option>
           </select>
-          <input type="date" className="filter-date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} title="From" />
-          <input type="date" className="filter-date" value={dateTo} onChange={e => setDateTo(e.target.value)} title="To" />
-          {hasFilters && <button className="icon-btn icon-btn-red" onClick={clearFilters} title="Clear" aria-label="Clear filters"><X size={15} /></button>}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            <input type="date" className="filter-date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} title="From" />
+            <input type="date" className="filter-date" value={dateTo} onChange={e => setDateTo(e.target.value)} title="To" />
+            {(dateFrom || dateTo) && (
+              <button
+                type="button"
+                className="icon-btn icon-btn-amber"
+                onClick={clearDateFilter}
+                title="Clear date filter"
+                aria-label="Clear date filter"
+              >
+                <CalendarX size={15} />
+              </button>
+            )}
+          </div>
+          {hasFilters && <button className="icon-btn icon-btn-red" onClick={clearFilters} title="Clear all filters" aria-label="Clear all filters"><X size={15} /></button>}
           <button type="button" className="btn btn-secondary" onClick={() => setShowColumnPicker(v => !v)}
             title="Choose which columns to show" aria-label="Column picker"
             style={{ marginLeft: 'auto', fontSize: '0.8rem', padding: '0.4rem 0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', whiteSpace: 'nowrap' }}>

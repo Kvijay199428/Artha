@@ -1001,6 +1001,16 @@ textarea.form-input { resize: vertical; min-height: 60px; }
 }
 .icon-btn-red:hover { background: rgba(220, 38, 38, 0.18); box-shadow: 0 2px 6px rgba(220,38,38,0.15); }
 
+.icon-btn-amber {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+}
+.icon-btn-amber:hover { background: rgba(245, 158, 11, 0.22); box-shadow: 0 2px 6px rgba(245,158,11,0.18); }
+[data-theme="dark"] .icon-btn-amber {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+}
+
 /* ========= Dashboard ========= */
 /* v1.10.33 — Bumped from 1000px. The invoice table has 8 columns
    including a 7-8 icon Actions column (~250px) — 1000px squeezed
