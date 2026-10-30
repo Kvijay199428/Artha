@@ -261,8 +261,8 @@ export default function Dashboard({ onNew, onEdit, onPrint, onDuplicate, onConve
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [fyFilter, setFyFilter] = useState('all');
-  const [dateFrom, setDateFrom] = useState('');
+  const [fyFilter, setFyFilter] = useState(() => getFYOptions()[0]?.value || 'all');
+  const [dateFrom, setDateFrom] = useState(() => localToday());
   const [dateTo, setDateTo] = useState('');
   // Bulk-selection state. Stores a Set of bill IDs (not the bills themselves)
   // so we don't hold stale references when the underlying bill is edited

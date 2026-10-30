@@ -1,7 +1,7 @@
 # ARTHA - Project Source Code Bundle
 
-> Generated on: **2026-10-30 18:15:49**
-> Total Files: **163** | Total Lines: **94,037** | Total Size: **4.00 MB**
+> Generated on: **2026-10-30 18:31:52**
+> Total Files: **163** | Total Lines: **94,040** | Total Size: **4.00 MB**
 
 ## Table of Contents
 
@@ -40,7 +40,7 @@
 33. [docs/AUDIT_2026-04-30.md](#docs-audit-2026-04-30-md) (272 lines)
 34. [docs/AUDIT_2026-10-22.md](#docs-audit-2026-10-22-md) (178 lines)
 35. [docs/BUSYWIN_DATABASE_SCHEMA.md](#docs-busywin-database-schema-md) (478 lines)
-36. [docs/BUSYWIN_FONTS.md](#docs-busywin-fonts-md) (92 lines)
+36. [docs/BUSYWIN_FONTS.md](#docs-busywin-fonts-md) (93 lines)
 37. [docs/busywin_schemas/01_COMPANY_DATABASE_db_bds.md](#docs-busywin-schemas-01-company-database-db-bds-md) (1647 lines)
 38. [docs/busywin_schemas/02_FY_MASTERS_AND_ACCOUNTS.md](#docs-busywin-schemas-02-fy-masters-and-accounts-md) (830 lines)
 39. [docs/busywin_schemas/03_FY_TRANSACTIONS_AND_VOUCHERS.md](#docs-busywin-schemas-03-fy-transactions-and-vouchers-md) (1021 lines)
@@ -70,7 +70,7 @@
 63. [launcher/MainWindow.xaml.cs](#launcher-mainwindow-xaml-cs) (376 lines)
 64. [launcher/ServerManager.cs](#launcher-servermanager-cs) (448 lines)
 65. [public/favicon.svg](#public-favicon-svg) (8 lines)
-66. [public/fonts/fonts.css](#public-fonts-fonts-css) (215 lines)
+66. [public/fonts/fonts.css](#public-fonts-fonts-css) (216 lines)
 67. [public/manifest.webmanifest](#public-manifest-webmanifest) (1 lines)
 68. [release-templates/_system-scripts/backup-unix.sh](#release-templates-system-scripts-backup-unix-sh) (30 lines)
 69. [release-templates/_system-scripts/backup-windows.ps1](#release-templates-system-scripts-backup-windows-ps1) (39 lines)
@@ -98,7 +98,7 @@
 91. [scripts/generate-artha-md.mjs](#scripts-generate-artha-md-mjs) (186 lines)
 92. [scripts/generate-icons.mjs](#scripts-generate-icons-mjs) (176 lines)
 93. [scripts/import-busywin.py](#scripts-import-busywin-py) (505 lines)
-94. [scripts/inspect_fonts.py](#scripts-inspect-fonts-py) (56 lines)
+94. [scripts/inspect_fonts.py](#scripts-inspect-fonts-py) (57 lines)
 95. [scripts/inspect_fy_tables.py](#scripts-inspect-fy-tables-py) (12 lines)
 96. [scripts/inspect_key_tables.py](#scripts-inspect-key-tables-py) (24 lines)
 97. [scripts/inspect_tables.py](#scripts-inspect-tables-py) (55 lines)
@@ -9482,7 +9482,7 @@ For the complete column-by-column schemas of all 108 tables, refer to the indivi
 ## `docs/BUSYWIN_FONTS.md`
 
 - Path: `docs/BUSYWIN_FONTS.md`
-- Lines: 92 | Size: 4.3 KB
+- Lines: 93 | Size: 4.3 KB
 
 ````markdown
 # BusyWin Font Analysis & ARTHA Integration Guide
@@ -9576,6 +9576,7 @@ Inspection of the formatting template strings inside `FORMATS.BDS` revealed expl
   font-family: 'Rupee Foradian';
 }
 ```
+
 
 ````
 
@@ -20448,7 +20449,7 @@ public class ServerManager
 ## `public/fonts/fonts.css`
 
 - Path: `public/fonts/fonts.css`
-- Lines: 215 | Size: 4.9 KB
+- Lines: 216 | Size: 4.9 KB
 
 ```css
 /* ==========================================================================
@@ -20665,6 +20666,7 @@ public class ServerManager
   font-style: italic;
   font-display: swap;
 }
+
 
 ```
 
@@ -55231,7 +55233,7 @@ if __name__ == '__main__':
 ## `scripts/inspect_fonts.py`
 
 - Path: `scripts/inspect_fonts.py`
-- Lines: 56 | Size: 2.0 KB
+- Lines: 57 | Size: 2.0 KB
 
 ```python
 import os, struct
@@ -55289,6 +55291,7 @@ for f in files:
         print(f'{f:18} | Family: {family:20} | Subfamily: {subfamily:15} | Full: {fullname}')
     else:
         print(f'{f:18} | NOT FOUND')
+
 
 ```
 
@@ -61228,7 +61231,7 @@ function ActionCard({ icon, title, body, buttonLabel, disabled, onClick, variant
 ## `src/components/Dashboard.jsx`
 
 - Path: `src/components/Dashboard.jsx`
-- Lines: 1898 | Size: 110.9 KB
+- Lines: 1898 | Size: 111.0 KB
 
 ```jsx
 import { useState, useEffect, useMemo, useRef } from 'react';
@@ -61494,8 +61497,8 @@ export default function Dashboard({ onNew, onEdit, onPrint, onDuplicate, onConve
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [fyFilter, setFyFilter] = useState('all');
-  const [dateFrom, setDateFrom] = useState('');
+  const [fyFilter, setFyFilter] = useState(() => getFYOptions()[0]?.value || 'all');
+  const [dateFrom, setDateFrom] = useState(() => localToday());
   const [dateTo, setDateTo] = useState('');
   // Bulk-selection state. Stores a Set of bill IDs (not the bills themselves)
   // so we don't hold stale references when the underlying bill is edited

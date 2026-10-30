@@ -53,3 +53,4 @@ for f in files:
         print(f'{f:18} | Family: {family:20} | Subfamily: {subfamily:15} | Full: {fullname}')
     else:
         print(f'{f:18} | NOT FOUND')
+
