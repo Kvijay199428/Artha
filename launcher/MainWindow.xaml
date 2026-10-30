@@ -3,8 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:ARTHA.Launcher"
         Title="ARTHA - Server Launcher &amp; Background Services"
-        Height="700" Width="1020"
-        MinHeight="550" MinWidth="850"
+        Height="720" Width="1060"
+        MinHeight="540" MinWidth="860"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource BgDark}"
         Foreground="{StaticResource TextWhite}"
@@ -18,8 +18,8 @@
         <Style x:Key="ActionButton" TargetType="Button">
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="12,6"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Template">
@@ -48,20 +48,20 @@
         <Style x:Key="ToolButton" TargetType="Button" BasedOn="{StaticResource ActionButton}">
             <Setter Property="Background" Value="#1E293B"/>
             <Setter Property="Foreground" Value="#CBD5E1"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="Padding" Value="9,5"/>
         </Style>
 
         <Style x:Key="FilterRadioButton" TargetType="RadioButton">
             <Setter Property="Foreground" Value="#94A3B8"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="11.5"/>
             <Setter Property="FontWeight" Value="Medium"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="Margin" Value="0,0,4,0"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
-                        <Border x:Name="bdr" Background="#1E293B" CornerRadius="6" Padding="10,5" BorderBrush="#334155" BorderThickness="1">
+                        <Border x:Name="bdr" Background="#1E293B" CornerRadius="6" Padding="8,4" BorderBrush="#334155" BorderThickness="1">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -93,7 +93,7 @@
         </Grid.RowDefinitions>
 
         <!-- HEADER -->
-        <Border Grid.Row="0" Background="{StaticResource CardDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="0,0,0,1" Padding="20,16">
+        <Border Grid.Row="0" Background="{StaticResource CardDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="0,0,0,1" Padding="18,12">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -102,53 +102,51 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Branding -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Image Source="app-icon.ico" Width="44" Height="44" Margin="0,0,14,0" RenderOptions.BitmapScalingMode="HighQuality"/>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
+                    <Image Source="app-icon.ico" Width="40" Height="40" Margin="0,0,12,0" RenderOptions.BitmapScalingMode="HighQuality"/>
                     <StackPanel VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="ARTHA" FontSize="22" FontWeight="Bold" Foreground="{StaticResource TextWhite}" Margin="0,0,8,0"/>
-                            <Border Background="#1E3A8A" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+                            <TextBlock Text="ARTHA" FontSize="20" FontWeight="Bold" Foreground="{StaticResource TextWhite}" Margin="0,0,8,0"/>
+                            <Border Background="#1E3A8A" CornerRadius="4" Padding="5,2" VerticalAlignment="Center">
                                 <TextBlock Text="v1.10.80" FontSize="11" FontWeight="SemiBold" Foreground="#93C5FD"/>
                             </Border>
                         </StackPanel>
-                        <TextBlock Text="Accounting &amp; GST Software — Server &amp; Background Services" FontSize="12" Foreground="{StaticResource TextMuted}" Margin="0,2,0,0"/>
+                        <TextBlock Text="Accounting &amp; GST Software" FontSize="11.5" Foreground="{StaticResource TextMuted}" Margin="0,2,0,0"/>
                     </StackPanel>
                 </StackPanel>
 
                 <!-- Status Pills -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="8,0">
                     <!-- Backend Pill -->
-                    <Border Background="{StaticResource CardLight}" BorderBrush="{StaticResource BorderLight}" BorderThickness="1" CornerRadius="20" Padding="12,6" Margin="0,0,10,0">
+                    <Border Background="{StaticResource CardLight}" BorderBrush="{StaticResource BorderLight}" BorderThickness="1" CornerRadius="16" Padding="10,5" Margin="0,0,8,0">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Ellipse x:Name="BackendDot" Width="10" Height="10" Fill="{StaticResource AccentAmber}" Margin="0,0,8,0"/>
-                            <TextBlock Text="Backend:" FontSize="12" Foreground="{StaticResource TextMuted}" Margin="0,0,4,0"/>
-                            <TextBlock x:Name="TxtBackendStatus" Text="Starting (:11001)..." FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextWhite}"/>
+                            <Ellipse x:Name="BackendDot" Width="9" Height="9" Fill="{StaticResource AccentAmber}" Margin="0,0,6,0"/>
+                            <TextBlock Text="Backend:" FontSize="11.5" Foreground="{StaticResource TextMuted}" Margin="0,0,4,0"/>
+                            <TextBlock x:Name="TxtBackendStatus" Text="Starting (:11001)..." FontSize="11.5" FontWeight="SemiBold" Foreground="{StaticResource TextWhite}"/>
                         </StackPanel>
                     </Border>
 
                     <!-- Frontend Pill -->
-                    <Border Background="{StaticResource CardLight}" BorderBrush="{StaticResource BorderLight}" BorderThickness="1" CornerRadius="20" Padding="12,6">
+                    <Border Background="{StaticResource CardLight}" BorderBrush="{StaticResource BorderLight}" BorderThickness="1" CornerRadius="16" Padding="10,5">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Ellipse x:Name="FrontendDot" Width="10" Height="10" Fill="{StaticResource AccentAmber}" Margin="0,0,8,0"/>
-                            <TextBlock Text="Frontend:" FontSize="12" Foreground="{StaticResource TextMuted}" Margin="0,0,4,0"/>
-                            <TextBlock x:Name="TxtFrontendStatus" Text="Starting (:11002)..." FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextWhite}"/>
+                            <Ellipse x:Name="FrontendDot" Width="9" Height="9" Fill="{StaticResource AccentAmber}" Margin="0,0,6,0"/>
+                            <TextBlock Text="Frontend:" FontSize="11.5" Foreground="{StaticResource TextMuted}" Margin="0,0,4,0"/>
+                            <TextBlock x:Name="TxtFrontendStatus" Text="Starting (:11002)..." FontSize="11.5" FontWeight="SemiBold" Foreground="{StaticResource TextWhite}"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
 
                 <!-- Action Controls -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button x:Name="BtnOpenBrowser" Style="{StaticResource ActionButton}" Background="{StaticResource AccentGreen}" Margin="0,0,8,0" Click="BtnOpenBrowser_Click">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="🌐 Open App" FontWeight="Bold"/>
-                        </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="16,0,0,0">
+                    <Button x:Name="BtnOpenBrowser" Style="{StaticResource ActionButton}" Background="{StaticResource AccentGreen}" Margin="0,0,6,0" Padding="12,6" FontSize="12" Click="BtnOpenBrowser_Click">
+                        <TextBlock Text="🌐 Open App" FontWeight="Bold"/>
                     </Button>
 
-                    <Button x:Name="BtnRestart" Style="{StaticResource ActionButton}" Background="{StaticResource AccentAmber}" Margin="0,0,8,0" Click="BtnRestart_Click">
+                    <Button x:Name="BtnRestart" Style="{StaticResource ActionButton}" Background="{StaticResource AccentAmber}" Margin="0,0,6,0" Padding="12,6" FontSize="12" Click="BtnRestart_Click">
                         <TextBlock Text="🔄 Restart"/>
                     </Button>
 
-                    <Button x:Name="BtnToggleService" Style="{StaticResource ActionButton}" Background="{StaticResource AccentRed}" Click="BtnToggleService_Click">
+                    <Button x:Name="BtnToggleService" Style="{StaticResource ActionButton}" Background="{StaticResource AccentRed}" Padding="12,6" FontSize="12" Click="BtnToggleService_Click">
                         <TextBlock x:Name="TxtToggleService" Text="⏹ Stop"/>
                     </Button>
                 </StackPanel>
@@ -156,17 +154,20 @@
         </Border>
 
         <!-- TOOLBAR: Filters, Search, and Utilities -->
-        <Border Grid.Row="1" Background="#0E1424" BorderBrush="{StaticResource BorderDark}" BorderThickness="0,0,0,1" Padding="16,10">
+        <Border Grid.Row="1" Background="#0E1424" BorderBrush="{StaticResource BorderDark}" BorderThickness="0,0,0,1" Padding="16,8">
             <Grid>
                 <Grid.ColumnDefinitions>
+                    <!-- Filters -->
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
+                    <!-- Search Box (Stretches gracefully, never pushes or overlaps) -->
+                    <ColumnDefinition Width="*" MinWidth="130"/>
+                    <!-- Right Utilities -->
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
                 <!-- Filters -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Filter:" Foreground="{StaticResource TextMuted}" FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+                    <TextBlock Text="Filter:" Foreground="{StaticResource TextMuted}" FontSize="11.5" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <RadioButton Content="All Logs" IsChecked="True" Style="{StaticResource FilterRadioButton}" Checked="FilterChanged"/>
                     <RadioButton Content="Backend" Tag="Backend" Style="{StaticResource FilterRadioButton}" Checked="FilterChanged"/>
                     <RadioButton Content="Frontend" Tag="Frontend" Style="{StaticResource FilterRadioButton}" Checked="FilterChanged"/>
@@ -174,27 +175,27 @@
                     <RadioButton Content="System" Tag="System" Style="{StaticResource FilterRadioButton}" Checked="FilterChanged"/>
                 </StackPanel>
 
-                <!-- Search box -->
-                <Border Grid.Column="1" HorizontalAlignment="Left" Width="260" Margin="20,0,0,0" Background="#1E293B" CornerRadius="6" BorderBrush="#334155" BorderThickness="1">
+                <!-- Search box (Responsive, max width 260, never overflows into Col 2) -->
+                <Border Grid.Column="1" HorizontalAlignment="Stretch" MaxWidth="260" Margin="8,0,12,0" Background="#1E293B" CornerRadius="6" BorderBrush="#334155" BorderThickness="1">
                     <Grid>
-                        <TextBox x:Name="TxtSearch" Background="Transparent" BorderThickness="0" Foreground="White" FontSize="12" Padding="8,5" TextChanged="TxtSearch_TextChanged"/>
-                        <TextBlock Text="🔍 Search logs..." IsHitTestVisible="False" Foreground="#64748B" FontSize="12" Margin="8,6,0,0"
+                        <TextBox x:Name="TxtSearch" Background="Transparent" BorderThickness="0" Foreground="White" FontSize="11.5" Padding="8,4" VerticalAlignment="Center" TextChanged="TxtSearch_TextChanged"/>
+                        <TextBlock Text="🔍 Search logs..." IsHitTestVisible="False" Foreground="#64748B" FontSize="11.5" Margin="8,4,0,0" VerticalAlignment="Center"
                                    Visibility="{Binding Text.IsEmpty, ElementName=TxtSearch, Converter={x:Static local:EmptyToVisibilityConverter.Instance}}"/>
                     </Grid>
                 </Border>
 
                 <!-- Right Tools -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <CheckBox x:Name="ChkAutoScroll" Content="Auto-scroll" IsChecked="True" Foreground="{StaticResource TextMuted}" FontSize="12" VerticalAlignment="Center" Margin="0,0,16,0"/>
-                    <Button Content="📋 Copy All" Style="{StaticResource ToolButton}" Margin="0,0,6,0" Click="BtnCopy_Click"/>
-                    <Button Content="💾 Export" Style="{StaticResource ToolButton}" Margin="0,0,6,0" Click="BtnExport_Click"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
+                    <CheckBox x:Name="ChkAutoScroll" Content="Auto-scroll" IsChecked="True" Foreground="{StaticResource TextMuted}" FontSize="11.5" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <Button Content="📋 Copy All" Style="{StaticResource ToolButton}" Margin="0,0,4,0" Click="BtnCopy_Click"/>
+                    <Button Content="💾 Export" Style="{StaticResource ToolButton}" Margin="0,0,4,0" Click="BtnExport_Click"/>
                     <Button Content="🗑 Clear" Style="{StaticResource ToolButton}" Click="BtnClear_Click"/>
                 </StackPanel>
             </Grid>
         </Border>
 
         <!-- LOG CONSOLE -->
-        <Border Grid.Row="2" Background="#060911" Padding="10">
+        <Border Grid.Row="2" Background="#060911" Padding="12,8">
             <ScrollViewer x:Name="LogScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                 <ItemsControl x:Name="LogListView">
                     <ItemsControl.ItemsPanel>
@@ -206,16 +207,16 @@
                         <DataTemplate>
                             <Grid Margin="0,1,0,1">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="65"/>
-                                    <ColumnDefinition Width="95"/>
+                                    <ColumnDefinition Width="70"/>
+                                    <ColumnDefinition Width="105"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
 
                                 <!-- Timestamp -->
-                                <TextBlock Grid.Column="0" Text="{Binding FormattedTime}" FontFamily="Cascadia Code, Consolas, Courier New" FontSize="12" Foreground="#64748B" VerticalAlignment="Top"/>
+                                <TextBlock Grid.Column="0" Text="{Binding FormattedTime}" FontFamily="Cascadia Code, Consolas, Courier New" FontSize="12" Foreground="#64748B" VerticalAlignment="Top" Margin="0,0,4,0"/>
 
                                 <!-- Source Tag -->
-                                <TextBlock Grid.Column="1" Text="{Binding SourceTag}" FontFamily="Cascadia Code, Consolas, Courier New" FontSize="12" FontWeight="Bold" Foreground="{Binding SourceColor}" VerticalAlignment="Top"/>
+                                <TextBlock Grid.Column="1" Text="{Binding SourceTag}" FontFamily="Cascadia Code, Consolas, Courier New" FontSize="12" FontWeight="Bold" Foreground="{Binding SourceColor}" VerticalAlignment="Top" Margin="0,0,8,0"/>
 
                                 <!-- Message Text -->
                                 <TextBox Grid.Column="2" Text="{Binding Message, Mode=OneWay}" FontFamily="Cascadia Code, Consolas, Courier New" FontSize="12" Foreground="{Binding MessageColor}"
@@ -228,30 +229,29 @@
         </Border>
 
         <!-- STATUS FOOTER -->
-        <Border Grid.Row="3" Background="{StaticResource CardDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="0,1,0,0" Padding="16,8">
+        <Border Grid.Row="3" Background="{StaticResource CardDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="0,1,0,0" Padding="16,7">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto" MaxWidth="380"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
                 <!-- Project Dir -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
                     <TextBlock Text="📁 Directory:" Foreground="{StaticResource TextMuted}" FontSize="11" Margin="0,0,6,0"/>
-                    <TextBlock x:Name="TxtDirectory" Text="D:\VEGA\ARTHA" Foreground="#93C5FD" FontSize="11" Cursor="Hand" MouseDown="TxtDirectory_MouseDown"/>
+                    <TextBlock x:Name="TxtDirectory" Text="D:\VEGA\ARTHA" Foreground="#93C5FD" FontSize="11" TextTrimming="CharacterEllipsis" MaxWidth="300" Cursor="Hand" MouseDown="TxtDirectory_MouseDown" ToolTip="Click to open project directory in Explorer"/>
                 </StackPanel>
 
                 <!-- Stats -->
-                <TextBlock x:Name="TxtStats" Grid.Column="1" Text="Services active • All logs captured" Foreground="{StaticResource TextMuted}" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <TextBlock x:Name="TxtStats" Grid.Column="1" Text="Services active • All logs captured" Foreground="{StaticResource TextMuted}" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="8,0" TextTrimming="CharacterEllipsis"/>
 
                 <!-- Options -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
                     <CheckBox x:Name="ChkMinimizeToTray" Content="Minimize to tray" IsChecked="True" Foreground="{StaticResource TextMuted}" FontSize="11" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                    <TextBlock Text="Press Open App to launch in browser" Foreground="{StaticResource AccentGreen}" FontSize="11" FontWeight="SemiBold"/>
+                    <TextBlock Text="Ready • Press Open App" Foreground="{StaticResource AccentGreen}" FontSize="11" FontWeight="SemiBold"/>
                 </StackPanel>
             </Grid>
         </Border>
     </Grid>
 </Window>
-
