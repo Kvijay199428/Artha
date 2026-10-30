@@ -1,7 +1,7 @@
 # ARTHA - Project Source Code Bundle
 
-> Generated on: **2026-10-30 17:53:46**
-> Total Files: **160** | Total Lines: **93,673** | Total Size: **3.99 MB**
+> Generated on: **2026-10-30 18:15:49**
+> Total Files: **163** | Total Lines: **94,037** | Total Size: **4.00 MB**
 
 ## Table of Contents
 
@@ -40,131 +40,134 @@
 33. [docs/AUDIT_2026-04-30.md](#docs-audit-2026-04-30-md) (272 lines)
 34. [docs/AUDIT_2026-10-22.md](#docs-audit-2026-10-22-md) (178 lines)
 35. [docs/BUSYWIN_DATABASE_SCHEMA.md](#docs-busywin-database-schema-md) (478 lines)
-36. [docs/busywin_schemas/01_COMPANY_DATABASE_db_bds.md](#docs-busywin-schemas-01-company-database-db-bds-md) (1647 lines)
-37. [docs/busywin_schemas/02_FY_MASTERS_AND_ACCOUNTS.md](#docs-busywin-schemas-02-fy-masters-and-accounts-md) (830 lines)
-38. [docs/busywin_schemas/03_FY_TRANSACTIONS_AND_VOUCHERS.md](#docs-busywin-schemas-03-fy-transactions-and-vouchers-md) (1021 lines)
-39. [docs/busywin_schemas/04_FY_GST_AND_STATUTORY.md](#docs-busywin-schemas-04-fy-gst-and-statutory-md) (1102 lines)
-40. [docs/busywin_schemas/05_FY_SYSTEM_AND_CONFIGURATION.md](#docs-busywin-schemas-05-fy-system-and-configuration-md) (835 lines)
-41. [docs/COMPETITOR_GAPS.md](#docs-competitor-gaps-md) (131 lines)
-42. [docs/DEPLOY_ONLINE.md](#docs-deploy-online-md) (349 lines)
-43. [docs/KNOWN_ERRORS.md](#docs-known-errors-md) (1717 lines)
-44. [docs/README.md](#docs-readme-md) (19 lines)
-45. [docs/RELEASE_CHECKLIST.md](#docs-release-checklist-md) (137 lines)
-46. [docs/superpowers/specs/2026-04-30-multi-account-payments-design.md](#docs-superpowers-specs-2026-04-30-multi-account-payments-design-md) (214 lines)
-47. [docs/TAX_HELPER_PLAN.md](#docs-tax-helper-plan-md) (147 lines)
-48. [docs/USER_GUIDE.md](#docs-user-guide-md) (456 lines)
-49. [installer/App.xaml](#installer-app-xaml) (18 lines)
-50. [installer/App.xaml.cs](#installer-app-xaml-cs) (9 lines)
-51. [installer/ARTHA.Installer.csproj](#installer-artha-installer-csproj) (29 lines)
-52. [installer/InstallerEngine.cs](#installer-installerengine-cs) (234 lines)
-53. [installer/MainWindow.xaml](#installer-mainwindow-xaml) (120 lines)
-54. [installer/MainWindow.xaml.cs](#installer-mainwindow-xaml-cs) (120 lines)
-55. [launcher/App.xaml](#launcher-app-xaml) (22 lines)
-56. [launcher/App.xaml.cs](#launcher-app-xaml-cs) (53 lines)
-57. [launcher/ARTHA.Launcher.csproj](#launcher-artha-launcher-csproj) (30 lines)
-58. [launcher/Converters.cs](#launcher-converters-cs) (27 lines)
-59. [launcher/JobManager.cs](#launcher-jobmanager-cs) (119 lines)
-60. [launcher/LogItem.cs](#launcher-logitem-cs) (68 lines)
-61. [launcher/MainWindow.xaml](#launcher-mainwindow-xaml) (258 lines)
-62. [launcher/MainWindow.xaml.cs](#launcher-mainwindow-xaml-cs) (376 lines)
-63. [launcher/ServerManager.cs](#launcher-servermanager-cs) (448 lines)
-64. [public/favicon.svg](#public-favicon-svg) (8 lines)
-65. [public/manifest.webmanifest](#public-manifest-webmanifest) (1 lines)
-66. [release-templates/_system-scripts/backup-unix.sh](#release-templates-system-scripts-backup-unix-sh) (30 lines)
-67. [release-templates/_system-scripts/backup-windows.ps1](#release-templates-system-scripts-backup-windows-ps1) (39 lines)
-68. [release-templates/_system-scripts/install-unix.sh](#release-templates-system-scripts-install-unix-sh) (19 lines)
-69. [release-templates/_system-scripts/install-windows.ps1](#release-templates-system-scripts-install-windows-ps1) (231 lines)
-70. [release-templates/_system-scripts/move-windows.ps1](#release-templates-system-scripts-move-windows-ps1) (43 lines)
-71. [release-templates/_system-scripts/restore-windows.ps1](#release-templates-system-scripts-restore-windows-ps1) (46 lines)
-72. [release-templates/_system-scripts/start-unix.sh](#release-templates-system-scripts-start-unix-sh) (50 lines)
-73. [release-templates/_system-scripts/start-windows.ps1](#release-templates-system-scripts-start-windows-ps1) (196 lines)
-74. [release-templates/_system-scripts/stop-windows.ps1](#release-templates-system-scripts-stop-windows-ps1) (31 lines)
-75. [release-templates/_system-scripts/update-unix.sh](#release-templates-system-scripts-update-unix-sh) (273 lines)
-76. [release-templates/_system-scripts/update-windows.ps1](#release-templates-system-scripts-update-windows-ps1) (140 lines)
-77. [release-templates/Free GST Billing - LINUX.sh](#release-templates-free-gst-billing-linux-sh) (59 lines)
-78. [release-templates/Free GST Billing - MAC.command](#release-templates-free-gst-billing-mac-command) (67 lines)
-79. [release-templates/Free GST Billing - WINDOWS.hta](#release-templates-free-gst-billing-windows-hta) (600 lines)
-80. [release-templates/READ ME FIRST.txt](#release-templates-read-me-first-txt) (146 lines)
-81. [scripts/build-release-zip.mjs](#scripts-build-release-zip-mjs) (353 lines)
-82. [scripts/bundle-tesseract-assets.mjs](#scripts-bundle-tesseract-assets-mjs) (150 lines)
-83. [scripts/busywin_db_schema.json](#scripts-busywin-db-schema-json) (29720 lines)
-84. [scripts/csv-test.mjs](#scripts-csv-test-mjs) (115 lines)
-85. [scripts/discount-modes-test.mjs](#scripts-discount-modes-test-mjs) (69 lines)
-86. [scripts/extract_busywin_schema.py](#scripts-extract-busywin-schema-py) (161 lines)
-87. [scripts/generate_busywin_docs.py](#scripts-generate-busywin-docs-py) (351 lines)
-88. [scripts/generate_master_doc.py](#scripts-generate-master-doc-py) (503 lines)
-89. [scripts/generate-artha-md.mjs](#scripts-generate-artha-md-mjs) (186 lines)
-90. [scripts/generate-icons.mjs](#scripts-generate-icons-mjs) (176 lines)
-91. [scripts/import-busywin.py](#scripts-import-busywin-py) (505 lines)
-92. [scripts/inspect_fy_tables.py](#scripts-inspect-fy-tables-py) (12 lines)
-93. [scripts/inspect_key_tables.py](#scripts-inspect-key-tables-py) (24 lines)
-94. [scripts/inspect_tables.py](#scripts-inspect-tables-py) (55 lines)
-95. [scripts/inspect_vchtypes.py](#scripts-inspect-vchtypes-py) (16 lines)
-96. [scripts/tax-test.mjs](#scripts-tax-test-mjs) (1038 lines)
-97. [scripts/test-update-unix.mjs](#scripts-test-update-unix-mjs) (239 lines)
-98. [scripts/verify-release.mjs](#scripts-verify-release-mjs) (190 lines)
-99. [src/App.jsx](#src-app-jsx) (1290 lines)
-100. [src/components/ActionsMenu.jsx](#src-components-actionsmenu-jsx) (88 lines)
-101. [src/components/AppFooter.jsx](#src-components-appfooter-jsx) (40 lines)
-102. [src/components/AppLock.jsx](#src-components-applock-jsx) (104 lines)
-103. [src/components/AppLockSettings.jsx](#src-components-applocksettings-jsx) (96 lines)
-104. [src/components/BillOCR.jsx](#src-components-billocr-jsx) (655 lines)
-105. [src/components/BulkCsvImport.jsx](#src-components-bulkcsvimport-jsx) (199 lines)
-106. [src/components/ClientModal.jsx](#src-components-clientmodal-jsx) (203 lines)
-107. [src/components/ClientsView.jsx](#src-components-clientsview-jsx) (1014 lines)
-108. [src/components/ConfirmModal.jsx](#src-components-confirmmodal-jsx) (210 lines)
-109. [src/components/ControlPanel.jsx](#src-components-controlpanel-jsx) (259 lines)
-110. [src/components/Dashboard.jsx](#src-components-dashboard-jsx) (1898 lines)
-111. [src/components/ExpenseTracker.jsx](#src-components-expensetracker-jsx) (466 lines)
-112. [src/components/GSTReturns.jsx](#src-components-gstreturns-jsx) (2466 lines)
-113. [src/components/HelpButton.jsx](#src-components-helpbutton-jsx) (62 lines)
-114. [src/components/IncomeTax.jsx](#src-components-incometax-jsx) (1177 lines)
-115. [src/components/InventoryView.jsx](#src-components-inventoryview-jsx) (398 lines)
-116. [src/components/InvoiceGenerator.jsx](#src-components-invoicegenerator-jsx) (4712 lines)
-117. [src/components/InvoiceGridLayout.jsx](#src-components-invoicegridlayout-jsx) (543 lines)
-118. [src/components/InvoiceNumberSettings.jsx](#src-components-invoicenumbersettings-jsx) (325 lines)
-119. [src/components/InvoicePreview.jsx](#src-components-invoicepreview-jsx) (1562 lines)
-120. [src/components/LockButton.jsx](#src-components-lockbutton-jsx) (25 lines)
-121. [src/components/PageHeader.jsx](#src-components-pageheader-jsx) (73 lines)
-122. [src/components/PartyOutstandingReport.jsx](#src-components-partyoutstandingreport-jsx) (97 lines)
-123. [src/components/PrintPreviewModal.jsx](#src-components-printpreviewmodal-jsx) (215 lines)
-124. [src/components/PrintSettings.jsx](#src-components-printsettings-jsx) (1615 lines)
-125. [src/components/ProductBulkEdit.jsx](#src-components-productbulkedit-jsx) (102 lines)
-126. [src/components/PurchaseBills.jsx](#src-components-purchasebills-jsx) (1280 lines)
-127. [src/components/ReceiptVoucher.jsx](#src-components-receiptvoucher-jsx) (500 lines)
-128. [src/components/RecurringInvoices.jsx](#src-components-recurringinvoices-jsx) (443 lines)
-129. [src/components/ReportsView.jsx](#src-components-reportsview-jsx) (726 lines)
-130. [src/components/SettingsView.jsx](#src-components-settingsview-jsx) (2142 lines)
-131. [src/components/SetupWizard.jsx](#src-components-setupwizard-jsx) (256 lines)
-132. [src/components/StarBanner.jsx](#src-components-starbanner-jsx) (63 lines)
-133. [src/components/StockReport.jsx](#src-components-stockreport-jsx) (106 lines)
-134. [src/components/SupportNudge.jsx](#src-components-supportnudge-jsx) (69 lines)
-135. [src/components/SupportView.jsx](#src-components-supportview-jsx) (207 lines)
-136. [src/components/TableExport.jsx](#src-components-tableexport-jsx) (63 lines)
-137. [src/components/Toast.jsx](#src-components-toast-jsx) (77 lines)
-138. [src/components/UnassignedBanner.jsx](#src-components-unassignedbanner-jsx) (76 lines)
-139. [src/components/useSupporters.js](#src-components-usesupporters-js) (29 lines)
-140. [src/components/WelcomeGuide.jsx](#src-components-welcomeguide-jsx) (509 lines)
-141. [src/config/brand.js](#src-config-brand-js) (17 lines)
-142. [src/index.css](#src-index-css) (3506 lines)
-143. [src/index.html](#src-index-html) (154 lines)
-144. [src/main.jsx](#src-main-jsx) (146 lines)
-145. [src/services/googleDrive.js](#src-services-googledrive-js) (219 lines)
-146. [src/store.js](#src-store-js) (550 lines)
-147. [src/utils.js](#src-utils-js) (2483 lines)
-148. [src/utils/appLock.js](#src-utils-applock-js) (15 lines)
-149. [src/utils/bulkCsv.js](#src-utils-bulkcsv-js) (409 lines)
-150. [src/utils/clientCredit.js](#src-utils-clientcredit-js) (135 lines)
-151. [src/utils/hsnRates.js](#src-utils-hsnrates-js) (168 lines)
-152. [src/utils/itr.js](#src-utils-itr-js) (1342 lines)
-153. [src/utils/partyOutstanding.js](#src-utils-partyoutstanding-js) (54 lines)
-154. [src/utils/prefsMirror.js](#src-utils-prefsmirror-js) (78 lines)
-155. [src/utils/printSettings.js](#src-utils-printsettings-js) (571 lines)
-156. [src/utils/products.js](#src-utils-products-js) (67 lines)
-157. [src/utils/share.js](#src-utils-share-js) (43 lines)
-158. [src/utils/supporters.js](#src-utils-supporters-js) (56 lines)
-159. [src/utils/xlsx.js](#src-utils-xlsx-js) (76 lines)
-160. [tests/smoke.mjs](#tests-smoke-mjs) (1844 lines)
+36. [docs/BUSYWIN_FONTS.md](#docs-busywin-fonts-md) (92 lines)
+37. [docs/busywin_schemas/01_COMPANY_DATABASE_db_bds.md](#docs-busywin-schemas-01-company-database-db-bds-md) (1647 lines)
+38. [docs/busywin_schemas/02_FY_MASTERS_AND_ACCOUNTS.md](#docs-busywin-schemas-02-fy-masters-and-accounts-md) (830 lines)
+39. [docs/busywin_schemas/03_FY_TRANSACTIONS_AND_VOUCHERS.md](#docs-busywin-schemas-03-fy-transactions-and-vouchers-md) (1021 lines)
+40. [docs/busywin_schemas/04_FY_GST_AND_STATUTORY.md](#docs-busywin-schemas-04-fy-gst-and-statutory-md) (1102 lines)
+41. [docs/busywin_schemas/05_FY_SYSTEM_AND_CONFIGURATION.md](#docs-busywin-schemas-05-fy-system-and-configuration-md) (835 lines)
+42. [docs/COMPETITOR_GAPS.md](#docs-competitor-gaps-md) (131 lines)
+43. [docs/DEPLOY_ONLINE.md](#docs-deploy-online-md) (349 lines)
+44. [docs/KNOWN_ERRORS.md](#docs-known-errors-md) (1717 lines)
+45. [docs/README.md](#docs-readme-md) (19 lines)
+46. [docs/RELEASE_CHECKLIST.md](#docs-release-checklist-md) (137 lines)
+47. [docs/superpowers/specs/2026-04-30-multi-account-payments-design.md](#docs-superpowers-specs-2026-04-30-multi-account-payments-design-md) (214 lines)
+48. [docs/TAX_HELPER_PLAN.md](#docs-tax-helper-plan-md) (147 lines)
+49. [docs/USER_GUIDE.md](#docs-user-guide-md) (456 lines)
+50. [installer/App.xaml](#installer-app-xaml) (18 lines)
+51. [installer/App.xaml.cs](#installer-app-xaml-cs) (9 lines)
+52. [installer/ARTHA.Installer.csproj](#installer-artha-installer-csproj) (29 lines)
+53. [installer/InstallerEngine.cs](#installer-installerengine-cs) (234 lines)
+54. [installer/MainWindow.xaml](#installer-mainwindow-xaml) (120 lines)
+55. [installer/MainWindow.xaml.cs](#installer-mainwindow-xaml-cs) (120 lines)
+56. [launcher/App.xaml](#launcher-app-xaml) (22 lines)
+57. [launcher/App.xaml.cs](#launcher-app-xaml-cs) (53 lines)
+58. [launcher/ARTHA.Launcher.csproj](#launcher-artha-launcher-csproj) (30 lines)
+59. [launcher/Converters.cs](#launcher-converters-cs) (27 lines)
+60. [launcher/JobManager.cs](#launcher-jobmanager-cs) (119 lines)
+61. [launcher/LogItem.cs](#launcher-logitem-cs) (68 lines)
+62. [launcher/MainWindow.xaml](#launcher-mainwindow-xaml) (258 lines)
+63. [launcher/MainWindow.xaml.cs](#launcher-mainwindow-xaml-cs) (376 lines)
+64. [launcher/ServerManager.cs](#launcher-servermanager-cs) (448 lines)
+65. [public/favicon.svg](#public-favicon-svg) (8 lines)
+66. [public/fonts/fonts.css](#public-fonts-fonts-css) (215 lines)
+67. [public/manifest.webmanifest](#public-manifest-webmanifest) (1 lines)
+68. [release-templates/_system-scripts/backup-unix.sh](#release-templates-system-scripts-backup-unix-sh) (30 lines)
+69. [release-templates/_system-scripts/backup-windows.ps1](#release-templates-system-scripts-backup-windows-ps1) (39 lines)
+70. [release-templates/_system-scripts/install-unix.sh](#release-templates-system-scripts-install-unix-sh) (19 lines)
+71. [release-templates/_system-scripts/install-windows.ps1](#release-templates-system-scripts-install-windows-ps1) (231 lines)
+72. [release-templates/_system-scripts/move-windows.ps1](#release-templates-system-scripts-move-windows-ps1) (43 lines)
+73. [release-templates/_system-scripts/restore-windows.ps1](#release-templates-system-scripts-restore-windows-ps1) (46 lines)
+74. [release-templates/_system-scripts/start-unix.sh](#release-templates-system-scripts-start-unix-sh) (50 lines)
+75. [release-templates/_system-scripts/start-windows.ps1](#release-templates-system-scripts-start-windows-ps1) (196 lines)
+76. [release-templates/_system-scripts/stop-windows.ps1](#release-templates-system-scripts-stop-windows-ps1) (31 lines)
+77. [release-templates/_system-scripts/update-unix.sh](#release-templates-system-scripts-update-unix-sh) (273 lines)
+78. [release-templates/_system-scripts/update-windows.ps1](#release-templates-system-scripts-update-windows-ps1) (140 lines)
+79. [release-templates/Free GST Billing - LINUX.sh](#release-templates-free-gst-billing-linux-sh) (59 lines)
+80. [release-templates/Free GST Billing - MAC.command](#release-templates-free-gst-billing-mac-command) (67 lines)
+81. [release-templates/Free GST Billing - WINDOWS.hta](#release-templates-free-gst-billing-windows-hta) (600 lines)
+82. [release-templates/READ ME FIRST.txt](#release-templates-read-me-first-txt) (146 lines)
+83. [scripts/build-release-zip.mjs](#scripts-build-release-zip-mjs) (353 lines)
+84. [scripts/bundle-tesseract-assets.mjs](#scripts-bundle-tesseract-assets-mjs) (150 lines)
+85. [scripts/busywin_db_schema.json](#scripts-busywin-db-schema-json) (29720 lines)
+86. [scripts/csv-test.mjs](#scripts-csv-test-mjs) (115 lines)
+87. [scripts/discount-modes-test.mjs](#scripts-discount-modes-test-mjs) (69 lines)
+88. [scripts/extract_busywin_schema.py](#scripts-extract-busywin-schema-py) (161 lines)
+89. [scripts/generate_busywin_docs.py](#scripts-generate-busywin-docs-py) (351 lines)
+90. [scripts/generate_master_doc.py](#scripts-generate-master-doc-py) (503 lines)
+91. [scripts/generate-artha-md.mjs](#scripts-generate-artha-md-mjs) (186 lines)
+92. [scripts/generate-icons.mjs](#scripts-generate-icons-mjs) (176 lines)
+93. [scripts/import-busywin.py](#scripts-import-busywin-py) (505 lines)
+94. [scripts/inspect_fonts.py](#scripts-inspect-fonts-py) (56 lines)
+95. [scripts/inspect_fy_tables.py](#scripts-inspect-fy-tables-py) (12 lines)
+96. [scripts/inspect_key_tables.py](#scripts-inspect-key-tables-py) (24 lines)
+97. [scripts/inspect_tables.py](#scripts-inspect-tables-py) (55 lines)
+98. [scripts/inspect_vchtypes.py](#scripts-inspect-vchtypes-py) (16 lines)
+99. [scripts/tax-test.mjs](#scripts-tax-test-mjs) (1038 lines)
+100. [scripts/test-update-unix.mjs](#scripts-test-update-unix-mjs) (239 lines)
+101. [scripts/verify-release.mjs](#scripts-verify-release-mjs) (190 lines)
+102. [src/App.jsx](#src-app-jsx) (1290 lines)
+103. [src/components/ActionsMenu.jsx](#src-components-actionsmenu-jsx) (88 lines)
+104. [src/components/AppFooter.jsx](#src-components-appfooter-jsx) (40 lines)
+105. [src/components/AppLock.jsx](#src-components-applock-jsx) (104 lines)
+106. [src/components/AppLockSettings.jsx](#src-components-applocksettings-jsx) (96 lines)
+107. [src/components/BillOCR.jsx](#src-components-billocr-jsx) (655 lines)
+108. [src/components/BulkCsvImport.jsx](#src-components-bulkcsvimport-jsx) (199 lines)
+109. [src/components/ClientModal.jsx](#src-components-clientmodal-jsx) (203 lines)
+110. [src/components/ClientsView.jsx](#src-components-clientsview-jsx) (1014 lines)
+111. [src/components/ConfirmModal.jsx](#src-components-confirmmodal-jsx) (210 lines)
+112. [src/components/ControlPanel.jsx](#src-components-controlpanel-jsx) (259 lines)
+113. [src/components/Dashboard.jsx](#src-components-dashboard-jsx) (1898 lines)
+114. [src/components/ExpenseTracker.jsx](#src-components-expensetracker-jsx) (466 lines)
+115. [src/components/GSTReturns.jsx](#src-components-gstreturns-jsx) (2466 lines)
+116. [src/components/HelpButton.jsx](#src-components-helpbutton-jsx) (62 lines)
+117. [src/components/IncomeTax.jsx](#src-components-incometax-jsx) (1177 lines)
+118. [src/components/InventoryView.jsx](#src-components-inventoryview-jsx) (398 lines)
+119. [src/components/InvoiceGenerator.jsx](#src-components-invoicegenerator-jsx) (4712 lines)
+120. [src/components/InvoiceGridLayout.jsx](#src-components-invoicegridlayout-jsx) (543 lines)
+121. [src/components/InvoiceNumberSettings.jsx](#src-components-invoicenumbersettings-jsx) (325 lines)
+122. [src/components/InvoicePreview.jsx](#src-components-invoicepreview-jsx) (1562 lines)
+123. [src/components/LockButton.jsx](#src-components-lockbutton-jsx) (25 lines)
+124. [src/components/PageHeader.jsx](#src-components-pageheader-jsx) (73 lines)
+125. [src/components/PartyOutstandingReport.jsx](#src-components-partyoutstandingreport-jsx) (97 lines)
+126. [src/components/PrintPreviewModal.jsx](#src-components-printpreviewmodal-jsx) (215 lines)
+127. [src/components/PrintSettings.jsx](#src-components-printsettings-jsx) (1615 lines)
+128. [src/components/ProductBulkEdit.jsx](#src-components-productbulkedit-jsx) (102 lines)
+129. [src/components/PurchaseBills.jsx](#src-components-purchasebills-jsx) (1280 lines)
+130. [src/components/ReceiptVoucher.jsx](#src-components-receiptvoucher-jsx) (500 lines)
+131. [src/components/RecurringInvoices.jsx](#src-components-recurringinvoices-jsx) (443 lines)
+132. [src/components/ReportsView.jsx](#src-components-reportsview-jsx) (726 lines)
+133. [src/components/SettingsView.jsx](#src-components-settingsview-jsx) (2142 lines)
+134. [src/components/SetupWizard.jsx](#src-components-setupwizard-jsx) (256 lines)
+135. [src/components/StarBanner.jsx](#src-components-starbanner-jsx) (63 lines)
+136. [src/components/StockReport.jsx](#src-components-stockreport-jsx) (106 lines)
+137. [src/components/SupportNudge.jsx](#src-components-supportnudge-jsx) (69 lines)
+138. [src/components/SupportView.jsx](#src-components-supportview-jsx) (207 lines)
+139. [src/components/TableExport.jsx](#src-components-tableexport-jsx) (63 lines)
+140. [src/components/Toast.jsx](#src-components-toast-jsx) (77 lines)
+141. [src/components/UnassignedBanner.jsx](#src-components-unassignedbanner-jsx) (76 lines)
+142. [src/components/useSupporters.js](#src-components-usesupporters-js) (29 lines)
+143. [src/components/WelcomeGuide.jsx](#src-components-welcomeguide-jsx) (509 lines)
+144. [src/config/brand.js](#src-config-brand-js) (17 lines)
+145. [src/index.css](#src-index-css) (3506 lines)
+146. [src/index.html](#src-index-html) (155 lines)
+147. [src/main.jsx](#src-main-jsx) (146 lines)
+148. [src/services/googleDrive.js](#src-services-googledrive-js) (219 lines)
+149. [src/store.js](#src-store-js) (550 lines)
+150. [src/utils.js](#src-utils-js) (2483 lines)
+151. [src/utils/appLock.js](#src-utils-applock-js) (15 lines)
+152. [src/utils/bulkCsv.js](#src-utils-bulkcsv-js) (409 lines)
+153. [src/utils/clientCredit.js](#src-utils-clientcredit-js) (135 lines)
+154. [src/utils/hsnRates.js](#src-utils-hsnrates-js) (168 lines)
+155. [src/utils/itr.js](#src-utils-itr-js) (1342 lines)
+156. [src/utils/partyOutstanding.js](#src-utils-partyoutstanding-js) (54 lines)
+157. [src/utils/prefsMirror.js](#src-utils-prefsmirror-js) (78 lines)
+158. [src/utils/printSettings.js](#src-utils-printsettings-js) (571 lines)
+159. [src/utils/products.js](#src-utils-products-js) (67 lines)
+160. [src/utils/share.js](#src-utils-share-js) (43 lines)
+161. [src/utils/supporters.js](#src-utils-supporters-js) (56 lines)
+162. [src/utils/xlsx.js](#src-utils-xlsx-js) (76 lines)
+163. [tests/smoke.mjs](#tests-smoke-mjs) (1844 lines)
 
 ---
 
@@ -9470,6 +9473,109 @@ For the complete column-by-column schemas of all 108 tables, refer to the indivi
 - 📄 **[Module 3: FY Transactions & Vouchers](./busywin_schemas/03_FY_TRANSACTIONS_AND_VOUCHERS.md)** — 24 tables, 590+ columns.
 - 📄 **[Module 4: FY GST, Statutory & Tax](./busywin_schemas/04_FY_GST_AND_STATUTORY.md)** — 25 tables, 750+ columns.
 - 📄 **[Module 5: FY System & Configuration](./busywin_schemas/05_FY_SYSTEM_AND_CONFIGURATION.md)** — 18 tables, 430+ columns.
+
+````
+
+---
+
+<a id="docs-busywin-fonts-md"></a>
+## `docs/BUSYWIN_FONTS.md`
+
+- Path: `docs/BUSYWIN_FONTS.md`
+- Lines: 92 | Size: 4.3 KB
+
+````markdown
+# BusyWin Font Analysis & ARTHA Integration Guide
+
+## Executive Summary
+
+Through binary reverse-engineering and inspection of BusyWin (`C:\BusyWin\Busy21.exe`, `C:\BusyWin\SYSTEM\FORMATS.BDS`, `C:\BusyWin\DATA\setup.exe`, and the Windows system font subsystem), we identified the exact fonts bundled and utilized by BusyWin across its UI, billing formats, and print subsystem.
+
+All identified font assets have been extracted, cataloged, and integrated directly into ARTHA's font suite under `public/fonts/` with `@font-face` definitions in `public/fonts/fonts.css` and linked in `src/index.html`.
+
+---
+
+## 1. BusyWin Font Inventory & Usage Breakdown
+
+| Font Family | Font Files | Category / Purpose in BusyWin |
+| :--- | :--- | :--- |
+| **Oloron** | `Oloron__.TTF` | Core BusyWin high-density invoice and document font |
+| **Oloron Condensed** | `OLORC___.TTF` (Regular)<br>`OLORCB__.TTF` (Bold)<br>`OLORCI__.TTF` (Italic)<br>`OLORCBI_.TTF` (Bold Italic) | Compact 80-column and 132-column printing; compact tables |
+| **Oloron EXP** | `OLORE___.TTF` (Regular)<br>`OLOREB__.TTF` (Bold)<br>`OLOREI__.TTF` (Italic)<br>`OLOREBI_.TTF` (Bold Italic) | Expanded title banners and highlighted account names |
+| **Oloron Ultra Condensed** | `OLORUC__.TTF` (Regular)<br>`OLORUCB_.TTF` (Bold)<br>`OLORUCI_.TTF` (Italic)<br>`OLORUCBI.TTF` (Bold Italic) | Narrow POS receipt slips (3-inch / 58mm / 80mm thermal rolls) |
+| **Rupee Foradian** | `Rupee_Foradian.ttf` | Dedicated Indian Rupee (`₹`) currency symbol font |
+| **Microsoft Sans Serif** | `micross.ttf` | Classical Win32 / VB6 application UI, dialogs, forms, menus |
+| **Tahoma** | `tahoma.ttf`<br>`tahomabd.ttf` | Data grid headers, report titles, and dialog labels |
+| **Calibri** | `calibri.ttf`<br>`calibrib.ttf`<br>`calibrii.ttf`<br>`calibriz.ttf` | Modern GST invoice template body font (`FORMATS.BDS`) |
+| **Courier New** | `cour.ttf`<br>`courbd.ttf`<br>`couri.ttf`<br>`courbi.ttf` | Fixed-pitch dot-matrix / ESC-P printer emulation |
+
+---
+
+## 2. Technical Evidence & Discovery Details
+
+### A. Oloron Font Family (BusyWin Proprietary Suite)
+- **Installer Archive (`C:\BusyWin\DATA\setup.exe`)**:
+  BusyWin installs the entire Oloron suite (`Oloron__.TTF`, `OLORC*.TTF`, `OLORE*.TTF`, `OLORUC*.TTF`) directly into Windows during setup.
+- **Binary Code Reference (`C:\BusyWin\Busy21.exe` & `Busy2L21.dll`)**:
+  Direct string references to `'Oloron'`, `'Oloron EXP'`, `'Oloron Condensed'`, and `'Oloron Ultra Condensed'` reside in the print engine and page formatting routines.
+
+### B. Rupee Foradian Font
+- Discovered in `setup.exe` (`F21639_Rupee_Foradian.ttf` -> `Rupee_Foradian.ttf`).
+- Used by BusyWin accounting vouchers and invoices to render the rupee symbol using the backtick key (`` ` ``) prior to universal Unicode U+20B9 adoption.
+
+### C. Document Formats (`C:\BusyWin\SYSTEM\FORMATS.BDS`)
+Inspection of the formatting template strings inside `FORMATS.BDS` revealed explicit font directives:
+```text
+<DATA_FONT_ON,Calibri,8>
+<DATA_FONT_ON,Calibri,10>
+<DATA_FONT_ON,Calibri,12>
+<DATA_FONT_ON,Courier New,8>
+<DATA_FONT_ON,Tahoma,8>
+<DATA_FONT_ON,Tahoma,10>
+```
+
+### D. Win32 VB6 UI Subsystem (`Busy21.exe`)
+- `MS Sans Serif` (120 form references in binary)
+- `Tahoma` (17 dialog references in binary)
+- `Arial` (32 button/label references in binary)
+
+---
+
+## 3. ARTHA Integration Architecture
+
+### Files Deployed to ARTHA
+1. **Directory**: `d:\VEGA\ARTHA\public\fonts\`
+   - 25 font binaries (`.ttf`) covering the complete Oloron family, Rupee Foradian, Microsoft Sans Serif, Tahoma, Calibri, and Courier New.
+2. **CSS Definition**: `d:\VEGA\ARTHA\public\fonts\fonts.css`
+   - Defines standard `@font-face` rules with `font-display: swap`.
+3. **HTML Link**: `d:\VEGA\ARTHA\src\index.html`
+   - Linked via `<link rel="stylesheet" href="/fonts/fonts.css" />`.
+4. **Vite Production Build**: `d:\VEGA\ARTHA\dist\fonts\`
+   - Automatically bundled into production distribution during `npm run build`.
+
+---
+
+## 4. How to Use in ARTHA Invoices & UI
+
+### In CSS
+```css
+/* Compact BusyWin-style tabular print */
+.busywin-table {
+  font-family: 'Oloron Condensed', 'Calibri', sans-serif;
+  font-size: 11px;
+}
+
+/* Thermal POS slip */
+.pos-receipt {
+  font-family: 'Oloron Ultra Condensed', monospace;
+  font-size: 10px;
+}
+
+/* Legacy Rupee Symbol */
+.currency-symbol {
+  font-family: 'Rupee Foradian';
+}
+```
 
 ````
 
@@ -19208,7 +19314,7 @@ public class LogItem
 ## `launcher/MainWindow.xaml`
 
 - Path: `launcher/MainWindow.xaml`
-- Lines: 258 | Size: 15.7 KB
+- Lines: 258 | Size: 16.3 KB
 
 ```xml
 <Window x:Class="ARTHA.Launcher.MainWindow"
@@ -19216,8 +19322,8 @@ public class LogItem
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:ARTHA.Launcher"
         Title="ARTHA - Server Launcher &amp; Background Services"
-        Height="700" Width="1020"
-        MinHeight="550" MinWidth="850"
+        Height="720" Width="1060"
+        MinHeight="540" MinWidth="860"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource BgDark}"
         Foreground="{StaticResource TextWhite}"
@@ -19231,8 +19337,8 @@ public class LogItem
         <Style x:Key="ActionButton" TargetType="Button">
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="12,6"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Template">
@@ -19261,20 +19367,20 @@ public class LogItem
         <Style x:Key="ToolButton" TargetType="Button" BasedOn="{StaticResource ActionButton}">
             <Setter Property="Background" Value="#1E293B"/>
             <Setter Property="Foreground" Value="#CBD5E1"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="Padding" Value="9,5"/>
         </Style>
 
         <Style x:Key="FilterRadioButton" TargetType="RadioButton">
             <Setter Property="Foreground" Value="#94A3B8"/>
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="11.5"/>
             <Setter Property="FontWeight" Value="Medium"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="Margin" Value="0,0,4,0"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
-                        <Border x:Name="bdr" Background="#1E293B" CornerRadius="6" Padding="10,5" BorderBrush="#334155" BorderThickness="1">
+                        <Border x:Name="bdr" Background="#1E293B" CornerRadius="6" Padding="8,4" BorderBrush="#334155" BorderThickness="1">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -19306,7 +19412,7 @@ public class LogItem
         </Grid.RowDefinitions>
 
         <!-- HEADER -->
-        <Border Grid.Row="0" Background="{StaticResource CardDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="0,0,0,1" Padding="20,16">
+        <Border Grid.Row="0" Background="{StaticResource CardDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="0,0,0,1" Padding="18,12">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -19315,53 +19421,51 @@ public class LogItem
                 </Grid.ColumnDefinitions>
 
                 <!-- Branding -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Image Source="app-icon.ico" Width="44" Height="44" Margin="0,0,14,0" RenderOptions.BitmapScalingMode="HighQuality"/>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
+                    <Image Source="app-icon.ico" Width="40" Height="40" Margin="0,0,12,0" RenderOptions.BitmapScalingMode="HighQuality"/>
                     <StackPanel VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="ARTHA" FontSize="22" FontWeight="Bold" Foreground="{StaticResource TextWhite}" Margin="0,0,8,0"/>
-                            <Border Background="#1E3A8A" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+                            <TextBlock Text="ARTHA" FontSize="20" FontWeight="Bold" Foreground="{StaticResource TextWhite}" Margin="0,0,8,0"/>
+                            <Border Background="#1E3A8A" CornerRadius="4" Padding="5,2" VerticalAlignment="Center">
                                 <TextBlock Text="v1.10.80" FontSize="11" FontWeight="SemiBold" Foreground="#93C5FD"/>
                             </Border>
                         </StackPanel>
-                        <TextBlock Text="Accounting &amp; GST Software — Server &amp; Background Services" FontSize="12" Foreground="{StaticResource TextMuted}" Margin="0,2,0,0"/>
+                        <TextBlock Text="Accounting &amp; GST Software" FontSize="11.5" Foreground="{StaticResource TextMuted}" Margin="0,2,0,0"/>
                     </StackPanel>
                 </StackPanel>
 
                 <!-- Status Pills -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="8,0">
                     <!-- Backend Pill -->
-                    <Border Background="{StaticResource CardLight}" BorderBrush="{StaticResource BorderLight}" BorderThickness="1" CornerRadius="20" Padding="12,6" Margin="0,0,10,0">
+                    <Border Background="{StaticResource CardLight}" BorderBrush="{StaticResource BorderLight}" BorderThickness="1" CornerRadius="16" Padding="10,5" Margin="0,0,8,0">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Ellipse x:Name="BackendDot" Width="10" Height="10" Fill="{StaticResource AccentAmber}" Margin="0,0,8,0"/>
-                            <TextBlock Text="Backend:" FontSize="12" Foreground="{StaticResource TextMuted}" Margin="0,0,4,0"/>
-                            <TextBlock x:Name="TxtBackendStatus" Text="Starting (:11001)..." FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextWhite}"/>
+                            <Ellipse x:Name="BackendDot" Width="9" Height="9" Fill="{StaticResource AccentAmber}" Margin="0,0,6,0"/>
+                            <TextBlock Text="Backend:" FontSize="11.5" Foreground="{StaticResource TextMuted}" Margin="0,0,4,0"/>
+                            <TextBlock x:Name="TxtBackendStatus" Text="Starting (:11001)..." FontSize="11.5" FontWeight="SemiBold" Foreground="{StaticResource TextWhite}"/>
                         </StackPanel>
                     </Border>
 
                     <!-- Frontend Pill -->
-                    <Border Background="{StaticResource CardLight}" BorderBrush="{StaticResource BorderLight}" BorderThickness="1" CornerRadius="20" Padding="12,6">
+                    <Border Background="{StaticResource CardLight}" BorderBrush="{StaticResource BorderLight}" BorderThickness="1" CornerRadius="16" Padding="10,5">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Ellipse x:Name="FrontendDot" Width="10" Height="10" Fill="{StaticResource AccentAmber}" Margin="0,0,8,0"/>
-                            <TextBlock Text="Frontend:" FontSize="12" Foreground="{StaticResource TextMuted}" Margin="0,0,4,0"/>
-                            <TextBlock x:Name="TxtFrontendStatus" Text="Starting (:11002)..." FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextWhite}"/>
+                            <Ellipse x:Name="FrontendDot" Width="9" Height="9" Fill="{StaticResource AccentAmber}" Margin="0,0,6,0"/>
+                            <TextBlock Text="Frontend:" FontSize="11.5" Foreground="{StaticResource TextMuted}" Margin="0,0,4,0"/>
+                            <TextBlock x:Name="TxtFrontendStatus" Text="Starting (:11002)..." FontSize="11.5" FontWeight="SemiBold" Foreground="{StaticResource TextWhite}"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
 
                 <!-- Action Controls -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button x:Name="BtnOpenBrowser" Style="{StaticResource ActionButton}" Background="{StaticResource AccentGreen}" Margin="0,0,8,0" Click="BtnOpenBrowser_Click">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="🌐 Open App" FontWeight="Bold"/>
-                        </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="16,0,0,0">
+                    <Button x:Name="BtnOpenBrowser" Style="{StaticResource ActionButton}" Background="{StaticResource AccentGreen}" Margin="0,0,6,0" Padding="12,6" FontSize="12" Click="BtnOpenBrowser_Click">
+                        <TextBlock Text="🌐 Open App" FontWeight="Bold"/>
                     </Button>
 
-                    <Button x:Name="BtnRestart" Style="{StaticResource ActionButton}" Background="{StaticResource AccentAmber}" Margin="0,0,8,0" Click="BtnRestart_Click">
+                    <Button x:Name="BtnRestart" Style="{StaticResource ActionButton}" Background="{StaticResource AccentAmber}" Margin="0,0,6,0" Padding="12,6" FontSize="12" Click="BtnRestart_Click">
                         <TextBlock Text="🔄 Restart"/>
                     </Button>
 
-                    <Button x:Name="BtnToggleService" Style="{StaticResource ActionButton}" Background="{StaticResource AccentRed}" Click="BtnToggleService_Click">
+                    <Button x:Name="BtnToggleService" Style="{StaticResource ActionButton}" Background="{StaticResource AccentRed}" Padding="12,6" FontSize="12" Click="BtnToggleService_Click">
                         <TextBlock x:Name="TxtToggleService" Text="⏹ Stop"/>
                     </Button>
                 </StackPanel>
@@ -19369,17 +19473,20 @@ public class LogItem
         </Border>
 
         <!-- TOOLBAR: Filters, Search, and Utilities -->
-        <Border Grid.Row="1" Background="#0E1424" BorderBrush="{StaticResource BorderDark}" BorderThickness="0,0,0,1" Padding="16,10">
+        <Border Grid.Row="1" Background="#0E1424" BorderBrush="{StaticResource BorderDark}" BorderThickness="0,0,0,1" Padding="16,8">
             <Grid>
                 <Grid.ColumnDefinitions>
+                    <!-- Filters -->
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
+                    <!-- Search Box (Stretches gracefully, never pushes or overlaps) -->
+                    <ColumnDefinition Width="*" MinWidth="130"/>
+                    <!-- Right Utilities -->
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
                 <!-- Filters -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Filter:" Foreground="{StaticResource TextMuted}" FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+                    <TextBlock Text="Filter:" Foreground="{StaticResource TextMuted}" FontSize="11.5" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <RadioButton Content="All Logs" IsChecked="True" Style="{StaticResource FilterRadioButton}" Checked="FilterChanged"/>
                     <RadioButton Content="Backend" Tag="Backend" Style="{StaticResource FilterRadioButton}" Checked="FilterChanged"/>
                     <RadioButton Content="Frontend" Tag="Frontend" Style="{StaticResource FilterRadioButton}" Checked="FilterChanged"/>
@@ -19387,27 +19494,27 @@ public class LogItem
                     <RadioButton Content="System" Tag="System" Style="{StaticResource FilterRadioButton}" Checked="FilterChanged"/>
                 </StackPanel>
 
-                <!-- Search box -->
-                <Border Grid.Column="1" HorizontalAlignment="Left" Width="260" Margin="20,0,0,0" Background="#1E293B" CornerRadius="6" BorderBrush="#334155" BorderThickness="1">
+                <!-- Search box (Responsive, max width 260, never overflows into Col 2) -->
+                <Border Grid.Column="1" HorizontalAlignment="Stretch" MaxWidth="260" Margin="8,0,12,0" Background="#1E293B" CornerRadius="6" BorderBrush="#334155" BorderThickness="1">
                     <Grid>
-                        <TextBox x:Name="TxtSearch" Background="Transparent" BorderThickness="0" Foreground="White" FontSize="12" Padding="8,5" TextChanged="TxtSearch_TextChanged"/>
-                        <TextBlock Text="🔍 Search logs..." IsHitTestVisible="False" Foreground="#64748B" FontSize="12" Margin="8,6,0,0"
+                        <TextBox x:Name="TxtSearch" Background="Transparent" BorderThickness="0" Foreground="White" FontSize="11.5" Padding="8,4" VerticalAlignment="Center" TextChanged="TxtSearch_TextChanged"/>
+                        <TextBlock Text="🔍 Search logs..." IsHitTestVisible="False" Foreground="#64748B" FontSize="11.5" Margin="8,4,0,0" VerticalAlignment="Center"
                                    Visibility="{Binding Text.IsEmpty, ElementName=TxtSearch, Converter={x:Static local:EmptyToVisibilityConverter.Instance}}"/>
                     </Grid>
                 </Border>
 
                 <!-- Right Tools -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <CheckBox x:Name="ChkAutoScroll" Content="Auto-scroll" IsChecked="True" Foreground="{StaticResource TextMuted}" FontSize="12" VerticalAlignment="Center" Margin="0,0,16,0"/>
-                    <Button Content="📋 Copy All" Style="{StaticResource ToolButton}" Margin="0,0,6,0" Click="BtnCopy_Click"/>
-                    <Button Content="💾 Export" Style="{StaticResource ToolButton}" Margin="0,0,6,0" Click="BtnExport_Click"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
+                    <CheckBox x:Name="ChkAutoScroll" Content="Auto-scroll" IsChecked="True" Foreground="{StaticResource TextMuted}" FontSize="11.5" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <Button Content="📋 Copy All" Style="{StaticResource ToolButton}" Margin="0,0,4,0" Click="BtnCopy_Click"/>
+                    <Button Content="💾 Export" Style="{StaticResource ToolButton}" Margin="0,0,4,0" Click="BtnExport_Click"/>
                     <Button Content="🗑 Clear" Style="{StaticResource ToolButton}" Click="BtnClear_Click"/>
                 </StackPanel>
             </Grid>
         </Border>
 
         <!-- LOG CONSOLE -->
-        <Border Grid.Row="2" Background="#060911" Padding="10">
+        <Border Grid.Row="2" Background="#060911" Padding="12,8">
             <ScrollViewer x:Name="LogScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                 <ItemsControl x:Name="LogListView">
                     <ItemsControl.ItemsPanel>
@@ -19419,16 +19526,16 @@ public class LogItem
                         <DataTemplate>
                             <Grid Margin="0,1,0,1">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="65"/>
-                                    <ColumnDefinition Width="95"/>
+                                    <ColumnDefinition Width="70"/>
+                                    <ColumnDefinition Width="105"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
 
                                 <!-- Timestamp -->
-                                <TextBlock Grid.Column="0" Text="{Binding FormattedTime}" FontFamily="Cascadia Code, Consolas, Courier New" FontSize="12" Foreground="#64748B" VerticalAlignment="Top"/>
+                                <TextBlock Grid.Column="0" Text="{Binding FormattedTime}" FontFamily="Cascadia Code, Consolas, Courier New" FontSize="12" Foreground="#64748B" VerticalAlignment="Top" Margin="0,0,4,0"/>
 
                                 <!-- Source Tag -->
-                                <TextBlock Grid.Column="1" Text="{Binding SourceTag}" FontFamily="Cascadia Code, Consolas, Courier New" FontSize="12" FontWeight="Bold" Foreground="{Binding SourceColor}" VerticalAlignment="Top"/>
+                                <TextBlock Grid.Column="1" Text="{Binding SourceTag}" FontFamily="Cascadia Code, Consolas, Courier New" FontSize="12" FontWeight="Bold" Foreground="{Binding SourceColor}" VerticalAlignment="Top" Margin="0,0,8,0"/>
 
                                 <!-- Message Text -->
                                 <TextBox Grid.Column="2" Text="{Binding Message, Mode=OneWay}" FontFamily="Cascadia Code, Consolas, Courier New" FontSize="12" Foreground="{Binding MessageColor}"
@@ -19441,33 +19548,32 @@ public class LogItem
         </Border>
 
         <!-- STATUS FOOTER -->
-        <Border Grid.Row="3" Background="{StaticResource CardDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="0,1,0,0" Padding="16,8">
+        <Border Grid.Row="3" Background="{StaticResource CardDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="0,1,0,0" Padding="16,7">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto" MaxWidth="380"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
                 <!-- Project Dir -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
                     <TextBlock Text="📁 Directory:" Foreground="{StaticResource TextMuted}" FontSize="11" Margin="0,0,6,0"/>
-                    <TextBlock x:Name="TxtDirectory" Text="D:\VEGA\ARTHA" Foreground="#93C5FD" FontSize="11" Cursor="Hand" MouseDown="TxtDirectory_MouseDown"/>
+                    <TextBlock x:Name="TxtDirectory" Text="D:\VEGA\ARTHA" Foreground="#93C5FD" FontSize="11" TextTrimming="CharacterEllipsis" MaxWidth="300" Cursor="Hand" MouseDown="TxtDirectory_MouseDown" ToolTip="Click to open project directory in Explorer"/>
                 </StackPanel>
 
                 <!-- Stats -->
-                <TextBlock x:Name="TxtStats" Grid.Column="1" Text="Services active • All logs captured" Foreground="{StaticResource TextMuted}" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <TextBlock x:Name="TxtStats" Grid.Column="1" Text="Services active • All logs captured" Foreground="{StaticResource TextMuted}" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="8,0" TextTrimming="CharacterEllipsis"/>
 
                 <!-- Options -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
                     <CheckBox x:Name="ChkMinimizeToTray" Content="Minimize to tray" IsChecked="True" Foreground="{StaticResource TextMuted}" FontSize="11" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                    <TextBlock Text="Press Open App to launch in browser" Foreground="{StaticResource AccentGreen}" FontSize="11" FontWeight="SemiBold"/>
+                    <TextBlock Text="Ready • Press Open App" Foreground="{StaticResource AccentGreen}" FontSize="11" FontWeight="SemiBold"/>
                 </StackPanel>
             </Grid>
         </Border>
     </Grid>
 </Window>
-
 
 ```
 
@@ -20333,6 +20439,232 @@ public class ServerManager
   <text x="32" y="44" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" font-size="26" fill="#fff">B</text>
   <rect x="14" y="50" width="36" height="3" rx="1.5" fill="#60a5fa"/>
 </svg>
+
+```
+
+---
+
+<a id="public-fonts-fonts-css"></a>
+## `public/fonts/fonts.css`
+
+- Path: `public/fonts/fonts.css`
+- Lines: 215 | Size: 4.9 KB
+
+```css
+/* ==========================================================================
+   ARTHA & BusyWin Font Suite
+   Contains @font-face declarations for BusyWin core accounting & report fonts:
+     - Oloron (Standard, Condensed, EXP, Ultra Condensed)
+     - Rupee Foradian (Legacy Indian Rupee symbol font)
+     - Microsoft Sans Serif (Win32 VB6 Classic UI font)
+     - Tahoma (Dialog & Report Header font)
+     - Calibri (Modern GST Invoice & Bill format font)
+     - Courier New (Fixed-width dot-matrix print & voucher format font)
+   ========================================================================== */
+
+/* --- Rupee Foradian (BusyWin Currency Symbol Font) --- */
+@font-face {
+  font-family: 'Rupee Foradian';
+  src: url('/fonts/Rupee_Foradian.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- Oloron Suite (BusyWin High-Density Document & Grid Font) --- */
+@font-face {
+  font-family: 'Oloron';
+  src: url('/fonts/Oloron__.TTF') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oloron Condensed';
+  src: url('/fonts/OLORC___.TTF') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oloron Condensed';
+  src: url('/fonts/OLORCB__.TTF') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oloron Condensed';
+  src: url('/fonts/OLORCI__.TTF') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oloron Condensed';
+  src: url('/fonts/OLORCBI_.TTF') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oloron EXP';
+  src: url('/fonts/OLORE___.TTF') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oloron EXP';
+  src: url('/fonts/OLOREB__.TTF') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oloron EXP';
+  src: url('/fonts/OLOREI__.TTF') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oloron EXP';
+  src: url('/fonts/OLOREBI_.TTF') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oloron Ultra Condensed';
+  src: url('/fonts/OLORUC__.TTF') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oloron Ultra Condensed';
+  src: url('/fonts/OLORUCB_.TTF') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oloron Ultra Condensed';
+  src: url('/fonts/OLORUCI_.TTF') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oloron Ultra Condensed';
+  src: url('/fonts/OLORUCBI.TTF') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* --- Windows System Fonts Used in BusyWin UI & Forms --- */
+@font-face {
+  font-family: 'Microsoft Sans Serif';
+  src: url('/fonts/micross.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Tahoma';
+  src: url('/fonts/tahoma.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Tahoma';
+  src: url('/fonts/tahomabd.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- Document & Format Template Fonts Used in BusyWin FORMATS.BDS --- */
+@font-face {
+  font-family: 'Calibri';
+  src: url('/fonts/calibri.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Calibri';
+  src: url('/fonts/calibrib.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Calibri';
+  src: url('/fonts/calibrii.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Calibri';
+  src: url('/fonts/calibriz.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Courier New';
+  src: url('/fonts/cour.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Courier New';
+  src: url('/fonts/courbd.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Courier New';
+  src: url('/fonts/couri.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Courier New';
+  src: url('/fonts/courbi.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
 
 ```
 
@@ -54895,6 +55227,73 @@ if __name__ == '__main__':
 
 ---
 
+<a id="scripts-inspect-fonts-py"></a>
+## `scripts/inspect_fonts.py`
+
+- Path: `scripts/inspect_fonts.py`
+- Lines: 56 | Size: 2.0 KB
+
+```python
+import os, struct
+
+def parse_ttf(path):
+    with open(path, 'rb') as f:
+        data = f.read()
+    
+    num_tables = struct.unpack('>H', data[4:6])[0]
+    tables = {}
+    for i in range(num_tables):
+        offset = 12 + i * 16
+        tag = data[offset:offset+4].decode('ascii', errors='ignore')
+        table_offset = struct.unpack('>I', data[offset+8:offset+12])[0]
+        table_len = struct.unpack('>I', data[offset+12:offset+16])[0]
+        tables[tag] = (table_offset, table_len)
+    
+    names = {}
+    if 'name' in tables:
+        to, tl = tables['name']
+        nr_count = struct.unpack('>H', data[to+2:to+4])[0]
+        str_offset = to + struct.unpack('>H', data[to+4:to+6])[0]
+        for i in range(nr_count):
+            ro = to + 6 + i * 12
+            pid, eid, lid, nid, length, offset = struct.unpack('>HHHHHH', data[ro:ro+12])
+            sdata = data[str_offset + offset : str_offset + offset + length]
+            try:
+                if pid == 0 or pid == 3: # Unicode
+                    val = sdata.decode('utf-16be')
+                elif pid == 1: # Mac Roman
+                    val = sdata.decode('latin1')
+                else:
+                    val = sdata.decode('utf-8', errors='ignore')
+                if nid not in names:
+                    names[nid] = val
+            except:
+                pass
+    return names
+
+font_dir = r'C:\Windows\Fonts'
+files = [
+    'Rupee_Foradian.ttf', 'Oloron__.TTF', 'OLORC___.TTF', 'OLORCB__.TTF',
+    'OLORCI__.TTF', 'OLORCBI_.TTF', 'OLORE___.TTF', 'OLOREB__.TTF',
+    'OLOREI__.TTF', 'OLOREBI_.TTF', 'OLORUC__.TTF', 'OLORUCB_.TTF',
+    'OLORUCI_.TTF', 'OLORUCBI.TTF', 'micross.ttf', 'tahoma.ttf', 'calibri.ttf', 'cour.ttf'
+]
+
+for f in files:
+    fp = os.path.join(font_dir, f)
+    if os.path.exists(fp):
+        meta = parse_ttf(fp)
+        family = meta.get(1, 'Unknown')
+        subfamily = meta.get(2, 'Unknown')
+        fullname = meta.get(4, 'Unknown')
+        print(f'{f:18} | Family: {family:20} | Subfamily: {subfamily:15} | Full: {fullname}')
+    else:
+        print(f'{f:18} | NOT FOUND')
+
+```
+
+---
+
 <a id="scripts-inspect-fy-tables-py"></a>
 ## `scripts/inspect_fy_tables.py`
 
@@ -86997,7 +87396,7 @@ html:not([data-theme="dark"]) .mobile-topbar-btn { background: rgba(15, 23, 42, 
 ## `src/index.html`
 
 - Path: `src/index.html`
-- Lines: 154 | Size: 11.0 KB
+- Lines: 155 | Size: 11.1 KB
 
 ```html
 <!doctype html>
@@ -87132,6 +87531,7 @@ html:not([data-theme="dark"]) .mobile-topbar-btn { background: rgba(15, 23, 42, 
     <!-- Preconnect for Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="/fonts/fonts.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   </head>
   <body>

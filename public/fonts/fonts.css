@@ -1,0 +1,214 @@
+/* ==========================================================================
+   ARTHA & BusyWin Font Suite
+   Contains @font-face declarations for BusyWin core accounting & report fonts:
+     - Oloron (Standard, Condensed, EXP, Ultra Condensed)
+     - Rupee Foradian (Legacy Indian Rupee symbol font)
+     - Microsoft Sans Serif (Win32 VB6 Classic UI font)
+     - Tahoma (Dialog & Report Header font)
+     - Calibri (Modern GST Invoice & Bill format font)
+     - Courier New (Fixed-width dot-matrix print & voucher format font)
+   ========================================================================== */
+
+/* --- Rupee Foradian (BusyWin Currency Symbol Font) --- */
+@font-face {
+  font-family: 'Rupee Foradian';
+  src: url('/fonts/Rupee_Foradian.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- Oloron Suite (BusyWin High-Density Document & Grid Font) --- */
+@font-face {
+  font-family: 'Oloron';
+  src: url('/fonts/Oloron__.TTF') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oloron Condensed';
+  src: url('/fonts/OLORC___.TTF') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oloron Condensed';
+  src: url('/fonts/OLORCB__.TTF') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oloron Condensed';
+  src: url('/fonts/OLORCI__.TTF') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oloron Condensed';
+  src: url('/fonts/OLORCBI_.TTF') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oloron EXP';
+  src: url('/fonts/OLORE___.TTF') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oloron EXP';
+  src: url('/fonts/OLOREB__.TTF') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oloron EXP';
+  src: url('/fonts/OLOREI__.TTF') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oloron EXP';
+  src: url('/fonts/OLOREBI_.TTF') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oloron Ultra Condensed';
+  src: url('/fonts/OLORUC__.TTF') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oloron Ultra Condensed';
+  src: url('/fonts/OLORUCB_.TTF') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oloron Ultra Condensed';
+  src: url('/fonts/OLORUCI_.TTF') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Oloron Ultra Condensed';
+  src: url('/fonts/OLORUCBI.TTF') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* --- Windows System Fonts Used in BusyWin UI & Forms --- */
+@font-face {
+  font-family: 'Microsoft Sans Serif';
+  src: url('/fonts/micross.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Tahoma';
+  src: url('/fonts/tahoma.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Tahoma';
+  src: url('/fonts/tahomabd.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* --- Document & Format Template Fonts Used in BusyWin FORMATS.BDS --- */
+@font-face {
+  font-family: 'Calibri';
+  src: url('/fonts/calibri.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Calibri';
+  src: url('/fonts/calibrib.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Calibri';
+  src: url('/fonts/calibrii.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Calibri';
+  src: url('/fonts/calibriz.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Courier New';
+  src: url('/fonts/cour.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Courier New';
+  src: url('/fonts/courbd.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Courier New';
+  src: url('/fonts/couri.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Courier New';
+  src: url('/fonts/courbi.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
