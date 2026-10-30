@@ -130,7 +130,7 @@
      Text only (textContent), and every value checked: it comes from the web. */
   var sup = $('#supporters');
   if (sup && window.fetch) {
-    fetch('https://raw.githubusercontent.com/IamRamgarhia/Free-GST-Billing-Software/main/supporters.json', { cache: 'no-store' })
+    fetch('https://raw.githubusercontent.com/Kvijay199428/Artha/main/supporters.json', { cache: 'no-store' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         var n = function (v, max) { v = Number(v); return isFinite(v) && v >= 0 && v <= max ? v : null; };

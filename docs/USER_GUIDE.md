@@ -4,7 +4,7 @@ A plain-language guide for everyone who uses this app — no coding background
 needed. If you only have 2 minutes, jump to [Quick Start](#quick-start).
 
 > **TL;DR**
-> 1. [Download the ZIP](https://github.com/IamRamgarhia/Free-GST-Billing-Software/releases/latest/download/Free-GST-Billing.zip), **extract it**, and double-click **Free GST Billing - WINDOWS** once.
+> 1. [Download the ZIP](https://github.com/Kvijay199428/Artha/releases/latest/download/Free-GST-Billing.zip), **extract it**, and double-click **Free GST Billing - WINDOWS** once.
 > 2. Click **Install Node & App**, then **Open App**. A desktop icon appears called *Free GST Billing*. Use it from then on.
 > 3. Your data lives in the `_system\data\` folder inside the app folder. Back that folder up and you have backed up everything.
 
@@ -55,7 +55,7 @@ internet, your data stays on your machine, and there is no monthly fee — ever.
 ### If you've never installed Node.js before — that's fine.
 
 1. **Download the release ZIP** from
-   <https://github.com/IamRamgarhia/Free-GST-Billing-Software/releases/latest>
+   <https://github.com/Kvijay199428/Artha/releases/latest>
    and save it somewhere you'll remember (e.g. `Documents\FreeGSTBill`).
 
    > Use the **Releases** page, not the green *Code → Download ZIP* button.
@@ -86,11 +86,11 @@ If you are comfortable with a terminal, this does all of the above by itself.
 It needs no admin rights and writes nothing outside your own user folder:
 
 ```powershell
-irm https://raw.githubusercontent.com/IamRamgarhia/Free-GST-Billing-Software/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/Kvijay199428/Artha/main/install.ps1 | iex
 ```
 
 It installs to `%LOCALAPPDATA%\Programs\Free GST Billing`. To pick your own
-folder, run `$env:FREEGSTBILL_DIR = 'D:\Apps\Free GST Billing'` first.
+folder, run `$env:ARTHA_DIR = 'D:\Apps\ARTHA'` first.
 
 > **First-run wizard:** The first time you open the app, a 4-step wizard asks
 > for your business name, country, bank details, and so on. Pick *India*,
@@ -101,8 +101,8 @@ folder, run `$env:FREEGSTBILL_DIR = 'D:\Apps\Free GST Billing'` first.
 The `.hta` launcher is Windows-only — use `Free GST Billing - MAC.command` or
 `Free GST Billing - LINUX.sh` from the same ZIP, or run it from source:
 ```bash
-git clone https://github.com/IamRamgarhia/Free-GST-Billing-Software.git
-cd Free-GST-Billing-Software
+git clone https://github.com/Kvijay199428/Artha.git
+cd Artha
 npm install
 npm start          # builds, then serves on http://localhost:47371
 ```
@@ -342,7 +342,7 @@ release. Your invoices, clients and settings are not touched.
 
 **Q: I want a feature that's missing.**
 A: Open an issue at
-<https://github.com/IamRamgarhia/Free-GST-Billing-Software/issues> — many
+<https://github.com/Kvijay199428/Artha/issues> — many
 features in this app started as community requests (the per-line *unit*
 feature came from a user named Apurba, for example).
 
@@ -368,7 +368,7 @@ Program Files or HKLM, and **does not** auto-download executables (we open
 the nodejs.org page in your browser if Node.js is missing — you download
 the signed MSI yourself).
 
-Full source: <https://github.com/IamRamgarhia/Free-GST-Billing-Software>
+Full source: <https://github.com/Kvijay199428/Artha>
 
 ### "Cannot connect to server" / blank page
 The local server isn't running. Open the launcher (Desktop shortcut) and click
@@ -387,7 +387,7 @@ Your data folder is untouched, so your bills are safe — and the updater took a
 backup to `Documents\FreeGSTBill Backups\` before it started. Either:
 1. Run the update again — most updates self-heal on a second run.
 2. Or download the previous version from the
-   [Releases page](https://github.com/IamRamgarhia/Free-GST-Billing-Software/releases)
+   [Releases page](https://github.com/Kvijay199428/Artha/releases)
    and extract it over the app folder (your `_system\data\` is not in the ZIP,
    so it survives).
 
@@ -428,8 +428,8 @@ The code is React 19 + Vite 7 on the frontend, Express 5 on the backend, all
 in JavaScript (no TypeScript). Persistence is plain JSON files in `data/`.
 
 ```bash
-git clone https://github.com/IamRamgarhia/Free-GST-Billing-Software.git
-cd Free-GST-Billing-Software
+git clone https://github.com/Kvijay199428/Artha.git
+cd Artha
 npm install
 npm run dev        # starts both Express server + Vite dev server
 npm run lint       # ESLint
@@ -451,5 +451,5 @@ PRs welcome. The project follows
 
 ## Need help?
 
-- File an issue: <https://github.com/IamRamgarhia/Free-GST-Billing-Software/issues>
+- File an issue: <https://github.com/Kvijay199428/Artha/issues>
 - Email DiceCodes: contact@dicecodes.com

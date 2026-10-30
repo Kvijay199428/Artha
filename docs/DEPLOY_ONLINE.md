@@ -342,7 +342,7 @@ Keep the localhost line so `npm run dev` still works when you're developing.
 
 ## Getting help
 
-- Something on the deploy paths doesn't work? Open a [GitHub issue](https://github.com/IamRamgarhia/Free-GST-Billing-Software/issues) with the platform + the error you're seeing.
+- Something on the deploy paths doesn't work? Open a [GitHub issue](https://github.com/Kvijay199428/Artha/issues) with the platform + the error you're seeing.
 - Want a specific stack documented that's not here (Netlify, Cloudflare Pages + D1, Coolify, Dokploy, etc.)? Open a feature request — happy to add.
 
 **Reminder — for 95% of users, the [local install](../README.md#-install-in-60-seconds-windows-one-click) is still the right answer.** Only go online if you have a specific reason to.

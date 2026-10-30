@@ -17,7 +17,11 @@ const IGNORED_DIRS = new Set([
   '.gemini',
   '.vscode',
   'public/tesseract',
-  'data/backups'
+  'data/backups',
+  'bin',
+  'obj',
+  'publish-launcher',
+  'publish-installer'
 ]);
 
 // Specific files to ignore

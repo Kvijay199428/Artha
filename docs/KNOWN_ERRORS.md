@@ -142,7 +142,7 @@ gh release create v<VERSION> "release-build/Free-GST-Billing-v<VERSION>.zip" --t
 Then confirm what the updater will actually see:
 
 ```
-gh api repos/IamRamgarhia/Free-GST-Billing-Software/releases/latest \
+gh api repos/Kvijay199428/Artha/releases/latest \
   --jq '{tag: .tag_name, asset: .assets[0].name}'
 ```
 
@@ -154,7 +154,7 @@ verification command above after every publish.
 **Also:** `gh` may have more than one account in its keyring. If
 `gh release create` fails with *"workflow scope may be required"*, the
 active account is probably the wrong one — check `gh auth status` and
-`gh auth switch -h github.com -u IamRamgarhia`. The error message is
+`gh auth switch -h github.com -u Kvijay199428`. The error message is
 misleading; it is a permissions problem, not a scope problem.
 
 ---

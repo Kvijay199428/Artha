@@ -15,7 +15,7 @@ const inr = (n) => `₹${Number(n).toLocaleString('en-IN')}`;
 
 const SUPPORT_UPI_ID = 'princeramgarhiaa-1@okaxis';
 const UPI_NAME = 'DiceCodes';
-const REPO = 'https://github.com/IamRamgarhia/Free-GST-Billing-Software';
+const REPO = 'https://github.com/Kvijay199428/Artha';
 const EMAIL = 'contact@dicecodes.com';
 const SITE = 'https://dicecodes.com';
 const AMOUNTS = [0, 101, 251, 501];

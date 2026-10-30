@@ -118,7 +118,7 @@ export default [
 <section id="one-command">
 <h2>Install with one command (optional)</h2>
 <p>If you are comfortable with a terminal, this does all of the above. Open PowerShell and paste:</p>
-<pre><code>irm https://raw.githubusercontent.com/IamRamgarhia/Free-GST-Billing-Software/main/install.ps1 | iex</code></pre>
+<pre><code>irm https://raw.githubusercontent.com/Kvijay199428/Artha/main/install.ps1 | iex</code></pre>
 <p>It installs to <code>%LOCALAPPDATA%\\Programs\\Free GST Billing</code>. To choose another folder, run this first:</p>
 <pre><code>$env:FREEGSTBILL_DIR = 'D:\\Apps\\Free GST Billing'</code></pre>
 <p>If the app is already installed in that folder with data in it, the command stops and tells you to update from inside the app instead, so it can never write over your books.</p>

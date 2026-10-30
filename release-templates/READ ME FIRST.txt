@@ -133,10 +133,10 @@
 
   Anything else
       Open an issue, with a screenshot if you can:
-      https://github.com/IamRamgarhia/Free-GST-Billing-Software/issues
+      https://github.com/Kvijay199428/Artha/issues
 
       The full guide is inside the app, under Help, and at:
-      https://github.com/IamRamgarhia/Free-GST-Billing-Software/blob/main/docs/USER_GUIDE.md
+      https://github.com/Kvijay199428/Artha/blob/main/docs/USER_GUIDE.md
 
 
 ===========================================================

@@ -50,7 +50,7 @@ to `Documents\FreeGSTBill Backups\` before it changes anything.
 
 ### Something went wrong?
 Open an issue with a screenshot of the error:
-https://github.com/IamRamgarhia/Free-GST-Billing-Software/issues
+https://github.com/Kvijay199428/Artha/issues
 ```
 
 ### When a release BREAKS the updater
@@ -99,10 +99,10 @@ gh release create v<NEW> "release-build/Free-GST-Billing.zip" \
   --target main --title "v<NEW> — <short user-facing summary>" \
   --notes-file <notes>
 curl -sIL -o /dev/null -w "%{http_code}\n" \
-  https://github.com/IamRamgarhia/Free-GST-Billing-Software/releases/latest/download/Free-GST-Billing.zip
+  https://github.com/Kvijay199428/Artha/releases/latest/download/Free-GST-Billing.zip
 
 # 5. Verify what the in-app updater will actually see
-gh api repos/IamRamgarhia/Free-GST-Billing-Software/releases/latest \
+gh api repos/Kvijay199428/Artha/releases/latest \
   --jq '{tag: .tag_name, asset: .assets[0].name}'
 ```
 

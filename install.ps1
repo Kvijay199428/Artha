@@ -1,6 +1,6 @@
-# Free GST Billing - one-command Windows installer.
+# ARTHA - one-command Windows installer.
 #
-#   irm https://raw.githubusercontent.com/IamRamgarhia/Free-GST-Billing-Software/main/install.ps1 | iex
+#   irm https://raw.githubusercontent.com/Kvijay199428/Artha/main/install.ps1 | iex
 #
 # Does what a user doing it by hand would do: download the latest release
 # ZIP, extract it, run the installer inside it. Nothing else. There is no
@@ -10,20 +10,20 @@
 # It runs through `iex`, so it cannot take -Parameters. Point it somewhere
 # else with an environment variable instead:
 #
-#   $env:FREEGSTBILL_DIR = 'D:\Apps\Free GST Billing'
+#   $env:ARTHA_DIR = 'D:\Apps\ARTHA'
 #
 # Keep this file pure ASCII: it is fetched and parsed by Windows
 # PowerShell 5.1, which mangles UTF-8 without a BOM (see ERR-001).
 
 $ErrorActionPreference = 'Stop'
 
-$Repo = 'IamRamgarhia/Free-GST-Billing-Software'
-$Dest = $env:FREEGSTBILL_DIR
-if (-not $Dest) { $Dest = Join-Path $env:LOCALAPPDATA 'Programs\Free GST Billing' }
+$Repo = 'Kvijay199428/Artha'
+$Dest = if ($env:ARTHA_DIR) { $env:ARTHA_DIR } else { $env:FREEGSTBILL_DIR }
+if (-not $Dest) { $Dest = Join-Path $env:LOCALAPPDATA 'Programs\ARTHA' }
 
 Write-Host ''
 Write-Host '  ============================================================'
-Write-Host '   Free GST Billing Software - one-command install'
+Write-Host '   ARTHA Accounting Software - one-command install'
 Write-Host '  ============================================================'
 Write-Host ''
 
@@ -45,7 +45,7 @@ if (Test-Path $existingData) {
     Write-Host '  That keeps your invoices, clients and settings, and backs them up first.'
     Write-Host ''
     Write-Host '  To install a second, separate copy, set a different folder and re-run:'
-    Write-Host '    $env:FREEGSTBILL_DIR = ''D:\Apps\Free GST Billing'''
+    Write-Host '    $env:ARTHA_DIR = ''D:\Apps\ARTHA'''
     Write-Host ''
     return
   }
@@ -54,7 +54,7 @@ if (Test-Path $existingData) {
 # Installed somewhere else already (a ZIP extracted by hand, say)? The
 # shortcuts point at it. Same rule as install-windows.ps1: update that copy,
 # do not start a second, empty one. An explicit FREEGSTBILL_DIR skips this.
-if (-not $env:FREEGSTBILL_DIR) {
+if (-not $env:ARTHA_DIR -and -not $env:FREEGSTBILL_DIR) {
   $installedAt = $null
   foreach ($dir in @([Environment]::GetFolderPath('Desktop'), [Environment]::GetFolderPath('Programs'))) {
     # One unreadable or empty shortcut must not stop the others being checked.
@@ -71,7 +71,7 @@ if (-not $env:FREEGSTBILL_DIR) {
     Write-Host ''
     Write-Host '  To update it, open the app and use Control Panel -> Update Now.'
     Write-Host '  To install a second, separate copy anyway, set a folder and re-run:'
-    Write-Host '    $env:FREEGSTBILL_DIR = ''D:\Apps\Free GST Billing'''
+    Write-Host '    $env:ARTHA_DIR = ''D:\Apps\ARTHA'''
     Write-Host ''
     return
   }

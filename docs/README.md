@@ -15,4 +15,4 @@ overview and feature list — everything below is the deep-dive material.
 > Looking for installation? [Quick Start](../README.md#quick-start--installation) in the main README,
 > or the [User Guide](./USER_GUIDE.md#quick-start) for the step-by-step version.
 
-If you spot something stale in here, [open an issue](https://github.com/IamRamgarhia/Free-GST-Billing-Software/issues) — docs drift faster than code.
+If you spot something stale in here, [open an issue](https://github.com/Kvijay199428/Artha/issues) — docs drift faster than code.

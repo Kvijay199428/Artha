@@ -10,10 +10,10 @@ export const SITE = {
   url: 'https://dicecodes.com/free-gst-software-documentation/',
   publisher: { name: 'DiceCodes', url: 'https://dicecodes.com' },
   version: '1.10.80',
-  repo: 'https://github.com/IamRamgarhia/Free-GST-Billing-Software',
+  repo: 'https://github.com/Kvijay199428/Artha',
   // Always the newest release: GitHub resolves this to the latest release's
   // file of exactly this name (see docs/RELEASE_CHECKLIST.md, step 4b).
-  download: 'https://github.com/IamRamgarhia/Free-GST-Billing-Software/releases/latest/download/Free-GST-Billing.zip',
+  download: 'https://github.com/Kvijay199428/Artha/releases/latest/download/Free-GST-Billing.zip',
 };
 
 // Search-result titles and descriptions for the pages people search for most.
