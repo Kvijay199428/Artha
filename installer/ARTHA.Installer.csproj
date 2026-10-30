@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>app-icon.ico</ApplicationIcon>
+    <AssemblyName>Setup-ARTHA</AssemblyName>
+    <RootNamespace>ARTHA.Installer</RootNamespace>
+    <Version>1.10.80</Version>
+    <FileVersion>1.10.80.0</FileVersion>
+    <AssemblyVersion>1.10.80.0</AssemblyVersion>
+    <Title>ARTHA Accounting Software Setup</Title>
+    <Description>ARTHA Accounting Software Windows Installer</Description>
+    <Company>DiceCodes</Company>
+    <Product>ARTHA Accounting Software</Product>
+    <Copyright>Copyright (c) 2026 DiceCodes</Copyright>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="app-icon.ico" />
+  </ItemGroup>
+
+</Project>
+

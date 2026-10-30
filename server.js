@@ -12,7 +12,7 @@ import { fileURLToPath } from 'url';
 // invoice-level discount, and round-off. Previously the recurring auto-fire
 // re-implemented totals inline and silently reintroduced every bug the
 // v1.10.1 extraction fixed. Same source of truth now.
-import { templateTotals, clientYearToDate, nextCounterValue, startFor, numberSeriesFor, counterKeyFor, formatDocNumber, businessKeyOf, getFinancialYearLabel, INVOICE_TYPES } from './src/utils.js';
+import { templateTotals, clientYearToDate, nextCounterValue, startFor, numberSeriesFor, counterKeyFor, formatDocNumber, businessKeyOf, getFinancialYearLabel, INVOICE_TYPES, decodeGstin, getStatesForCountry } from './src/utils.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, 'data');
@@ -26,7 +26,7 @@ const DATA_DIR = path.join(__dirname, 'data');
 // by any common software we could find. The persisted `data/port.txt` always
 // wins over this default — so a single user who genuinely needs 47371 for
 // something else can edit that file and we'll respect it forever.
-const DEFAULT_PORT = 47371;
+const DEFAULT_PORT = parseInt(process.env.PORT, 10) || 11001;
 const PORT_FILE = path.join(__dirname, 'data', 'port.txt');
 
 // Read the persisted port (if any) — written once on first successful start
@@ -332,9 +332,94 @@ app.get('/api/profile', (req, res) => {
   res.json(readJSON(PROFILE_PATH, DEFAULT_PROFILE));
 });
 
+function validateProfileOnServer(profile) {
+  const errors = [];
+  if (!profile || typeof profile !== 'object') {
+    return { ok: false, errors: [{ field: 'profile', message: 'Invalid profile payload' }] };
+  }
+
+  if (profile.email !== undefined && profile.email !== null && profile.email !== '') {
+    const email = String(profile.email).trim();
+    if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errors.push({ field: 'email', message: 'Invalid email address' });
+    }
+  }
+
+  if (profile.pan) {
+    const pan = String(profile.pan).trim().toUpperCase();
+    if (pan.length !== 10 || !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) {
+      errors.push({ field: 'pan', message: 'Invalid PAN format' });
+    }
+  }
+
+  if (profile.gstin) {
+    const gstin = String(profile.gstin).trim().toUpperCase();
+    if (gstin.length !== 15) {
+      errors.push({ field: 'gstin', message: 'GSTIN must be 15 characters' });
+    } else {
+      if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z][A-Z][0-9A-Z]$/.test(gstin)) {
+        errors.push({ field: 'gstin', message: 'Invalid GSTIN format' });
+      } else if (gstin[13] !== 'Z') {
+        errors.push({ field: 'gstin', message: "GSTIN character 14 must be 'Z'" });
+      } else {
+        const decoded = decodeGstin(gstin);
+        if (!decoded || !decoded.checksumOk) {
+          errors.push({ field: 'gstin', message: 'Invalid GSTIN checksum' });
+        }
+        if (!decoded || !decoded.state) {
+          errors.push({ field: 'gstin', message: 'Invalid GST state code in GSTIN' });
+        }
+        const panSeg = gstin.slice(2, 12);
+        if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(panSeg)) {
+          errors.push({ field: 'gstin', message: 'Invalid PAN segment in GSTIN' });
+        }
+      }
+    }
+  }
+
+  if (profile.gstin && profile.pan) {
+    const g = String(profile.gstin).trim().toUpperCase();
+    const p = String(profile.pan).trim().toUpperCase();
+    if (g.length === 15 && p.length === 10) {
+      if (g.slice(2, 12) !== p) {
+        errors.push({ field: 'pan', message: 'PAN does not match GSTIN embedded PAN' });
+      }
+    }
+  }
+
+  if (profile.country === 'India' && profile.state) {
+    const states = getStatesForCountry('India');
+    if (states.length > 0 && !states.includes(profile.state)) {
+      errors.push({ field: 'state', message: 'Invalid state for India' });
+    }
+  }
+
+  if (errors.length > 0) return { ok: false, errors };
+
+  const normalized = { ...profile };
+  if (normalized.email) normalized.email = String(normalized.email).trim();
+  if (normalized.gstin) normalized.gstin = String(normalized.gstin).trim().toUpperCase();
+  if (normalized.pan) normalized.pan = String(normalized.pan).trim().toUpperCase();
+  if (normalized.phone) normalized.phone = String(normalized.phone).trim();
+  if (normalized.businessName) normalized.businessName = String(normalized.businessName).trim();
+
+  return { ok: true, profile: normalized };
+}
+
 app.post('/api/profile', (req, res) => {
-  writeJSON(PROFILE_PATH, req.body);
-  res.json({ success: true });
+  try {
+    if (!req.body || typeof req.body !== 'object') {
+      return res.status(400).json({ error: 'Invalid profile payload', code: 'bad-request' });
+    }
+    const result = validateProfileOnServer(req.body);
+    if (!result.ok) {
+      return res.status(400).json({ error: 'Validation failed', errors: result.errors });
+    }
+    writeJSON(PROFILE_PATH, result.profile);
+    res.json({ success: true });
+  } catch (err) {
+    errRes(res, 500, 'server-error', err);
+  }
 });
 
 // ========================
@@ -1261,6 +1346,14 @@ app.post('/api/control-panel/launch-script', async (req, res) => {
 // flips to serving the app the moment dist/ appears.
 const distPath = path.join(__dirname, 'dist');
 const indexPath = path.join(distPath, 'index.html');
+app.get('/manifest.webmanifest', (req, res, next) => {
+  const manifestPath = path.join(distPath, 'manifest.webmanifest');
+  if (fs.existsSync(manifestPath)) {
+    res.setHeader('Content-Type', 'application/manifest+json');
+    return res.sendFile(manifestPath);
+  }
+  next();
+});
 app.use(express.static(distPath, { fallthrough: true })); // fallthrough = ok if dist doesn't exist
 
 // ============================================================

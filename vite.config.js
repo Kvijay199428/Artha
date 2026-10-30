@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+﻿import { defineConfig } from 'vite'
 import path from 'path'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
@@ -10,17 +10,17 @@ import { VitePWA } from 'vite-plugin-pwa'
 // of where npm is invoked from.
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// v1.10.6 — audit L20: read `data/port.txt` when it exists so the dev
+// v1.10.6 â€” audit L20: read `data/port.txt` when it exists so the dev
 // proxy tracks whatever port Express landed on (Express drifts off the
-// default when EADDRINUSE bumps it to 47372, 47373, …). Falls back to
+// default when EADDRINUSE bumps it to 47372, 47373, â€¦). Falls back to
 // the historical 47371 default if the file's missing.
 const readActivePort = () => {
   try {
     const p = path.join(__dirname, 'data', 'port.txt');
-    if (!fs.existsSync(p)) return 47371;
+    if (!fs.existsSync(p)) return 11001;
     const n = parseInt(fs.readFileSync(p, 'utf-8').trim(), 10);
-    return (isFinite(n) && n >= 1024 && n <= 65535) ? n : 47371;
-  } catch { return 47371; }
+    return (isFinite(n) && n >= 1024 && n <= 65535) ? n : 11001;
+  } catch { return 11001; }
 };
 const activeExpressPort = readActivePort();
 
@@ -36,14 +36,14 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      // v1.10.2 — Prior 'autoUpdate' triggered an immediate location.reload()
-      // via main.jsx's onNeedRefresh handler → cashier mid-invoice would
+      // v1.10.2 â€” Prior 'autoUpdate' triggered an immediate location.reload()
+      // via main.jsx's onNeedRefresh handler â†’ cashier mid-invoice would
       // lose form state on deploy. Switched to 'prompt' so the app can
       // defer the reload until the user is idle. The main.jsx handler
       // now stores an "update ready" flag and reloads on next window
       // blur / navigation, never mid-form.
-      // v1.10.33 — Kept 'prompt' but bumped skipWaiting → true below.
-      // Reported: "it work in incognito only" — user's tab had a stale
+      // v1.10.33 â€” Kept 'prompt' but bumped skipWaiting â†’ true below.
+      // Reported: "it work in incognito only" â€” user's tab had a stale
       // SW serving a broken hash-mismatched bundle after a redeploy,
       // so main.jsx never loaded and the tab stayed blank. skipWaiting
       // makes new SWs activate immediately on install (no more 24-hour
@@ -53,26 +53,26 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['favicon.svg', 'og-preview.png'],
       manifest: {
-        name: 'Free GST Billing Software',
-        short_name: 'GST Billing',
+        name: 'ARTHA Accounting Software',
+        short_name: 'ARTHA',
         description: 'Open-source, offline GST invoicing for India and 21 other countries. Tax invoices, GSTR-1 / GSTR-3B / GSTR-2B, TDS / TCS, multi-currency, multi-account payments, recurring billing. Your data stays on your computer. Free forever.',
         theme_color: '#1e40af',
         background_color: '#f8fafc',
         display: 'standalone',
         // display_override gives Edge / Chrome the option to render in a
         // tighter "Window Controls Overlay" mode (the title bar disappears,
-        // we draw the chrome ourselves) — falls back to standalone if not
+        // we draw the chrome ourselves) â€” falls back to standalone if not
         // supported. Removes the "this is just a browser" feel.
         display_override: ['window-controls-overlay', 'standalone'],
         start_url: '/',
         scope: '/',
-        // v1.10.2 — Was 'portrait-primary'. Locked landscape tablets to
+        // v1.10.2 â€” Was 'portrait-primary'. Locked landscape tablets to
         // portrait even though shop counters and Android POS terminals
         // often run horizontally. 'any' lets the device decide.
         orientation: 'any',
         lang: 'en-IN',
         categories: ['business', 'productivity', 'finance'],
-        // Manifest shortcuts — right-click the pinned PWA icon (Windows
+        // Manifest shortcuts â€” right-click the pinned PWA icon (Windows
         // taskbar / Start Menu / Edge app launcher) to jump directly to
         // the most-used flows without a full Dashboard hop.
         shortcuts: [
@@ -81,7 +81,7 @@ export default defineConfig({
             short_name: 'New Invoice',
             description: 'Create a new tax invoice',
             url: '/?view=new',
-            // v1.10.6 — audit L16: SVG at fixed `sizes:96x96` confused
+            // v1.10.6 â€” audit L16: SVG at fixed `sizes:96x96` confused
             // Windows jumplist. `any` lets the OS render at whatever
             // size it wants (SVG is scalable).
             icons: [{ src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' }],
@@ -91,7 +91,7 @@ export default defineConfig({
             short_name: 'Dashboard',
             description: 'See invoices and stats',
             url: '/?view=dashboard',
-            // v1.10.6 — audit L16: SVG at fixed `sizes:96x96` confused
+            // v1.10.6 â€” audit L16: SVG at fixed `sizes:96x96` confused
             // Windows jumplist. `any` lets the OS render at whatever
             // size it wants (SVG is scalable).
             icons: [{ src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' }],
@@ -101,7 +101,7 @@ export default defineConfig({
             short_name: 'GST Returns',
             description: 'GSTR-1 / 3B / 2B reconciliation',
             url: '/?view=filing',
-            // v1.10.6 — audit L16: SVG at fixed `sizes:96x96` confused
+            // v1.10.6 â€” audit L16: SVG at fixed `sizes:96x96` confused
             // Windows jumplist. `any` lets the OS render at whatever
             // size it wants (SVG is scalable).
             icons: [{ src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' }],
@@ -111,21 +111,21 @@ export default defineConfig({
             short_name: 'Settings',
             description: 'Business profile, accounts, modules',
             url: '/?view=settings',
-            // v1.10.6 — audit L16: SVG at fixed `sizes:96x96` confused
+            // v1.10.6 â€” audit L16: SVG at fixed `sizes:96x96` confused
             // Windows jumplist. `any` lets the OS render at whatever
             // size it wants (SVG is scalable).
             icons: [{ src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' }],
           },
         ],
-        // v1.10.2 — Icon set matches Android + iOS "Add to Home Screen"
-        // requirements. Prior manifest had ONE entry — favicon.svg with
+        // v1.10.2 â€” Icon set matches Android + iOS "Add to Home Screen"
+        // requirements. Prior manifest had ONE entry â€” favicon.svg with
         // `purpose: 'any maskable'`. Chrome/Android needs distinct 192
         // and 512 PNGs for the app drawer + splash; iOS silently ignores
         // SVG apple-touch-icons and falls back to a generated screenshot.
         //
         // The SVG entry stays as a scalable fallback for browsers that
         // handle it (all modern desktop). The PNG entries point at files
-        // that MUST be dropped into public/icons/ — see README.
+        // that MUST be dropped into public/icons/ â€” see README.
         icons: [
           { src: '/favicon.svg', sizes: 'any',       type: 'image/svg+xml' },
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
@@ -135,38 +135,38 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // v1.10.2 — Precache excludes the heaviest chunks (pdf 588 KB,
+        // v1.10.2 â€” Precache excludes the heaviest chunks (pdf 588 KB,
         // qr 25 KB, html2canvas' ESM chunk) since most sessions never
         // print. They still get cached on demand by the runtime rule
         // below (StaleWhileRevalidate for /assets/), so the FIRST print
         // works offline as long as the user has visited that route at
-        // least once. Trims initial precache from 1.63 MiB → ~0.85 MiB.
+        // least once. Trims initial precache from 1.63 MiB â†’ ~0.85 MiB.
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         globIgnores: [
           '**/assets/pdf-*.js',
           '**/assets/qr-*.js',
           '**/assets/index.es-*.js',
-          // v1.10.33 — Tesseract worker + core + traineddata (~22MB total).
-          // Excluded from precache — cached on demand by the runtime rule
+          // v1.10.33 â€” Tesseract worker + core + traineddata (~22MB total).
+          // Excluded from precache â€” cached on demand by the runtime rule
           // below so the initial SW install stays ~1MB, and the OCR
           // dependency is downloaded once when the user actually opens
           // the OCR modal.
           '**/tesseract/**',
         ],
-        // v1.10.33 — allow the 3.9MB traineddata and 3.3MB wasm cores to
+        // v1.10.33 â€” allow the 3.9MB traineddata and 3.3MB wasm cores to
         // enter the runtime cache. Workbox's default 2MB cap would
         // silently skip them and offline-second-use OCR would break.
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],
-        // v1.10.33 — Was `false` on both. Kept the prompt-mode reload
+        // v1.10.33 â€” Was `false` on both. Kept the prompt-mode reload
         // deferral in main.jsx but flipped these to true because:
         //   1. skipWaiting=true lets the new SW take over on install
         //      without waiting for every open tab to close first. Prior
         //      value stalled the SW in `waiting` until the user closed
-        //      every browser tab and reopened the app — meanwhile the
+        //      every browser tab and reopened the app â€” meanwhile the
         //      OLD SW served the OLD bundle whose file hashes no longer
-        //      matched what index.html referenced → white screen.
+        //      matched what index.html referenced â†’ white screen.
         //   2. clientsClaim=true means any currently-open tab starts
         //      talking to the new SW immediately after activation.
         //      Combined with cleanupOutdatedCaches below, orphaned
@@ -175,10 +175,10 @@ export default defineConfig({
         clientsClaim: true,
         cleanupOutdatedCaches: true,
         runtimeCaching: [
-          // v1.10.2 — /api/* runtime cache. Missing this rule meant the
+          // v1.10.2 â€” /api/* runtime cache. Missing this rule meant the
           // "offline billing counter" promise was broken: fetch() throws
           // TypeError as soon as the network drops. NetworkFirst means
-          // fresh data online, cached-fallback offline. GETs only —
+          // fresh data online, cached-fallback offline. GETs only â€”
           // POST/DELETE would need a background-sync queue (future).
           {
             urlPattern: ({ url, request }) =>
@@ -189,12 +189,12 @@ export default defineConfig({
               networkTimeoutSeconds: 3,
               expiration: {
                 maxEntries: 200,
-                maxAgeSeconds: 60 * 60 * 24 * 7, // a week — fresh enough for offline read
+                maxAgeSeconds: 60 * 60 * 24 * 7, // a week â€” fresh enough for offline read
               },
               cacheableResponse: { statuses: [0, 200] },
             },
           },
-          // v1.10.2 — Lazy-loaded JS chunks (pdf, qr, html2canvas ESM)
+          // v1.10.2 â€” Lazy-loaded JS chunks (pdf, qr, html2canvas ESM)
           // are NOT precached but are cached on first use so the second
           // print offline works.
           {
@@ -231,9 +231,9 @@ export default defineConfig({
               expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 30 },
             },
           },
-          // v1.10.33 — OCR assets. CacheFirst so second-time OCR is
+          // v1.10.33 â€” OCR assets. CacheFirst so second-time OCR is
           // instant and works offline once the user has opened the
-          // modal once online. maxAgeSeconds is a year — these files
+          // modal once online. maxAgeSeconds is a year â€” these files
           // are versioned in-place by scripts/bundle-tesseract-assets.mjs
           // and don't change without a redeploy.
           {
@@ -251,18 +251,18 @@ export default defineConfig({
   ],
   build: {
     // outDir + publicDir point at project-root paths because Vite's
-    // `root` is src/ — without absolute resolution the output would
+    // `root` is src/ â€” without absolute resolution the output would
     // land inside src/dist/ instead of the repo's dist/.
     outDir: path.resolve(__dirname, 'dist'),
     emptyOutDir: true,
-    // v1.10.2 — main+pdf chunks tripped the default 500 KB warning line
-    // on every build (main 812 KB, pdf 588 KB). Bumped to 900 KB — high
+    // v1.10.2 â€” main+pdf chunks tripped the default 500 KB warning line
+    // on every build (main 812 KB, pdf 588 KB). Bumped to 900 KB â€” high
     // enough to silence noise, low enough to catch a genuine regression.
     chunkSizeWarningLimit: 900,
     rollupOptions: {
       output: {
         manualChunks: {
-          // v1.10.2 — React was in the main bundle; every app-code
+          // v1.10.2 â€” React was in the main bundle; every app-code
           // change invalidated the React runtime for cached clients.
           // Now: cache hit on React across releases as long as versions
           // don't move.
@@ -275,14 +275,18 @@ export default defineConfig({
     },
   },
   server: {
+    port: 11002,
+    strictPort: true,
     proxy: {
-      // v1.10.6 — audit L20: was hardcoded 47371. Now reads
-      // `data/port.txt` at Vite start (see `activeExpressPort` at top
-      // of file). Restart Vite if the server rebooted onto a new port.
+      // reads `data/port.txt` at Vite start (see `activeExpressPort` at top of file)
       '/api': {
         target: `http://localhost:${activeExpressPort}`,
         changeOrigin: true,
       }
     }
+  },
+  preview: {
+    port: 11002,
+    strictPort: true
   }
 })

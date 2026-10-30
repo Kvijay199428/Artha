@@ -876,6 +876,32 @@ body {
   box-shadow: 0 0 0 3px var(--primary-light);
 }
 
+.phone-input .PhoneInputInput {
+  width: 100%;
+  padding: 0.65rem 0.9rem;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: white;
+  font-family: inherit;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  color: var(--text);
+}
+
+.phone-input .PhoneInputCountry {
+  margin-right: 0.5rem;
+}
+
+[data-theme="dark"] .phone-input .PhoneInputInput {
+  background: var(--card);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+[data-theme="dark"] .phone-input .PhoneInputCountrySelectArrow {
+  color: var(--text);
+}
+
 /* v1.10.34 — Private-note textarea gets a warm-ivory tint in light
    mode (visually separates it from regular fields), a muted warm tint
    in dark mode. Prior inline `background:'#fffef5'` looked yellow-on-

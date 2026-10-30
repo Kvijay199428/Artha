@@ -1,0 +1,119 @@
+<Window x:Class="ARTHA.Installer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="ARTHA Accounting Software — Setup"
+        Height="480" Width="640"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        Background="{StaticResource BgDark}"
+        Foreground="{StaticResource TextWhite}"
+        Icon="app-icon.ico"
+        Loaded="Window_Loaded">
+
+    <Window.Resources>
+        <Style x:Key="ActionButton" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}"
+                                CornerRadius="8" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Opacity" Value="0.75"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <!-- Banner / Header -->
+            <RowDefinition Height="Auto"/>
+            <!-- Content area -->
+            <RowDefinition Height="*"/>
+            <!-- Footer controls -->
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Top Header Banner -->
+        <Border Grid.Row="0" Background="{StaticResource CardDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="0,0,0,1" Padding="24,18">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Image Source="app-icon.ico" Width="48" Height="48" Margin="0,0,16,0" RenderOptions.BitmapScalingMode="HighQuality"/>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="ARTHA Accounting Software" FontSize="20" FontWeight="Bold" Foreground="{StaticResource TextWhite}"/>
+                    <TextBlock Text="Complete Setup &amp; Windows Installation Wizard" FontSize="12" Foreground="{StaticResource TextMuted}" Margin="0,3,0,0"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Content Area -->
+        <Grid Grid.Row="1" Margin="28,20">
+            <!-- STEP 1: OPTIONS -->
+            <StackPanel x:Name="PanelStepOptions" Visibility="Visible">
+                <TextBlock Text="Choose Installation Options" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource TextWhite}" Margin="0,0,0,12"/>
+
+                <TextBlock Text="Destination Folder:" FontSize="12" Foreground="{StaticResource TextMuted}" Margin="0,0,0,6"/>
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="TxtTargetPath" Grid.Column="0" Background="{StaticResource CardLight}" Foreground="White" BorderBrush="{StaticResource BorderLight}" Padding="10,6" FontSize="12"/>
+                    <Button Content="Browse..." Grid.Column="1" Style="{StaticResource ActionButton}" Background="{StaticResource CardLight}" Margin="8,0,0,0" Padding="12,6" Click="BtnBrowse_Click"/>
+                </Grid>
+
+                <CheckBox x:Name="ChkInPlace" Content="Configure in current directory (Portable setup)" Foreground="{StaticResource TextMuted}" FontSize="12" Margin="0,0,0,16" Checked="ChkInPlace_Checked" Unchecked="ChkInPlace_Unchecked"/>
+
+                <Border Background="{StaticResource CardDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="1" CornerRadius="8" Padding="16,12" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="Shortcuts &amp; Registration" FontWeight="SemiBold" FontSize="13" Foreground="{StaticResource TextWhite}" Margin="0,0,0,8"/>
+                        <CheckBox x:Name="ChkDesktopShortcut" Content="Create Desktop shortcut (ARTHA.lnk)" IsChecked="True" Foreground="{StaticResource TextWhite}" FontSize="12" Margin="0,0,0,8"/>
+                        <CheckBox x:Name="ChkStartMenuShortcut" Content="Create Start Menu entry (ARTHA Accounting)" IsChecked="True" Foreground="{StaticResource TextWhite}" FontSize="12" Margin="0,0,0,8"/>
+                        <CheckBox x:Name="ChkAutoLaunch" Content="Launch ARTHA after installation completes" IsChecked="True" Foreground="{StaticResource TextWhite}" FontSize="12"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- STEP 2: INSTALLING PROGRESS -->
+            <StackPanel x:Name="PanelStepProgress" Visibility="Collapsed" VerticalAlignment="Center">
+                <TextBlock Text="Installing ARTHA Accounting Software..." FontSize="16" FontWeight="Bold" Foreground="{StaticResource TextWhite}" Margin="0,0,0,8"/>
+                <TextBlock x:Name="TxtProgressStatus" Text="Extracting and setting up files..." FontSize="12" Foreground="{StaticResource TextMuted}" Margin="0,0,0,16"/>
+
+                <ProgressBar x:Name="ProgressBarInstall" Height="16" Minimum="0" Maximum="100" Value="0" Background="{StaticResource CardDark}" Foreground="{StaticResource AccentBlue}" BorderThickness="0"/>
+                <TextBlock x:Name="TxtPercent" Text="0%" HorizontalAlignment="Right" FontSize="11" Foreground="{StaticResource TextMuted}" Margin="0,4,0,0"/>
+            </StackPanel>
+
+            <!-- STEP 3: FINISHED -->
+            <StackPanel x:Name="PanelStepFinished" Visibility="Collapsed" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <TextBlock Text="🎉" FontSize="44" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                <TextBlock Text="Installation Completed Successfully!" FontSize="18" FontWeight="Bold" Foreground="{StaticResource AccentGreen}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                <TextBlock Text="ARTHA Launcher and Background Services are ready to use." FontSize="13" Foreground="{StaticResource TextMuted}" HorizontalAlignment="Center" Margin="0,0,0,16"/>
+                <TextBlock Text="You can start ARTHA from your Desktop, Start Menu, or via server.bat" FontSize="12" Foreground="{StaticResource TextMuted}" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Footer Buttons -->
+        <Border Grid.Row="2" Background="{StaticResource CardDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="0,1,0,0" Padding="20,12">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="BtnCancel" Content="Cancel" Style="{StaticResource ActionButton}" Background="{StaticResource CardLight}" Margin="0,0,10,0" Click="BtnCancel_Click"/>
+                <Button x:Name="BtnInstall" Content="Install ARTHA" Style="{StaticResource ActionButton}" Background="{StaticResource AccentBlue}" Click="BtnInstall_Click"/>
+                <Button x:Name="BtnFinish" Content="Finish &amp; Launch" Style="{StaticResource ActionButton}" Background="{StaticResource AccentGreen}" Visibility="Collapsed" Click="BtnFinish_Click"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>
+

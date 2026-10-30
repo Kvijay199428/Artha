@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import { Building2, FileText, BarChart3, Shield, ChevronRight, ChevronLeft, Check, ArrowRight, Image, PenTool } from 'lucide-react';
+import PhoneInput, { isValidPhoneNumber, parsePhoneNumber } from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
 import { saveProfile, setRegionMode } from '../store';
-import { getStatesForCountry, getCountryConfig, detectCountryFromBrowser, createEmptyAccount } from '../utils';
+import { 
+  getStatesForCountry, getCountryConfig, detectCountryFromBrowser, createEmptyAccount,
+  validateEmail, validatePAN, validateGSTIN, extractPANFromGSTIN, 
+  validateGSTINPANConsistency, COUNTRIES 
+} from '../utils';
 import { toast } from './Toast';
 
 const STEPS = [
@@ -26,11 +32,91 @@ export default function WelcomeGuide({ onComplete }) {
   // States company profile. The other two options are one click away.
   const [region, setRegion] = useState('india');
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [panDerivedFromGstin, setPanDerivedFromGstin] = useState(false);
+  const [phoneValue, setPhoneValue] = useState('');
   const cc = getCountryConfig(profile.country);
   const stateOptions = getStatesForCountry(profile.country);
 
   const handleChange = (e) => {
     setProfile({ ...profile, [e.target.name]: e.target.value });
+  };
+
+  const handleCountryChange = (e) => {
+    const newCountry = e.target.value;
+    setProfile(p => {
+      const states = getStatesForCountry(newCountry);
+      const newState = states.includes(p.state) ? p.state : '';
+      return { ...p, country: newCountry, state: newState };
+    });
+  };
+
+  const handleGstinChange = (e) => {
+    const value = e.target.value.toUpperCase();
+    setProfile(p => {
+      const newProfile = { ...p, gstin: value };
+      if (value.length >= 12) {
+        const gstinCheck = validateGSTIN(value);
+        if (gstinCheck.ok) {
+          const extractedPan = extractPANFromGSTIN(value);
+          if (extractedPan && /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(extractedPan)) {
+            if (!p.pan || panDerivedFromGstin) {
+              setPanDerivedFromGstin(true);
+              return { ...newProfile, pan: extractedPan };
+            }
+          }
+        }
+      } else if (panDerivedFromGstin) {
+        setPanDerivedFromGstin(false);
+      }
+      return newProfile;
+    });
+  };
+
+  const handlePanChange = (e) => {
+    const value = e.target.value.toUpperCase();
+    setPanDerivedFromGstin(false);
+    setProfile(p => ({ ...p, pan: value }));
+  };
+
+  const handlePhoneChange = (value) => {
+    setPhoneValue(value || '');
+    setProfile(p => ({ ...p, phone: value || '' }));
+  };
+
+  const validateStep1 = () => {
+    const newErrors = {};
+    if (!profile.businessName?.trim()) newErrors.businessName = 'Business name is required';
+    if (profile.country === 'India' && !profile.state) newErrors.state = 'State is required for India';
+    
+    const emailRes = validateEmail(profile.email);
+    if (!emailRes.ok) newErrors.email = emailRes.message;
+    
+    const panRes = validatePAN(profile.pan);
+    if (!panRes.ok) newErrors.pan = panRes.message;
+    
+    const gstinRes = validateGSTIN(profile.gstin);
+    if (!gstinRes.ok) newErrors.gstin = gstinRes.message;
+    
+    const consRes = validateGSTINPANConsistency(profile.gstin, profile.pan);
+    if (!consRes.ok && consRes.message) {
+      if (consRes.message.includes('PAN')) newErrors.pan = consRes.message;
+      else if (!newErrors.gstin) newErrors.gstin = consRes.message;
+    }
+    
+    if (phoneValue) {
+      if (profile.country === 'India') {
+        const parsed = parsePhoneNumber(phoneValue);
+        if (!parsed || parsed.country !== 'IN' || !isValidPhoneNumber(phoneValue)) {
+          newErrors.phone = 'Invalid Indian mobile number';
+        }
+      } else if (!isValidPhoneNumber(phoneValue)) {
+        newErrors.phone = 'Invalid phone number';
+      }
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleFileUpload = (field) => {
@@ -52,6 +138,11 @@ export default function WelcomeGuide({ onComplete }) {
   };
 
   const handleFinish = async () => {
+    if (!validateStep1()) {
+      toast('Please fix the errors before saving', 'error');
+      setStep(1);
+      return;
+    }
     setSaving(true);
     try {
       setRegionMode(region);
@@ -59,20 +150,28 @@ export default function WelcomeGuide({ onComplete }) {
       // so the multi-account manager has a starting entry. If the user
       // skipped all bank fields, we don't create an empty account — they can
       // add one later in Settings.
-      const hasBank = profile.bankName || profile.accountNumber || profile.ifsc || profile.swift || profile.upiId;
-      const profileToSave = hasBank ? {
+      const normalizedProfile = {
         ...profile,
+        email: profile.email?.trim() || '',
+        gstin: profile.gstin?.toUpperCase() || '',
+        pan: profile.pan?.toUpperCase() || '',
+        phone: phoneValue || '',
+        businessName: profile.businessName?.trim() || '',
+      };
+      const hasBank = normalizedProfile.bankName || normalizedProfile.accountNumber || normalizedProfile.ifsc || normalizedProfile.swift || normalizedProfile.upiId;
+      const profileToSave = hasBank ? {
+        ...normalizedProfile,
         paymentAccounts: [{
-          ...createEmptyAccount(profile.bankName || 'Default account'),
-          bankName: profile.bankName || '',
-          accountNumber: profile.accountNumber || '',
-          ifsc: profile.ifsc || '',
-          swift: profile.swift || '',
-          upiId: profile.upiId || '',
+          ...createEmptyAccount(normalizedProfile.bankName || 'Default account'),
+          bankName: normalizedProfile.bankName || '',
+          accountNumber: normalizedProfile.accountNumber || '',
+          ifsc: normalizedProfile.ifsc || '',
+          swift: normalizedProfile.swift || '',
+          upiId: normalizedProfile.upiId || '',
           isDefault: true,
           isActive: true,
         }],
-      } : profile;
+      } : normalizedProfile;
       await saveProfile(profileToSave);
       localStorage.setItem('freegstbill_onboarded', 'true');
       toast('Setup complete! Start creating invoices.', 'success');
@@ -89,8 +188,22 @@ export default function WelcomeGuide({ onComplete }) {
   };
 
   const canProceed = () => {
-    if (step === 1) return profile.businessName.trim().length > 0;
+    if (step === 1) {
+      if (!profile.businessName?.trim()) return false;
+      if (profile.country === 'India' && !profile.state) return false;
+      return validateStep1();
+    }
     return true;
+  };
+
+  const handleNext = () => {
+    if (step === 1) {
+      if (!validateStep1()) {
+        toast('Please fix the errors before proceeding', 'error');
+        return;
+      }
+    }
+    setStep(step + 1);
   };
 
   return (
@@ -115,7 +228,7 @@ export default function WelcomeGuide({ onComplete }) {
               <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
                 <FileText size={32} color="white" />
               </div>
-              <h1 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--text-primary)' }}>Welcome to Free GST Billing Software</h1>
+              <h1 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--text-primary)' }}>Welcome to ARTHA</h1>
               <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem', lineHeight: 1.6 }}>
                 Free, open-source GST billing software that runs 100% on your computer. Your data never leaves your machine.
               </p>
@@ -174,9 +287,17 @@ export default function WelcomeGuide({ onComplete }) {
 
               <div style={{ display: 'grid', gap: '1rem' }}>
                 <div className="form-group">
+                  <label className="form-label">Country</label>
+                  <select className="form-input" value={profile.country} onChange={handleCountryChange}>
+                    {COUNTRIES.map(c => <option key={c.code} value={c.name}>{c.name}</option>)}
+                  </select>
+                </div>
+
+                <div className="form-group">
                   <label className="form-label">Business Name *</label>
                   <input type="text" name="businessName" className="form-input" value={profile.businessName} onChange={handleChange}
-                    placeholder="e.g. Sharma Consultants Pvt. Ltd." />
+                    placeholder="e.g. Sharma Consultants Pvt. Ltd." aria-invalid={errors.businessName ? 'true' : 'false'} />
+                  {errors.businessName && <span style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>{errors.businessName}</span>}
                 </div>
 
                 <div className="form-group">
@@ -187,42 +308,54 @@ export default function WelcomeGuide({ onComplete }) {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div className="form-group">
-                    <label className="form-label">{cc.stateLabel}</label>
+                    <label className="form-label">{cc.stateLabel}{profile.country === 'India' ? ' *' : ''}</label>
                     {stateOptions.length > 0 ? (
-                      <select name="state" className="form-input" value={profile.state} onChange={handleChange}>
+                      <select name="state" className="form-input" value={profile.state} onChange={handleChange} aria-invalid={errors.state ? 'true' : 'false'}>
                         <option value="">Select {cc.stateLabel.toLowerCase()}</option>
                         {stateOptions.map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     ) : (
-                      <input type="text" name="state" className="form-input" value={profile.state} onChange={handleChange} placeholder={cc.stateLabel} />
+                      <input type="text" name="state" className="form-input" value={profile.state} onChange={handleChange} placeholder={cc.stateLabel} aria-invalid={errors.state ? 'true' : 'false'} />
                     )}
                     {profile.country === 'India' && <span className="field-hint">Needed for auto CGST/SGST vs IGST</span>}
+                    {errors.state && <span style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>{errors.state}</span>}
                   </div>
                   <div className="form-group">
                     <label className="form-label">{cc.taxIdLabel}</label>
-                    <input type="text" name="gstin" className="form-input" value={profile.gstin} onChange={handleChange}
-                      placeholder={cc.taxIdPlaceholder} maxLength={20} style={{ textTransform: 'uppercase' }} />
+                    <input type="text" name="gstin" className="form-input" value={profile.gstin} onChange={handleGstinChange}
+                      placeholder={cc.taxIdPlaceholder} maxLength={15} style={{ textTransform: 'uppercase' }} aria-invalid={errors.gstin ? 'true' : 'false'} />
                     <span className="field-hint">Leave blank if not registered for tax</span>
+                    {errors.gstin && <span style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>{errors.gstin}</span>}
                   </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div className="form-group">
                     <label className="form-label">PAN</label>
-                    <input type="text" name="pan" className="form-input" value={profile.pan} onChange={handleChange}
-                      placeholder="AAAAA1234A" maxLength={10} style={{ textTransform: 'uppercase' }} />
+                    <input type="text" name="pan" className="form-input" value={profile.pan} onChange={handlePanChange}
+                      placeholder="AAAAA1234A" maxLength={10} style={{ textTransform: 'uppercase' }} aria-invalid={errors.pan ? 'true' : 'false'} />
+                    {panDerivedFromGstin && <span className="field-hint" style={{ color: 'var(--primary)' }}>PAN derived from GSTIN</span>}
+                    {errors.pan && <span style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>{errors.pan}</span>}
                   </div>
                   <div className="form-group">
                     <label className="form-label">Phone</label>
-                    <input type="text" name="phone" className="form-input" value={profile.phone} onChange={handleChange}
-                      placeholder="+91 98765 43210" />
+                    <PhoneInput
+                      international
+                      defaultCountry={profile.country === 'India' ? 'IN' : undefined}
+                      value={phoneValue}
+                      onChange={handlePhoneChange}
+                      className="phone-input"
+                      style={{ '--react-phone-number-input-color--focus': 'var(--primary)' }}
+                    />
+                    {errors.phone && <span style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>{errors.phone}</span>}
                   </div>
                 </div>
 
                 <div className="form-group">
                   <label className="form-label">Email</label>
                   <input type="email" name="email" className="form-input" value={profile.email} onChange={handleChange}
-                    placeholder="billing@yourbusiness.com" />
+                    placeholder="billing@yourbusiness.com" aria-invalid={errors.email ? 'true' : 'false'} />
+                  {errors.email && <span style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>{errors.email}</span>}
                 </div>
               </div>
             </div>
@@ -343,7 +476,7 @@ export default function WelcomeGuide({ onComplete }) {
 
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               {step < 3 && (
-                <button className="btn btn-primary" onClick={() => setStep(step + 1)} disabled={!canProceed()}>
+                <button className="btn btn-primary" onClick={step === 1 ? handleNext : () => setStep(step + 1)} disabled={step === 0 ? false : (step === 1 ? false : !canProceed())}>
                   {step === 0 ? 'Get Started' : 'Next'} <ChevronRight size={16} />
                 </button>
               )}

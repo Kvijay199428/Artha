@@ -43,3 +43,12 @@ public/tesseract/
 
 # Built documentation site (regenerate with: node docs-site/build.mjs)
 docs-site/out/
+
+# Launcher and Installer build artifacts
+publish-launcher/
+publish-installer/
+launcher/bin/
+launcher/obj/
+installer/bin/
+installer/obj/
+*.exe

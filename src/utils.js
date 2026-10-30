@@ -899,7 +899,7 @@ export const getCountriesForRegion = (regionMode = 'both') => {
 };
 
 // GST State Codes (as per GST portal) — used in GSTR-1 JSON export
-const GST_STATE_CODES = {
+export const GST_STATE_CODES = {
   'jammu and kashmir': '01', 'himachal pradesh': '02', 'punjab': '03',
   'chandigarh': '04', 'uttarakhand': '05', 'haryana': '06',
   'delhi': '07', 'rajasthan': '08', 'uttar pradesh': '09',
@@ -1007,6 +1007,124 @@ export const isInterstateSupply = (supplierGstin, profile) => {
   const ours = getStateCode(profile?.gstin || '') || getStateCode(profile?.state || '');
   if (!theirs || !ours) return null;
   return theirs !== ours;
+};
+
+// ============================================================================
+// Setup Wizard Validation Utilities
+// ============================================================================
+export const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export const validatePAN = (pan) => {
+  const p = String(pan || '').trim().toUpperCase();
+  if (!p) return { ok: true, message: '' };
+  if (p.length !== 10) return { ok: false, message: 'PAN must be 10 characters' };
+  if (!PAN_REGEX.test(p)) return { ok: false, message: 'Invalid PAN format (e.g., AAAAA1234A)' };
+  return { ok: true, message: '' };
+};
+
+export const extractPANFromGSTIN = (gstin) => {
+  const g = String(gstin || '').trim().toUpperCase();
+  if (g.length < 12) return '';
+  return g.slice(2, 12);
+};
+
+export const validateGSTIN = (gstin) => {
+  const g = String(gstin || '').trim().toUpperCase();
+  if (!g) return { ok: true, message: '' };
+  if (g.length !== 15) return { ok: false, message: 'GSTIN must be 15 characters' };
+  if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z][A-Z][0-9A-Z]$/.test(g)) {
+    return { ok: false, message: 'Invalid GSTIN format' };
+  }
+  const stateCode = g.slice(0, 2);
+  if (!stateNameForCode(stateCode)) {
+    return { ok: false, message: 'Invalid GST state code in GSTIN' };
+  }
+  const panSegment = extractPANFromGSTIN(g);
+  if (!PAN_REGEX.test(panSegment)) return { ok: false, message: 'Invalid PAN segment in GSTIN' };
+  if (g[13] !== 'Z') return { ok: false, message: "GSTIN character 14 must be 'Z'" };
+  if (!gstinChecksumOk(g)) return { ok: false, message: 'Invalid GSTIN checksum' };
+  return { ok: true, message: '', decoded: decodeGstin(g) };
+};
+
+export const validateGSTINPANConsistency = (gstin, pan) => {
+  const g = String(gstin || '').trim().toUpperCase();
+  const p = String(pan || '').trim().toUpperCase();
+  if (!g && !p) return { ok: true, message: '' };
+  if (g && !p) return { ok: true, message: '' };
+  if (!g && p) return validatePAN(p);
+  const gstinValidation = validateGSTIN(g);
+  if (!gstinValidation.ok) return { ok: true, message: '' };
+  const panValidation = validatePAN(p);
+  if (!panValidation.ok) return panValidation;
+  const extractedPAN = extractPANFromGSTIN(g);
+  if (extractedPAN !== p) {
+    return { ok: false, message: 'PAN does not match GSTIN embedded PAN' };
+  }
+  return { ok: true, message: '' };
+};
+
+export const validateEmail = (email) => {
+  const e = String(email || '').trim();
+  if (!e) return { ok: true, message: '' };
+  if (e.length > 254) return { ok: false, message: 'Email too long' };
+  if (!EMAIL_REGEX.test(e)) return { ok: false, message: 'Invalid email address' };
+  return { ok: true, message: '' };
+};
+
+export const validateIndianMobile = (phone) => {
+  const digits = String(phone || '').replace(/\D/g, '');
+  if (digits.length === 0) return { ok: true, message: '' };
+  if (digits.startsWith('91') && digits.length === 12) {
+    const mobile = digits.slice(2);
+    if (mobile.length === 10 && /^[6-9]/.test(mobile)) return { ok: true, message: '' };
+    return { ok: false, message: 'Invalid Indian mobile number' };
+  }
+  if (digits.length === 10 && /^[6-9]/.test(digits)) return { ok: true, message: '' };
+  if (digits.length < 10) return { ok: false, message: 'Phone number is incomplete' };
+  return { ok: false, message: 'Invalid Indian mobile number' };
+};
+
+export const validateBusinessProfile = (profile, options = {}) => {
+  const errors = {};
+  const { requireState = false, country = profile?.country || 'India' } = options;
+  
+  if (!String(profile?.businessName || '').trim()) {
+    errors.businessName = 'Business name is required';
+  }
+  
+  if (requireState || country === 'India') {
+    if (!String(profile?.state || '').trim()) {
+      errors.state = 'State is required';
+    } else {
+      const states = getStatesForCountry(country);
+      if (states.length > 0 && !states.includes(profile.state)) {
+        errors.state = 'Invalid state for selected country';
+      }
+    }
+  }
+  
+  const emailResult = validateEmail(profile?.email);
+  if (!emailResult.ok) errors.email = emailResult.message;
+  
+  const panResult = validatePAN(profile?.pan);
+  if (!panResult.ok) errors.pan = panResult.message;
+  
+  const gstinResult = validateGSTIN(profile?.gstin);
+  if (!gstinResult.ok) errors.gstin = gstinResult.message;
+  
+  if (profile?.gstin || profile?.pan) {
+    const consistencyResult = validateGSTINPANConsistency(profile?.gstin, profile?.pan);
+    if (!consistencyResult.ok) {
+      if (consistencyResult.message && consistencyResult.message.includes('PAN') && !errors.pan) {
+        errors.pan = consistencyResult.message;
+      } else if (consistencyResult.message && !errors.gstin) {
+        errors.gstin = consistencyResult.message;
+      }
+    }
+  }
+  
+  return { ok: Object.keys(errors).length === 0, errors };
 };
 
 // v1.10.1 — Union Territories WITHOUT their own legislature use CGST +
@@ -1843,7 +1961,7 @@ export const setDefaultAccount = (accounts, accountId) => {
 // Soft UPI VPA format check (warning-only). Allows alphanumerics, dot, hyphen,
 // underscore on either side of the @ — covers Indian VPAs like
 // "9999999999@upi", "acme.corp@hdfcbank", "merchant-1@paytm".
-export const isValidUpiId = (s) => /^[\w.\-]+@[\w.\-]+$/.test(String(s || '').trim());
+export const isValidUpiId = (s) => /^[\w.-]+@[\w.-]+$/.test(String(s || '').trim());
 
 // ========== Feature modules ==========
 // Each module can be turned off by the user in Settings → Modules. Modules in
@@ -2307,7 +2425,7 @@ export const GST_DOC_NUMBER = /^[A-Za-z0-9\-/]{1,16}$/;
 const GST_NUMBERED_TYPES = ['tax-invoice', 'credit-note'];
 export const numberFormatProblem = (settings, { nextInvoice = 1, own = false, customPrefixes = {}, fyLabel = '' } = {}) => {
   const s = { ...DEFAULT_NUMBER_SETTINGS, ...(settings || {}) };
-  if (s.format !== 'random' && !/^[\-/]$/.test(s.separator || '/')) return `The GST portal does not accept "${s.separator}" in invoice numbers. Use / or -.`;
+  if (s.format !== 'random' && !/^[/ -]$/.test(s.separator || '/')) return `The GST portal does not accept "${s.separator}" in invoice numbers. Use / or -.`;
   for (const type of GST_NUMBERED_TYPES) {
     const override = own ? '' : String(customPrefixes?.[type] || '').trim();
     const sample = formatDocNumber({
