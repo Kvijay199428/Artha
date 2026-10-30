@@ -1,7 +1,7 @@
 # ARTHA - Project Source Code Bundle
 
-> Generated on: **2026-10-30 17:46:48**
-> Total Files: **160** | Total Lines: **93,664** | Total Size: **3.98 MB**
+> Generated on: **2026-10-30 17:53:46**
+> Total Files: **160** | Total Lines: **93,673** | Total Size: **3.99 MB**
 
 ## Table of Contents
 
@@ -93,7 +93,7 @@
 86. [scripts/extract_busywin_schema.py](#scripts-extract-busywin-schema-py) (161 lines)
 87. [scripts/generate_busywin_docs.py](#scripts-generate-busywin-docs-py) (351 lines)
 88. [scripts/generate_master_doc.py](#scripts-generate-master-doc-py) (503 lines)
-89. [scripts/generate-artha-md.mjs](#scripts-generate-artha-md-mjs) (177 lines)
+89. [scripts/generate-artha-md.mjs](#scripts-generate-artha-md-mjs) (186 lines)
 90. [scripts/generate-icons.mjs](#scripts-generate-icons-mjs) (176 lines)
 91. [scripts/import-busywin.py](#scripts-import-busywin-py) (505 lines)
 92. [scripts/inspect_fy_tables.py](#scripts-inspect-fy-tables-py) (12 lines)
@@ -18229,7 +18229,7 @@ PRs welcome. The project follows
 - Path: `installer/App.xaml`
 - Lines: 18 | Size: 0.8 KB
 
-```
+```xml
 <Application x:Class="ARTHA.Installer.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -18258,7 +18258,7 @@ PRs welcome. The project follows
 - Path: `installer/App.xaml.cs`
 - Lines: 9 | Size: 0.1 KB
 
-```
+```csharp
 using System.Windows;
 
 namespace ARTHA.Installer;
@@ -18278,7 +18278,7 @@ public partial class App : Application
 - Path: `installer/ARTHA.Installer.csproj`
 - Lines: 29 | Size: 0.9 KB
 
-```
+```xml
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
@@ -18318,7 +18318,7 @@ public partial class App : Application
 - Path: `installer/InstallerEngine.cs`
 - Lines: 234 | Size: 9.4 KB
 
-```
+```csharp
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -18563,7 +18563,7 @@ pause
 - Path: `installer/MainWindow.xaml`
 - Lines: 120 | Size: 8.0 KB
 
-```
+```xml
 <Window x:Class="ARTHA.Installer.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -18694,7 +18694,7 @@ pause
 - Path: `installer/MainWindow.xaml.cs`
 - Lines: 120 | Size: 3.5 KB
 
-```
+```csharp
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -18825,7 +18825,7 @@ public partial class MainWindow : Window
 - Path: `launcher/App.xaml`
 - Lines: 22 | Size: 1.0 KB
 
-```
+```xml
 <Application x:Class="ARTHA.Launcher.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -18858,7 +18858,7 @@ public partial class MainWindow : Window
 - Path: `launcher/App.xaml.cs`
 - Lines: 53 | Size: 1.5 KB
 
-```
+```csharp
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -18922,7 +18922,7 @@ public partial class App : System.Windows.Application
 - Path: `launcher/ARTHA.Launcher.csproj`
 - Lines: 30 | Size: 1.0 KB
 
-```
+```xml
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
@@ -18963,7 +18963,7 @@ public partial class App : System.Windows.Application
 - Path: `launcher/Converters.cs`
 - Lines: 27 | Size: 0.7 KB
 
-```
+```csharp
 using System;
 using System.Globalization;
 using System.Windows;
@@ -19001,7 +19001,7 @@ public class EmptyToVisibilityConverter : IValueConverter
 - Path: `launcher/JobManager.cs`
 - Lines: 119 | Size: 3.5 KB
 
-```
+```csharp
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -19131,7 +19131,7 @@ public static class JobManager
 - Path: `launcher/LogItem.cs`
 - Lines: 68 | Size: 2.0 KB
 
-```
+```csharp
 using System;
 using System.Text.RegularExpressions;
 using Brush = System.Windows.Media.Brush;
@@ -19210,7 +19210,7 @@ public class LogItem
 - Path: `launcher/MainWindow.xaml`
 - Lines: 258 | Size: 15.7 KB
 
-```
+```xml
 <Window x:Class="ARTHA.Launcher.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -19479,7 +19479,7 @@ public class LogItem
 - Path: `launcher/MainWindow.xaml.cs`
 - Lines: 376 | Size: 11.8 KB
 
-```
+```csharp
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -19866,7 +19866,7 @@ public partial class MainWindow : Window
 - Path: `launcher/ServerManager.cs`
 - Lines: 448 | Size: 13.8 KB
 
-```
+```csharp
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -21723,7 +21723,7 @@ bash "$SYSTEM_DIR/start-unix.sh"
 - Path: `release-templates/Free GST Billing - WINDOWS.hta`
 - Lines: 600 | Size: 22.9 KB
 
-```
+```html
 <!DOCTYPE html>
 <html>
 <head>
@@ -52953,7 +52953,7 @@ process.exit(fail > 0 ? 1 : 0);
 - Path: `scripts/extract_busywin_schema.py`
 - Lines: 161 | Size: 5.3 KB
 
-```
+```python
 #!/usr/bin/env python3
 """
 Extract full schemas of BusyWin Access/Jet database files:
@@ -53125,7 +53125,7 @@ if __name__ == '__main__':
 - Path: `scripts/generate_busywin_docs.py`
 - Lines: 351 | Size: 25.0 KB
 
-```
+```python
 #!/usr/bin/env python3
 """
 Generate complete database schema documentation for BusyWin in d:\\VEGA\\ARTHA\\docs:
@@ -53487,7 +53487,7 @@ print("All modular documents generated successfully!")
 - Path: `scripts/generate_master_doc.py`
 - Lines: 503 | Size: 40.6 KB
 
-````
+````python
 #!/usr/bin/env python3
 """
 Generate docs/BUSYWIN_DATABASE_SCHEMA.md master reference documentation.
@@ -53999,7 +53999,7 @@ print(f"Master document generated at: {OUTPUT_FILE} ({len(content)} bytes)")
 ## `scripts/generate-artha-md.mjs`
 
 - Path: `scripts/generate-artha-md.mjs`
-- Lines: 177 | Size: 5.1 KB
+- Lines: 186 | Size: 5.3 KB
 
 ````javascript
 import fs from 'fs';
@@ -54025,7 +54025,8 @@ const IGNORED_DIRS = new Set([
   'bin',
   'obj',
   'publish-launcher',
-  'publish-installer'
+  'publish-installer',
+  'release-build'
 ]);
 
 // Specific files to ignore
@@ -54044,7 +54045,7 @@ const BINARY_EXTENSIONS = new Set([
   '.zip', '.tar', '.gz', '.7z', '.rar',
   '.pdf', '.doc', '.docx', '.xls', '.xlsx',
   '.exe', '.dll', '.so', '.dylib', '.bin',
-  '.traineddata', '.wasm', '.map'
+  '.traineddata', '.wasm', '.map', '.pdb', '.sys'
 ]);
 
 // Map file extensions to markdown language tags
@@ -54055,10 +54056,15 @@ const LANGUAGE_MAP = {
   '.cjs': 'javascript',
   '.ts': 'typescript',
   '.tsx': 'tsx',
+  '.cs': 'csharp',
+  '.xaml': 'xml',
+  '.csproj': 'xml',
+  '.py': 'python',
   '.json': 'json',
   '.css': 'css',
   '.html': 'html',
   '.htm': 'html',
+  '.hta': 'html',
   '.md': 'markdown',
   '.bat': 'batch',
   '.cmd': 'batch',
@@ -54069,6 +54075,9 @@ const LANGUAGE_MAP = {
   '.yaml': 'yaml',
   '.xml': 'xml',
   '.svg': 'xml',
+  '.manifest': 'xml',
+  '.iss': 'ini',
+  '.sql': 'sql',
   '.txt': 'text'
 };
 
@@ -54376,7 +54385,7 @@ console.log(`Wrote ${path.relative(ROOT, ICO_OUT)} (${images.map((i) => i.size).
 - Path: `scripts/import-busywin.py`
 - Lines: 505 | Size: 21.6 KB
 
-```
+```python
 #!/usr/bin/env python3
 """
 BusyWin to ARTHA Data Importer
@@ -54892,7 +54901,7 @@ if __name__ == '__main__':
 - Path: `scripts/inspect_fy_tables.py`
 - Lines: 12 | Size: 0.4 KB
 
-```
+```python
 import json
 
 with open('scripts/busywin_db_schema.json', 'r', encoding='utf-8') as f:
@@ -54915,7 +54924,7 @@ for tname, tinfo in sorted(d['fy_bds'].items()):
 - Path: `scripts/inspect_key_tables.py`
 - Lines: 24 | Size: 0.7 KB
 
-```
+```python
 import json
 import win32com.client
 
@@ -54950,7 +54959,7 @@ print_cols('fy_bds', 'Folio1')
 - Path: `scripts/inspect_tables.py`
 - Lines: 55 | Size: 1.9 KB
 
-```
+```python
 import json
 import win32com.client
 
@@ -55016,7 +55025,7 @@ conn.Close()
 - Path: `scripts/inspect_vchtypes.py`
 - Lines: 16 | Size: 0.6 KB
 
-```
+```python
 import win32com.client
 
 path = 'C:\\BusyWin\\DATA\\COMP0001\\db12026.bds'

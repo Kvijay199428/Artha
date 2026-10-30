@@ -21,7 +21,8 @@ const IGNORED_DIRS = new Set([
   'bin',
   'obj',
   'publish-launcher',
-  'publish-installer'
+  'publish-installer',
+  'release-build'
 ]);
 
 // Specific files to ignore
@@ -40,7 +41,7 @@ const BINARY_EXTENSIONS = new Set([
   '.zip', '.tar', '.gz', '.7z', '.rar',
   '.pdf', '.doc', '.docx', '.xls', '.xlsx',
   '.exe', '.dll', '.so', '.dylib', '.bin',
-  '.traineddata', '.wasm', '.map'
+  '.traineddata', '.wasm', '.map', '.pdb', '.sys'
 ]);
 
 // Map file extensions to markdown language tags
@@ -51,10 +52,15 @@ const LANGUAGE_MAP = {
   '.cjs': 'javascript',
   '.ts': 'typescript',
   '.tsx': 'tsx',
+  '.cs': 'csharp',
+  '.xaml': 'xml',
+  '.csproj': 'xml',
+  '.py': 'python',
   '.json': 'json',
   '.css': 'css',
   '.html': 'html',
   '.htm': 'html',
+  '.hta': 'html',
   '.md': 'markdown',
   '.bat': 'batch',
   '.cmd': 'batch',
@@ -65,6 +71,9 @@ const LANGUAGE_MAP = {
   '.yaml': 'yaml',
   '.xml': 'xml',
   '.svg': 'xml',
+  '.manifest': 'xml',
+  '.iss': 'ini',
+  '.sql': 'sql',
   '.txt': 'text'
 };
 
