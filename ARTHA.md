@@ -1,7 +1,7 @@
 # ARTHA - Project Source Code Bundle
 
-> Generated on: **2026-10-30 18:37:38**
-> Total Files: **163** | Total Lines: **94,068** | Total Size: **4.00 MB**
+> Generated on: **2026-10-31 11:27:22**
+> Total Files: **173** | Total Lines: **94,912** | Total Size: **4.04 MB**
 
 ## Table of Contents
 
@@ -37,137 +37,147 @@
 30. [docs-site/pages/setup.mjs](#docs-site-pages-setup-mjs) (299 lines)
 31. [docs-site/pages/start.mjs](#docs-site-pages-start-mjs) (276 lines)
 32. [docs-site/site.mjs](#docs-site-site-mjs) (57 lines)
-33. [docs/AUDIT_2026-04-30.md](#docs-audit-2026-04-30-md) (272 lines)
-34. [docs/AUDIT_2026-10-22.md](#docs-audit-2026-10-22-md) (178 lines)
-35. [docs/BUSYWIN_DATABASE_SCHEMA.md](#docs-busywin-database-schema-md) (478 lines)
-36. [docs/BUSYWIN_FONTS.md](#docs-busywin-fonts-md) (93 lines)
-37. [docs/busywin_schemas/01_COMPANY_DATABASE_db_bds.md](#docs-busywin-schemas-01-company-database-db-bds-md) (1647 lines)
-38. [docs/busywin_schemas/02_FY_MASTERS_AND_ACCOUNTS.md](#docs-busywin-schemas-02-fy-masters-and-accounts-md) (830 lines)
-39. [docs/busywin_schemas/03_FY_TRANSACTIONS_AND_VOUCHERS.md](#docs-busywin-schemas-03-fy-transactions-and-vouchers-md) (1021 lines)
-40. [docs/busywin_schemas/04_FY_GST_AND_STATUTORY.md](#docs-busywin-schemas-04-fy-gst-and-statutory-md) (1102 lines)
-41. [docs/busywin_schemas/05_FY_SYSTEM_AND_CONFIGURATION.md](#docs-busywin-schemas-05-fy-system-and-configuration-md) (835 lines)
-42. [docs/COMPETITOR_GAPS.md](#docs-competitor-gaps-md) (131 lines)
-43. [docs/DEPLOY_ONLINE.md](#docs-deploy-online-md) (349 lines)
-44. [docs/KNOWN_ERRORS.md](#docs-known-errors-md) (1717 lines)
-45. [docs/README.md](#docs-readme-md) (19 lines)
-46. [docs/RELEASE_CHECKLIST.md](#docs-release-checklist-md) (137 lines)
-47. [docs/superpowers/specs/2026-04-30-multi-account-payments-design.md](#docs-superpowers-specs-2026-04-30-multi-account-payments-design-md) (214 lines)
-48. [docs/TAX_HELPER_PLAN.md](#docs-tax-helper-plan-md) (147 lines)
-49. [docs/USER_GUIDE.md](#docs-user-guide-md) (456 lines)
-50. [installer/App.xaml](#installer-app-xaml) (18 lines)
-51. [installer/App.xaml.cs](#installer-app-xaml-cs) (9 lines)
-52. [installer/ARTHA.Installer.csproj](#installer-artha-installer-csproj) (29 lines)
-53. [installer/InstallerEngine.cs](#installer-installerengine-cs) (234 lines)
-54. [installer/MainWindow.xaml](#installer-mainwindow-xaml) (120 lines)
-55. [installer/MainWindow.xaml.cs](#installer-mainwindow-xaml-cs) (120 lines)
-56. [launcher/App.xaml](#launcher-app-xaml) (22 lines)
-57. [launcher/App.xaml.cs](#launcher-app-xaml-cs) (53 lines)
-58. [launcher/ARTHA.Launcher.csproj](#launcher-artha-launcher-csproj) (30 lines)
-59. [launcher/Converters.cs](#launcher-converters-cs) (27 lines)
-60. [launcher/JobManager.cs](#launcher-jobmanager-cs) (119 lines)
-61. [launcher/LogItem.cs](#launcher-logitem-cs) (68 lines)
-62. [launcher/MainWindow.xaml](#launcher-mainwindow-xaml) (258 lines)
-63. [launcher/MainWindow.xaml.cs](#launcher-mainwindow-xaml-cs) (376 lines)
-64. [launcher/ServerManager.cs](#launcher-servermanager-cs) (448 lines)
-65. [public/favicon.svg](#public-favicon-svg) (8 lines)
-66. [public/fonts/fonts.css](#public-fonts-fonts-css) (216 lines)
-67. [public/manifest.webmanifest](#public-manifest-webmanifest) (1 lines)
-68. [release-templates/_system-scripts/backup-unix.sh](#release-templates-system-scripts-backup-unix-sh) (30 lines)
-69. [release-templates/_system-scripts/backup-windows.ps1](#release-templates-system-scripts-backup-windows-ps1) (39 lines)
-70. [release-templates/_system-scripts/install-unix.sh](#release-templates-system-scripts-install-unix-sh) (19 lines)
-71. [release-templates/_system-scripts/install-windows.ps1](#release-templates-system-scripts-install-windows-ps1) (231 lines)
-72. [release-templates/_system-scripts/move-windows.ps1](#release-templates-system-scripts-move-windows-ps1) (43 lines)
-73. [release-templates/_system-scripts/restore-windows.ps1](#release-templates-system-scripts-restore-windows-ps1) (46 lines)
-74. [release-templates/_system-scripts/start-unix.sh](#release-templates-system-scripts-start-unix-sh) (50 lines)
-75. [release-templates/_system-scripts/start-windows.ps1](#release-templates-system-scripts-start-windows-ps1) (196 lines)
-76. [release-templates/_system-scripts/stop-windows.ps1](#release-templates-system-scripts-stop-windows-ps1) (31 lines)
-77. [release-templates/_system-scripts/update-unix.sh](#release-templates-system-scripts-update-unix-sh) (273 lines)
-78. [release-templates/_system-scripts/update-windows.ps1](#release-templates-system-scripts-update-windows-ps1) (140 lines)
-79. [release-templates/Free GST Billing - LINUX.sh](#release-templates-free-gst-billing-linux-sh) (59 lines)
-80. [release-templates/Free GST Billing - MAC.command](#release-templates-free-gst-billing-mac-command) (67 lines)
-81. [release-templates/Free GST Billing - WINDOWS.hta](#release-templates-free-gst-billing-windows-hta) (600 lines)
-82. [release-templates/READ ME FIRST.txt](#release-templates-read-me-first-txt) (146 lines)
-83. [scripts/build-release-zip.mjs](#scripts-build-release-zip-mjs) (353 lines)
-84. [scripts/bundle-tesseract-assets.mjs](#scripts-bundle-tesseract-assets-mjs) (150 lines)
-85. [scripts/busywin_db_schema.json](#scripts-busywin-db-schema-json) (29720 lines)
-86. [scripts/csv-test.mjs](#scripts-csv-test-mjs) (115 lines)
-87. [scripts/discount-modes-test.mjs](#scripts-discount-modes-test-mjs) (69 lines)
-88. [scripts/extract_busywin_schema.py](#scripts-extract-busywin-schema-py) (161 lines)
-89. [scripts/generate_busywin_docs.py](#scripts-generate-busywin-docs-py) (351 lines)
-90. [scripts/generate_master_doc.py](#scripts-generate-master-doc-py) (503 lines)
-91. [scripts/generate-artha-md.mjs](#scripts-generate-artha-md-mjs) (186 lines)
-92. [scripts/generate-icons.mjs](#scripts-generate-icons-mjs) (176 lines)
-93. [scripts/import-busywin.py](#scripts-import-busywin-py) (505 lines)
-94. [scripts/inspect_fonts.py](#scripts-inspect-fonts-py) (57 lines)
-95. [scripts/inspect_fy_tables.py](#scripts-inspect-fy-tables-py) (12 lines)
-96. [scripts/inspect_key_tables.py](#scripts-inspect-key-tables-py) (24 lines)
-97. [scripts/inspect_tables.py](#scripts-inspect-tables-py) (55 lines)
-98. [scripts/inspect_vchtypes.py](#scripts-inspect-vchtypes-py) (16 lines)
-99. [scripts/tax-test.mjs](#scripts-tax-test-mjs) (1038 lines)
-100. [scripts/test-update-unix.mjs](#scripts-test-update-unix-mjs) (239 lines)
-101. [scripts/verify-release.mjs](#scripts-verify-release-mjs) (190 lines)
-102. [src/App.jsx](#src-app-jsx) (1290 lines)
-103. [src/components/ActionsMenu.jsx](#src-components-actionsmenu-jsx) (88 lines)
-104. [src/components/AppFooter.jsx](#src-components-appfooter-jsx) (40 lines)
-105. [src/components/AppLock.jsx](#src-components-applock-jsx) (104 lines)
-106. [src/components/AppLockSettings.jsx](#src-components-applocksettings-jsx) (96 lines)
-107. [src/components/BillOCR.jsx](#src-components-billocr-jsx) (655 lines)
-108. [src/components/BulkCsvImport.jsx](#src-components-bulkcsvimport-jsx) (199 lines)
-109. [src/components/ClientModal.jsx](#src-components-clientmodal-jsx) (203 lines)
-110. [src/components/ClientsView.jsx](#src-components-clientsview-jsx) (1014 lines)
-111. [src/components/ConfirmModal.jsx](#src-components-confirmmodal-jsx) (210 lines)
-112. [src/components/ControlPanel.jsx](#src-components-controlpanel-jsx) (259 lines)
-113. [src/components/Dashboard.jsx](#src-components-dashboard-jsx) (1916 lines)
-114. [src/components/ExpenseTracker.jsx](#src-components-expensetracker-jsx) (466 lines)
-115. [src/components/GSTReturns.jsx](#src-components-gstreturns-jsx) (2466 lines)
-116. [src/components/HelpButton.jsx](#src-components-helpbutton-jsx) (62 lines)
-117. [src/components/IncomeTax.jsx](#src-components-incometax-jsx) (1177 lines)
-118. [src/components/InventoryView.jsx](#src-components-inventoryview-jsx) (398 lines)
-119. [src/components/InvoiceGenerator.jsx](#src-components-invoicegenerator-jsx) (4712 lines)
-120. [src/components/InvoiceGridLayout.jsx](#src-components-invoicegridlayout-jsx) (543 lines)
-121. [src/components/InvoiceNumberSettings.jsx](#src-components-invoicenumbersettings-jsx) (325 lines)
-122. [src/components/InvoicePreview.jsx](#src-components-invoicepreview-jsx) (1562 lines)
-123. [src/components/LockButton.jsx](#src-components-lockbutton-jsx) (25 lines)
-124. [src/components/PageHeader.jsx](#src-components-pageheader-jsx) (73 lines)
-125. [src/components/PartyOutstandingReport.jsx](#src-components-partyoutstandingreport-jsx) (97 lines)
-126. [src/components/PrintPreviewModal.jsx](#src-components-printpreviewmodal-jsx) (215 lines)
-127. [src/components/PrintSettings.jsx](#src-components-printsettings-jsx) (1615 lines)
-128. [src/components/ProductBulkEdit.jsx](#src-components-productbulkedit-jsx) (102 lines)
-129. [src/components/PurchaseBills.jsx](#src-components-purchasebills-jsx) (1280 lines)
-130. [src/components/ReceiptVoucher.jsx](#src-components-receiptvoucher-jsx) (500 lines)
-131. [src/components/RecurringInvoices.jsx](#src-components-recurringinvoices-jsx) (443 lines)
-132. [src/components/ReportsView.jsx](#src-components-reportsview-jsx) (726 lines)
-133. [src/components/SettingsView.jsx](#src-components-settingsview-jsx) (2142 lines)
-134. [src/components/SetupWizard.jsx](#src-components-setupwizard-jsx) (256 lines)
-135. [src/components/StarBanner.jsx](#src-components-starbanner-jsx) (63 lines)
-136. [src/components/StockReport.jsx](#src-components-stockreport-jsx) (106 lines)
-137. [src/components/SupportNudge.jsx](#src-components-supportnudge-jsx) (69 lines)
-138. [src/components/SupportView.jsx](#src-components-supportview-jsx) (207 lines)
-139. [src/components/TableExport.jsx](#src-components-tableexport-jsx) (63 lines)
-140. [src/components/Toast.jsx](#src-components-toast-jsx) (77 lines)
-141. [src/components/UnassignedBanner.jsx](#src-components-unassignedbanner-jsx) (76 lines)
-142. [src/components/useSupporters.js](#src-components-usesupporters-js) (29 lines)
-143. [src/components/WelcomeGuide.jsx](#src-components-welcomeguide-jsx) (509 lines)
-144. [src/config/brand.js](#src-config-brand-js) (17 lines)
-145. [src/index.css](#src-index-css) (3516 lines)
-146. [src/index.html](#src-index-html) (155 lines)
-147. [src/main.jsx](#src-main-jsx) (146 lines)
-148. [src/services/googleDrive.js](#src-services-googledrive-js) (219 lines)
-149. [src/store.js](#src-store-js) (550 lines)
-150. [src/utils.js](#src-utils-js) (2483 lines)
-151. [src/utils/appLock.js](#src-utils-applock-js) (15 lines)
-152. [src/utils/bulkCsv.js](#src-utils-bulkcsv-js) (409 lines)
-153. [src/utils/clientCredit.js](#src-utils-clientcredit-js) (135 lines)
-154. [src/utils/hsnRates.js](#src-utils-hsnrates-js) (168 lines)
-155. [src/utils/itr.js](#src-utils-itr-js) (1342 lines)
-156. [src/utils/partyOutstanding.js](#src-utils-partyoutstanding-js) (54 lines)
-157. [src/utils/prefsMirror.js](#src-utils-prefsmirror-js) (78 lines)
-158. [src/utils/printSettings.js](#src-utils-printsettings-js) (571 lines)
-159. [src/utils/products.js](#src-utils-products-js) (67 lines)
-160. [src/utils/share.js](#src-utils-share-js) (43 lines)
-161. [src/utils/supporters.js](#src-utils-supporters-js) (56 lines)
-162. [src/utils/xlsx.js](#src-utils-xlsx-js) (76 lines)
-163. [tests/smoke.mjs](#tests-smoke-mjs) (1844 lines)
+33. [docs/ARTHA_DATABASE_SCHEMA.md](#docs-artha-database-schema-md) (120 lines)
+34. [docs/artha_schemas/01_BILLS_AND_INVOICES.md](#docs-artha-schemas-01-bills-and-invoices-md) (166 lines)
+35. [docs/artha_schemas/02_CLIENTS_AND_CUSTOMERS.md](#docs-artha-schemas-02-clients-and-customers-md) (62 lines)
+36. [docs/artha_schemas/03_PRODUCTS_AND_INVENTORY.md](#docs-artha-schemas-03-products-and-inventory-md) (62 lines)
+37. [docs/artha_schemas/04_PURCHASES_AND_SUPPLIERS.md](#docs-artha-schemas-04-purchases-and-suppliers-md) (82 lines)
+38. [docs/artha_schemas/05_EXPENSES_AND_OVERHEADS.md](#docs-artha-schemas-05-expenses-and-overheads-md) (56 lines)
+39. [docs/artha_schemas/06_RECEIPTS_AND_PAYMENTS.md](#docs-artha-schemas-06-receipts-and-payments-md) (50 lines)
+40. [docs/artha_schemas/07_PROFILES_AND_TEMPLATES.md](#docs-artha-schemas-07-profiles-and-templates-md) (94 lines)
+41. [docs/artha_schemas/08_SYSTEM_META_AND_CONFIG.md](#docs-artha-schemas-08-system-meta-and-config-md) (93 lines)
+42. [docs/AUDIT_2026-04-30.md](#docs-audit-2026-04-30-md) (272 lines)
+43. [docs/AUDIT_2026-10-22.md](#docs-audit-2026-10-22-md) (178 lines)
+44. [docs/BUSYWIN_DATABASE_SCHEMA.md](#docs-busywin-database-schema-md) (478 lines)
+45. [docs/BUSYWIN_FONTS.md](#docs-busywin-fonts-md) (93 lines)
+46. [docs/busywin_schemas/01_COMPANY_DATABASE_db_bds.md](#docs-busywin-schemas-01-company-database-db-bds-md) (1647 lines)
+47. [docs/busywin_schemas/02_FY_MASTERS_AND_ACCOUNTS.md](#docs-busywin-schemas-02-fy-masters-and-accounts-md) (830 lines)
+48. [docs/busywin_schemas/03_FY_TRANSACTIONS_AND_VOUCHERS.md](#docs-busywin-schemas-03-fy-transactions-and-vouchers-md) (1021 lines)
+49. [docs/busywin_schemas/04_FY_GST_AND_STATUTORY.md](#docs-busywin-schemas-04-fy-gst-and-statutory-md) (1102 lines)
+50. [docs/busywin_schemas/05_FY_SYSTEM_AND_CONFIGURATION.md](#docs-busywin-schemas-05-fy-system-and-configuration-md) (835 lines)
+51. [docs/COMPETITOR_GAPS.md](#docs-competitor-gaps-md) (131 lines)
+52. [docs/DEPLOY_ONLINE.md](#docs-deploy-online-md) (349 lines)
+53. [docs/KNOWN_ERRORS.md](#docs-known-errors-md) (1717 lines)
+54. [docs/README.md](#docs-readme-md) (19 lines)
+55. [docs/RELEASE_CHECKLIST.md](#docs-release-checklist-md) (137 lines)
+56. [docs/superpowers/specs/2026-04-30-multi-account-payments-design.md](#docs-superpowers-specs-2026-04-30-multi-account-payments-design-md) (214 lines)
+57. [docs/TAX_HELPER_PLAN.md](#docs-tax-helper-plan-md) (147 lines)
+58. [docs/USER_GUIDE.md](#docs-user-guide-md) (456 lines)
+59. [installer/App.xaml](#installer-app-xaml) (18 lines)
+60. [installer/App.xaml.cs](#installer-app-xaml-cs) (9 lines)
+61. [installer/ARTHA.Installer.csproj](#installer-artha-installer-csproj) (29 lines)
+62. [installer/InstallerEngine.cs](#installer-installerengine-cs) (234 lines)
+63. [installer/MainWindow.xaml](#installer-mainwindow-xaml) (120 lines)
+64. [installer/MainWindow.xaml.cs](#installer-mainwindow-xaml-cs) (120 lines)
+65. [launcher/App.xaml](#launcher-app-xaml) (22 lines)
+66. [launcher/App.xaml.cs](#launcher-app-xaml-cs) (53 lines)
+67. [launcher/ARTHA.Launcher.csproj](#launcher-artha-launcher-csproj) (30 lines)
+68. [launcher/Converters.cs](#launcher-converters-cs) (27 lines)
+69. [launcher/JobManager.cs](#launcher-jobmanager-cs) (119 lines)
+70. [launcher/LogItem.cs](#launcher-logitem-cs) (68 lines)
+71. [launcher/MainWindow.xaml](#launcher-mainwindow-xaml) (258 lines)
+72. [launcher/MainWindow.xaml.cs](#launcher-mainwindow-xaml-cs) (376 lines)
+73. [launcher/ServerManager.cs](#launcher-servermanager-cs) (448 lines)
+74. [public/favicon.svg](#public-favicon-svg) (8 lines)
+75. [public/fonts/fonts.css](#public-fonts-fonts-css) (216 lines)
+76. [public/manifest.webmanifest](#public-manifest-webmanifest) (1 lines)
+77. [release-templates/_system-scripts/backup-unix.sh](#release-templates-system-scripts-backup-unix-sh) (30 lines)
+78. [release-templates/_system-scripts/backup-windows.ps1](#release-templates-system-scripts-backup-windows-ps1) (39 lines)
+79. [release-templates/_system-scripts/install-unix.sh](#release-templates-system-scripts-install-unix-sh) (19 lines)
+80. [release-templates/_system-scripts/install-windows.ps1](#release-templates-system-scripts-install-windows-ps1) (231 lines)
+81. [release-templates/_system-scripts/move-windows.ps1](#release-templates-system-scripts-move-windows-ps1) (43 lines)
+82. [release-templates/_system-scripts/restore-windows.ps1](#release-templates-system-scripts-restore-windows-ps1) (46 lines)
+83. [release-templates/_system-scripts/start-unix.sh](#release-templates-system-scripts-start-unix-sh) (50 lines)
+84. [release-templates/_system-scripts/start-windows.ps1](#release-templates-system-scripts-start-windows-ps1) (196 lines)
+85. [release-templates/_system-scripts/stop-windows.ps1](#release-templates-system-scripts-stop-windows-ps1) (31 lines)
+86. [release-templates/_system-scripts/update-unix.sh](#release-templates-system-scripts-update-unix-sh) (273 lines)
+87. [release-templates/_system-scripts/update-windows.ps1](#release-templates-system-scripts-update-windows-ps1) (140 lines)
+88. [release-templates/Free GST Billing - LINUX.sh](#release-templates-free-gst-billing-linux-sh) (59 lines)
+89. [release-templates/Free GST Billing - MAC.command](#release-templates-free-gst-billing-mac-command) (67 lines)
+90. [release-templates/Free GST Billing - WINDOWS.hta](#release-templates-free-gst-billing-windows-hta) (600 lines)
+91. [release-templates/READ ME FIRST.txt](#release-templates-read-me-first-txt) (146 lines)
+92. [scripts/build-release-zip.mjs](#scripts-build-release-zip-mjs) (353 lines)
+93. [scripts/bundle-tesseract-assets.mjs](#scripts-bundle-tesseract-assets-mjs) (150 lines)
+94. [scripts/busywin_db_schema.json](#scripts-busywin-db-schema-json) (29720 lines)
+95. [scripts/csv-test.mjs](#scripts-csv-test-mjs) (115 lines)
+96. [scripts/discount-modes-test.mjs](#scripts-discount-modes-test-mjs) (69 lines)
+97. [scripts/extract_busywin_schema.py](#scripts-extract-busywin-schema-py) (161 lines)
+98. [scripts/generate_busywin_docs.py](#scripts-generate-busywin-docs-py) (351 lines)
+99. [scripts/generate_master_doc.py](#scripts-generate-master-doc-py) (503 lines)
+100. [scripts/generate-artha-md.mjs](#scripts-generate-artha-md-mjs) (186 lines)
+101. [scripts/generate-icons.mjs](#scripts-generate-icons-mjs) (176 lines)
+102. [scripts/import-busywin.py](#scripts-import-busywin-py) (505 lines)
+103. [scripts/inspect_artha_schema.py](#scripts-inspect-artha-schema-py) (59 lines)
+104. [scripts/inspect_fonts.py](#scripts-inspect-fonts-py) (57 lines)
+105. [scripts/inspect_fy_tables.py](#scripts-inspect-fy-tables-py) (12 lines)
+106. [scripts/inspect_key_tables.py](#scripts-inspect-key-tables-py) (24 lines)
+107. [scripts/inspect_tables.py](#scripts-inspect-tables-py) (55 lines)
+108. [scripts/inspect_vchtypes.py](#scripts-inspect-vchtypes-py) (16 lines)
+109. [scripts/tax-test.mjs](#scripts-tax-test-mjs) (1038 lines)
+110. [scripts/test-update-unix.mjs](#scripts-test-update-unix-mjs) (239 lines)
+111. [scripts/verify-release.mjs](#scripts-verify-release-mjs) (190 lines)
+112. [src/App.jsx](#src-app-jsx) (1290 lines)
+113. [src/components/ActionsMenu.jsx](#src-components-actionsmenu-jsx) (88 lines)
+114. [src/components/AppFooter.jsx](#src-components-appfooter-jsx) (40 lines)
+115. [src/components/AppLock.jsx](#src-components-applock-jsx) (104 lines)
+116. [src/components/AppLockSettings.jsx](#src-components-applocksettings-jsx) (96 lines)
+117. [src/components/BillOCR.jsx](#src-components-billocr-jsx) (655 lines)
+118. [src/components/BulkCsvImport.jsx](#src-components-bulkcsvimport-jsx) (199 lines)
+119. [src/components/ClientModal.jsx](#src-components-clientmodal-jsx) (203 lines)
+120. [src/components/ClientsView.jsx](#src-components-clientsview-jsx) (1014 lines)
+121. [src/components/ConfirmModal.jsx](#src-components-confirmmodal-jsx) (210 lines)
+122. [src/components/ControlPanel.jsx](#src-components-controlpanel-jsx) (259 lines)
+123. [src/components/Dashboard.jsx](#src-components-dashboard-jsx) (1916 lines)
+124. [src/components/ExpenseTracker.jsx](#src-components-expensetracker-jsx) (466 lines)
+125. [src/components/GSTReturns.jsx](#src-components-gstreturns-jsx) (2466 lines)
+126. [src/components/HelpButton.jsx](#src-components-helpbutton-jsx) (62 lines)
+127. [src/components/IncomeTax.jsx](#src-components-incometax-jsx) (1177 lines)
+128. [src/components/InventoryView.jsx](#src-components-inventoryview-jsx) (398 lines)
+129. [src/components/InvoiceGenerator.jsx](#src-components-invoicegenerator-jsx) (4712 lines)
+130. [src/components/InvoiceGridLayout.jsx](#src-components-invoicegridlayout-jsx) (543 lines)
+131. [src/components/InvoiceNumberSettings.jsx](#src-components-invoicenumbersettings-jsx) (325 lines)
+132. [src/components/InvoicePreview.jsx](#src-components-invoicepreview-jsx) (1562 lines)
+133. [src/components/LockButton.jsx](#src-components-lockbutton-jsx) (25 lines)
+134. [src/components/PageHeader.jsx](#src-components-pageheader-jsx) (73 lines)
+135. [src/components/PartyOutstandingReport.jsx](#src-components-partyoutstandingreport-jsx) (97 lines)
+136. [src/components/PrintPreviewModal.jsx](#src-components-printpreviewmodal-jsx) (215 lines)
+137. [src/components/PrintSettings.jsx](#src-components-printsettings-jsx) (1615 lines)
+138. [src/components/ProductBulkEdit.jsx](#src-components-productbulkedit-jsx) (102 lines)
+139. [src/components/PurchaseBills.jsx](#src-components-purchasebills-jsx) (1280 lines)
+140. [src/components/ReceiptVoucher.jsx](#src-components-receiptvoucher-jsx) (500 lines)
+141. [src/components/RecurringInvoices.jsx](#src-components-recurringinvoices-jsx) (443 lines)
+142. [src/components/ReportsView.jsx](#src-components-reportsview-jsx) (726 lines)
+143. [src/components/SettingsView.jsx](#src-components-settingsview-jsx) (2142 lines)
+144. [src/components/SetupWizard.jsx](#src-components-setupwizard-jsx) (256 lines)
+145. [src/components/StarBanner.jsx](#src-components-starbanner-jsx) (63 lines)
+146. [src/components/StockReport.jsx](#src-components-stockreport-jsx) (106 lines)
+147. [src/components/SupportNudge.jsx](#src-components-supportnudge-jsx) (69 lines)
+148. [src/components/SupportView.jsx](#src-components-supportview-jsx) (207 lines)
+149. [src/components/TableExport.jsx](#src-components-tableexport-jsx) (63 lines)
+150. [src/components/Toast.jsx](#src-components-toast-jsx) (77 lines)
+151. [src/components/UnassignedBanner.jsx](#src-components-unassignedbanner-jsx) (76 lines)
+152. [src/components/useSupporters.js](#src-components-usesupporters-js) (29 lines)
+153. [src/components/WelcomeGuide.jsx](#src-components-welcomeguide-jsx) (509 lines)
+154. [src/config/brand.js](#src-config-brand-js) (17 lines)
+155. [src/index.css](#src-index-css) (3516 lines)
+156. [src/index.html](#src-index-html) (155 lines)
+157. [src/main.jsx](#src-main-jsx) (146 lines)
+158. [src/services/googleDrive.js](#src-services-googledrive-js) (219 lines)
+159. [src/store.js](#src-store-js) (550 lines)
+160. [src/utils.js](#src-utils-js) (2483 lines)
+161. [src/utils/appLock.js](#src-utils-applock-js) (15 lines)
+162. [src/utils/bulkCsv.js](#src-utils-bulkcsv-js) (409 lines)
+163. [src/utils/clientCredit.js](#src-utils-clientcredit-js) (135 lines)
+164. [src/utils/hsnRates.js](#src-utils-hsnrates-js) (168 lines)
+165. [src/utils/itr.js](#src-utils-itr-js) (1342 lines)
+166. [src/utils/partyOutstanding.js](#src-utils-partyoutstanding-js) (54 lines)
+167. [src/utils/prefsMirror.js](#src-utils-prefsmirror-js) (78 lines)
+168. [src/utils/printSettings.js](#src-utils-printsettings-js) (571 lines)
+169. [src/utils/products.js](#src-utils-products-js) (67 lines)
+170. [src/utils/share.js](#src-utils-share-js) (43 lines)
+171. [src/utils/supporters.js](#src-utils-supporters-js) (56 lines)
+172. [src/utils/xlsx.js](#src-utils-xlsx-js) (76 lines)
+173. [tests/smoke.mjs](#tests-smoke-mjs) (1844 lines)
 
 ---
 
@@ -8514,6 +8524,890 @@ export const NAV = [
 ];
 
 ```
+
+---
+
+<a id="docs-artha-database-schema-md"></a>
+## `docs/ARTHA_DATABASE_SCHEMA.md`
+
+- Path: `docs/ARTHA_DATABASE_SCHEMA.md`
+- Lines: 120 | Size: 8.4 KB
+
+````markdown
+# ARTHA Database Architecture & Schema Specification
+
+> **Storage Paradigm:** Offline-First Document Store (JSON on Local File System)  
+> **Server Runtime:** Node.js Express REST API Engine (`server.js`)  
+> **Data Root Path:** `d:\VEGA\ARTHA\data/`  
+> **Security & Privacy:** 100% Private, Local-Only, Zero Cloud Tracking, Atomic File Locking  
+> **Primary Collections:** Bills, Clients, Products, Purchases, Expenses, Receipts, Profiles, Templates, Recurring, Meta  
+
+---
+
+## 1. Executive Summary & Architecture Overview
+
+ARTHA is engineered around an **offline-first, zero-dependency document store** architecture. Rather than relying on heavyweight relational database management systems (RDBMS) that require background services or complex drivers (such as MS Jet/Access, SQLite, or PostgreSQL), ARTHA structures its persistence as **structured, human-readable, schema-validated JSON files** partitioned into collection folders.
+
+```
+D:\VEGA\ARTHA\data\
+  ├── bills\             <-- Sales Invoices, Estimates, Credit Notes, Delivery Challans
+  ├── clients\           <-- Customer and Client Directory Masters
+  ├── products\          <-- Item, Inventory, Service, and Price Masters
+  ├── purchases\         <-- Supplier Bills & Input Tax Credit (ITC) Records
+  ├── expenses\          <-- Operating Expenses & Overhead Vouchers
+  ├── receipts\          <-- Payment Receipts & Inward Voucher Settlements
+  ├── profiles\          <-- Multi-Business Enterprise Profiles
+  ├── templates\         <-- Reusable Terms & Conditions Templates
+  ├── recurring\         <-- Recurring Billing Contract Schedules
+  ├── trash\             <-- Soft-Deleted Documents & Trashed PDFs
+  ├── backups\           <-- Daily Incremental & Snapshot Archives (30-day retention)
+  ├── meta.json          <-- Atomic Sequence Counters & Global System Flags
+  ├── local-prefs.json   <-- UI State, Column Toggles, and Tax Calculator Inputs
+  ├── profile.json       <-- Active Primary Business Profile
+  └── port.txt           <-- Persisted Backend Network Port
+```
+
+### Core Design Tenets:
+1. **Atomic File Writes:** Writes use atomic file writes or strict JSON serialization to ensure zero data corruption during unexpected system power cuts.
+2. **Document Immutability & Snapshots:** When an invoice is created, it embeds complete snapshots of the seller (`profile`) and buyer (`client`), preserving tax numbers, addresses, and rates exactly as they existed at issue time.
+3. **Cross-Platform & Backup Simplicity:** Because all data lives in `data/`, backing up ARTHA simply requires copying the `data/` folder or using the automated daily snapshot engine.
+4. **Multi-Business Isolation:** Multi-company databases are unified within the same data store using `ownerGstin` and `ownerName` partition keys, preventing accidental data bleeding while keeping setup painless.
+
+---
+
+## 2. Entity-Relationship Model
+
+```mermaid
+erDiagram
+    PROFILE ||--o{ BILL : "Issues (ownerGstin)"
+    PROFILE ||--o{ PURCHASE : "Purchases (ownerGstin)"
+    PROFILE ||--o{ EXPENSE : "Incurs (ownerGstin)"
+    PROFILE ||--o{ RECEIPT : "Receives (ownerGstin)"
+    PROFILE ||--o{ PAYMENT_ACCOUNT : "Bank Accounts"
+
+    CLIENT ||--o{ BILL : "Billed to (clientName / gstin)"
+    CLIENT ||--o{ RECEIPT : "Pays via"
+    CLIENT ||--o{ RECURRING : "Contract target"
+
+    PRODUCT ||--o{ INVOICE_ITEM : "Sold in"
+    PRODUCT ||--o{ PURCHASE_ITEM : "Procured in"
+
+    BILL ||--o{ INVOICE_ITEM : "Contains items"
+    BILL ||--o{ PAYMENT : "Settled by"
+    BILL ||--o{ RECEIPT : "Linked to (againstInvoice)"
+
+    PURCHASE ||--o{ PURCHASE_ITEM : "Contains items"
+```
+
+---
+
+## 3. Modular Schema Catalog
+
+Detailed field-by-field specifications, types, constraints, and JSON samples are documented in dedicated modular guides:
+
+| Module | Schema Documentation File | Description & Entities Covered |
+| :---: | :--- | :--- |
+| **01** | [01_BILLS_AND_INVOICES.md](file:///d:/VEGA/ARTHA/docs/artha_schemas/01_BILLS_AND_INVOICES.md) | Tax Invoices, Quotations, Proformas, Bill of Supply, Credit Notes, Challans, Payments array. |
+| **02** | [02_CLIENTS_AND_CUSTOMERS.md](file:///d:/VEGA/ARTHA/docs/artha_schemas/02_CLIENTS_AND_CUSTOMERS.md) | Client master, GSTIN/PAN parsing, State codes, Billing & Shipping addresses, SEZ flags. |
+| **03** | [03_PRODUCTS_AND_INVENTORY.md](file:///d:/VEGA/ARTHA/docs/artha_schemas/03_PRODUCTS_AND_INVENTORY.md) | Products, Services, HSN/SAC codes, UQC units, Prices, Tax slabs, Real-time stock. |
+| **04** | [04_PURCHASES_AND_SUPPLIERS.md](file:///d:/VEGA/ARTHA/docs/artha_schemas/04_PURCHASES_AND_SUPPLIERS.md) | Supplier purchase bills, Input Tax Credit (ITC) tracking, GSTR-3B reconciliation, Payables. |
+| **05** | [05_EXPENSES_AND_OVERHEADS.md](file:///d:/VEGA/ARTHA/docs/artha_schemas/05_EXPENSES_AND_OVERHEADS.md) | Operating overheads, Categories, Service ITC setoff, Payment modes, Vendor GSTINs. |
+| **06** | [06_RECEIPTS_AND_PAYMENTS.md](file:///d:/VEGA/ARTHA/docs/artha_schemas/06_RECEIPTS_AND_PAYMENTS.md) | Payment receipts, Cheque/NEFT/UPI references, Inward settlement sync with invoice ledger. |
+| **07** | [07_PROFILES_AND_TEMPLATES.md](file:///d:/VEGA/ARTHA/docs/artha_schemas/07_PROFILES_AND_TEMPLATES.md) | Business profiles, Bank accounts, Base64 logos/signatures, Terms templates, Recurring schedules. |
+| **08** | [08_SYSTEM_META_AND_CONFIG.md](file:///d:/VEGA/ARTHA/docs/artha_schemas/08_SYSTEM_META_AND_CONFIG.md) | Atomic sequence counters, System flags, PIN lock, Local preferences, Backups, Trash bin. |
+
+---
+
+## 4. BusyWin to ARTHA Schema Mapping Reference
+
+For teams migrating from legacy **BusyWin Accounting** (`C:\BusyWin`) to **ARTHA**, the table below explains how BusyWin's Jet 4.0 database tables translate into ARTHA's document collections:
+
+| BusyWin Source Table | BusyWin Table Role | ARTHA Target Collection | Architectural Mapping Notes |
+| :--- | :--- | :--- | :--- |
+| **`Master1`** (`MasterType=1`) | Accounts / Debtors / Creditors | `data/clients/` | Client party master. Mapped with `Name`, `GSTIN`, `Address`, `StateCode`, `Phone`. |
+| **`Master1`** (`MasterType=6`) | Items / Inventory Masters | `data/products/` | Product catalog. Mapped with `ItemName`, `HSN`, `Unit`, `SellingPrice`, `PurchasePrice`, `Stock`. |
+| **`MasterAddressInfo`** | Master Party Addresses | `data/clients/` | Address, city, state, pin, and email are merged directly into the `client` document. |
+| **`Tran1`** (`VchType=1, 9`) | Sales Invoices & Credit Notes | `data/bills/` | Header mapped to `bill` metadata (`invoiceNumber`, `invoiceDate`, `totalAmount`, `status`). |
+| **`Tran2`** (`Item movement`) | Line Item Transaction Details | `data/bills/` -> `items[]` | Converted into embedded `data.items` array on the invoice document. |
+| **`Tran2`** (`Account debit/credit`) | Ledger Posting Lines | `data/bills/` -> `totals` | Converted into statutory tax totals (`subtotal`, `cgst`, `sgst`, `igst`, `roundOff`). |
+| **`Tran1`** (`VchType=2`) | Purchase Inward Bills | `data/purchases/` | Mapped to purchase documents with vendor name, supplier GSTIN, and taxable/tax totals. |
+| **`Tran1`** (`VchType=5, 6`) | Payment & Receipt Vouchers | `data/receipts/` & `bills.payments` | Payment receipts mapped to `data/receipts/` and synchronized to invoice `payments` arrays. |
+| **`Company`** | Enterprise Profile Master | `data/profiles/` & `profile.json` | Mapped to primary company profile (name, address, bank, PAN, GSTIN). |
+| **`PrinterReps`** | Invoice Print Formats | `data/templates/` & `meta.json` | Print formatting, layout flags, and thermal options mapped to display options. |
+
+---
+
+## 5. Concurrency, Atomic Operations & Integrity Controls
+
+### 1. Atomic Sequence Counters
+Invoice numbers are generated atomically by the Node.js Express server using endpoint `POST /api/meta/:key/increment`.
+- Eliminates race conditions where two concurrent browser windows generate the same invoice number.
+- Supports "peek" mode (`GET /api/meta/:key`) to show previews on invoice form load without burning sequence numbers.
+
+### 2. Overwrite Protection
+Attempting to create an invoice with an already-existing `invoiceNumber` returns HTTP `409 Conflict` unless explicit `?overwrite=1` is provided (e.g. during an explicit edit session).
+
+### 3. Automatic Daily Snapshotting
+Before any destructive operation or at midnight:
+1. ARTHA creates `data/backups/YYYY-MM-DD/`.
+2. Copies all collections into the snapshot directory.
+3. Automatically prunes snapshots older than 30 days.
+4. Allows instantaneous rollback via `POST /api/backups/:date/restore`.
+
+````
+
+---
+
+<a id="docs-artha-schemas-01-bills-and-invoices-md"></a>
+## `docs/artha_schemas/01_BILLS_AND_INVOICES.md`
+
+- Path: `docs/artha_schemas/01_BILLS_AND_INVOICES.md`
+- Lines: 166 | Size: 7.7 KB
+
+````markdown
+# ARTHA Database Schema: Bills & Invoices (`data/bills/`)
+
+## 1. Overview & Purpose
+The `bills` collection stores all outward commercial documents generated by ARTHA, including:
+- **Tax Invoices** (`tax-invoice`): GST-compliant sales invoices.
+- **Quotations / Estimates** (`quotation`): Pre-sales proposals with zero stock/tax effect.
+- **Proforma Invoices** (`proforma`): Formal commercial quotations for advance booking.
+- **Bill of Supply** (`bill-of-supply`): Invoices for exempt goods or composition taxpayers (no GST charged).
+- **Composition Invoices** (`composition`): Bill of supply issued by taxpayers under composition levy.
+- **Credit Notes** (`credit-note`): Sales returns or downward price corrections (negative stock & tax effect).
+- **Delivery Challans** (`delivery-challan`): Movement of goods without immediate sale (e.g. job work, approval).
+
+Each document is persisted as an independent, human-readable, atomic JSON file named `<invoiceNumber>.json` (with illegal path characters sanitized).
+
+---
+
+## 2. Top-Level Entity Schema
+
+| Field Name | Type | Required | Description & Constraints |
+| :--- | :--- | :---: | :--- |
+| `id` | `String` | Yes | Unique identifier, typically identical to `invoiceNumber` or generated UUID. |
+| `clientName` | `String` | Yes | Party/customer name printed on the document. |
+| `invoiceNumber` | `String` | Yes | Official invoice number (e.g., `HPS00001`, `INV/2026-27/0042`). Must be unique across active documents. |
+| `invoiceDate` | `String (YYYY-MM-DD)` | Yes | Date of invoice issue (local date format). |
+| `dueDate` | `String (YYYY-MM-DD)` | No | Payment maturity or settlement due date. |
+| `invoiceType` | `String` | Yes | Enum: `'tax-invoice'`, `'quotation'`, `'proforma'`, `'bill-of-supply'`, `'composition'`, `'credit-note'`, `'delivery-challan'`. |
+| `currency` | `String` | Yes | ISO 4217 3-letter currency code (e.g. `'INR'`, `'USD'`, `'EUR'`, `'AED'`). Defaults to `'INR'`. |
+| `totalAmount` | `Number (Float)` | Yes | Final payable grand total after taxes, discounts, TCS/TDS adjustments, and round-off. |
+| `totalTaxAmount`| `Number (Float)` | Yes | Sum of all statutory taxes (CGST + SGST + IGST + UTGST + Cess). |
+| `status` | `String` | Yes | Lifecycle status enum: `'unpaid'`, `'partial'`, `'paid'`, `'overdue'`, `'cancelled'`. |
+| `paidAmount` | `Number (Float)` | Yes | Cumulative amount received against this invoice across all recorded payment vouchers. |
+| `payments` | `Array<Payment>` | Yes | Array of payment event objects recorded against this invoice. |
+| `printedCount` | `Integer` | No | Number of times this document has been printed or exported to PDF. |
+| `lastPrintedAt` | `String (ISO 8601)` | No | Timestamp of the most recent print or PDF export. |
+| `ownerGstin` | `String` | No | GSTIN of the issuing business profile (for multi-business installations). |
+| `ownerName` | `String` | No | Trade/Legal name of the issuing business profile. |
+| `data` | `Object` | Yes | Comprehensive document payload containing full snapshot data (see below). |
+
+---
+
+## 3. The `payments` Sub-Array Schema
+
+Each payment entry in `bill.payments` represents an inward settlement transaction:
+
+| Field Name | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `String` | Unique transaction ID (e.g. `pay_1793257592000` or `pmt_HPS00001`). |
+| `date` | `String (YYYY-MM-DD)` | Settlement date. |
+| `amount` | `Number (Float)` | Amount paid in this transaction. |
+| `mode` | `String` | Payment method: `'cash'`, `'upi'`, `'bank-transfer'`, `'cheque'`, `'card'`, `'other'`. |
+| `note` | `String` | Transaction reference, UTR number, cheque number, or bank deposit remark. |
+| `receiptNo` | `String` | Optional reference to a formal Payment Receipt voucher (`data/receipts/`). |
+| `recordedAt` | `String (ISO 8601)` | Audit timestamp when the payment was logged. |
+| `auto` | `Boolean` | True if generated automatically by a bulk action or quick-pay modal. |
+
+---
+
+## 4. The `data` Document Snapshot Schema
+
+ARTHA embeds an immutable snapshot inside `data` so that historical invoices never mutate if product prices or company profiles change later:
+
+### `data.profile` (Seller Snapshot)
+- `businessName`: Issuing business entity name.
+- `address`, `city`, `state`, `country`, `pin`: Full registered business address.
+- `gstin`: 15-character GST Identification Number.
+- `pan`: 10-character Permanent Account Number.
+- `phone`, `email`: Contact details.
+- `bankName`, `accountNumber`, `ifsc`, `swift`: Bank settlement details.
+- `upiId`: Virtual Payment Address for instant QR code settlement.
+- `logo`: Base64 data URL of the company brand logo.
+- `signature`: Base64 data URL of the authorized signatory stamp/signature.
+- `paymentAccounts`: Array of configured bank accounts for multi-account selection.
+
+### `data.client` (Buyer Snapshot)
+- `id`: Master client identifier (`cli_*`).
+- `name`: Legal party or corporate buyer name.
+- `address`, `city`, `state`, `stateCode`, `pin`: Place of destination / buyer address.
+- `gstin`: Buyer GSTIN (if B2B registered).
+- `pan`: Buyer PAN.
+- `phone`, `email`: Communication channels for PDF dispatch and reminders.
+
+### `data.details` (Voucher Header Details)
+- `invoiceNumber`: Voucher serial number.
+- `invoiceDate`: Issue date.
+- `dueDate`: Due date.
+- `placeOfSupply`: Indian State name determining IGST vs CGST/SGST routing.
+- `eWayBillNo`: 12-digit e-Way Bill reference number (if consignment > ₹50,000).
+- `vehicleNo`: Transport vehicle registration number.
+- `poNumber`: Customer Purchase Order reference.
+- `poDate`: Customer Purchase Order date.
+
+### `data.items` (Line Items Array)
+Each line item object contains:
+```json
+{
+  "id": "1",
+  "name": "RATTAN MAT",
+  "description": "Premium 12mm woven cane sheet",
+  "hsn": "998891",
+  "qty": 56.0,
+  "unit": "Sq.ft",
+  "price": 120.0,
+  "discountPercent": 0,
+  "discountType": "percent",
+  "discountBase": "net",
+  "taxPercent": 18.0,
+  "cessPercent": 0.0,
+  "taxAmount": 1209.6,
+  "total": 7929.6
+}
+```
+
+### `data.totals` (Computed Tax & Financial Breakdown)
+- `subtotal`: Gross taxable value before discounts and taxes.
+- `itemDiscount`: Sum of line-level discounts.
+- `invoiceDiscount`: Bill-level discount applied across entire voucher.
+- `taxable`: Net taxable value subject to GST.
+- `cgst`: Central GST (50% of intra-state tax).
+- `sgst`: State GST (50% of intra-state tax).
+- `utgst`: Union Territory GST (for non-legislature UTs like Chandigarh, Ladakh).
+- `igst`: Integrated GST (for inter-state supply).
+- `cess`: Statutory compensation cess.
+- `tdsAmount`: Section 194Q / 194C TDS deducted by buyer.
+- `tcsAmount`: Section 206C TCS collected from buyer.
+- `roundOff`: Mathematical round-off adjustment (+/- fraction of a rupee).
+- `total`: Grand final total payable by customer.
+
+---
+
+## 5. Sample JSON Document
+```json
+{
+  "id": "HPS00001",
+  "clientName": "ARK INTERNO LLP",
+  "invoiceNumber": "HPS00001",
+  "invoiceDate": "2025-05-28",
+  "dueDate": "2025-05-28",
+  "invoiceType": "tax-invoice",
+  "currency": "INR",
+  "totalAmount": 7930.0,
+  "totalTaxAmount": 1209.6,
+  "status": "paid",
+  "paidAmount": 7930.0,
+  "payments": [
+    {
+      "id": "pmt_HPS00001",
+      "date": "2025-05-28",
+      "amount": 7930.0,
+      "mode": "Bank",
+      "note": "Imported from BusyWin"
+    }
+  ],
+  "printedCount": 1,
+  "lastPrintedAt": null,
+  "data": {
+    "profile": { "businessName": "HPS FURNITURE & DECORATION", "gstin": "06BPSPS2861B1ZO" },
+    "client": { "name": "ARK INTERNO LLP", "state": "Uttar Pradesh", "gstin": "09ACGFA8344K1Z0" },
+    "details": { "invoiceNumber": "HPS00001", "placeOfSupply": "Uttar Pradesh" },
+    "items": [
+      { "name": "RATTAN MAT", "hsn": "998891", "qty": 56.0, "unit": "Sq.ft", "price": 120.0, "taxPercent": 18.0 }
+    ],
+    "totals": { "subtotal": 6720.0, "igst": 1209.6, "roundOff": 0.4, "total": 7930.0 }
+  }
+}
+```
+
+````
+
+---
+
+<a id="docs-artha-schemas-02-clients-and-customers-md"></a>
+## `docs/artha_schemas/02_CLIENTS_AND_CUSTOMERS.md`
+
+- Path: `docs/artha_schemas/02_CLIENTS_AND_CUSTOMERS.md`
+- Lines: 62 | Size: 3.0 KB
+
+````markdown
+# ARTHA Database Schema: Clients & Customers (`data/clients/`)
+
+## 1. Overview & Purpose
+The `clients` collection acts as ARTHA's customer and debtor master directory. It maintains party details, statutory identifiers (GSTIN, PAN), billing addresses, contact channels, and state coding required for automated inter-state vs. intra-state GST tax determination.
+
+Files are stored individually under `data/clients/` as `cli_<id>.json`.
+
+---
+
+## 2. Field Specifications
+
+| Field Name | Type | Required | Description & Constraints |
+| :--- | :--- | :---: | :--- |
+| `id` | `String` | Yes | Unique client ID (e.g., `cli_1102`, `cli_1793257592000`). |
+| `name` | `String` | Yes | Legal party or trade name of the client/customer. Must be non-empty. |
+| `address` | `String` | No | Street address, building number, industrial area. |
+| `city` | `String` | No | City or town name (e.g., `'Faridabad'`, `'Noida'`). |
+| `state` | `String` | No | Indian State or Union Territory name (e.g., `'Haryana'`, `'Uttar Pradesh'`). Used to determine place of supply. |
+| `stateCode` | `String (2 Digits)`| No | 2-digit Indian GST State Code (e.g., `'06'` for Haryana, `'09'` for Uttar Pradesh, `'07'` for Delhi). Derived automatically from GSTIN or state name. |
+| `country` | `String` | No | Country name. Defaults to `'India'`. In international mode, foreign countries trigger export invoice flows. |
+| `pin` | `String (6 Digits)`| No | 6-digit postal PIN code. |
+| `gstin` | `String (15 Chars)`| No | 15-character alphanumeric GST Identification Number. Validated against standard GSTIN checksum. |
+| `pan` | `String (10 Chars)`| No | 10-character alphanumeric Permanent Account Number (chars 3 to 12 of GSTIN). |
+| `phone` | `String` | No | Contact telephone or mobile number (for WhatsApp document sharing and SMS alerts). |
+| `email` | `String` | No | Email address for digital invoice and payment reminder delivery. |
+| `isSEZ` | `Boolean` | No | Flag indicating Special Economic Zone client (enabling IGST LUT supply or tax-paid export). |
+| `notes` | `String` | No | Internal notes, payment terms, or client account remarks. |
+| `ownerGstin` | `String` | No | Business profile ownership stamp for multi-company isolation. |
+| `ownerName` | `String` | No | Legal name of the business profile that owns this client account. |
+
+---
+
+## 3. GST State Code Mapping Logic
+When a client's `gstin` is supplied, ARTHA's `decodeGstin()` utility automatically decodes:
+- State Code (`gstin.slice(0, 2)`)
+- PAN (`gstin.slice(2, 12)`)
+- State Name (mapped from the Ministry of Finance state code dictionary).
+
+For B2C unregistered consumers, `gstin` remains blank, and `state` dictates place of supply.
+
+---
+
+## 4. Sample JSON Document
+```json
+{
+  "id": "cli_1432",
+  "name": "ARK INTERNO LLP",
+  "address": "PLOT NO-10, ECOTECH-X, Greater Noida",
+  "city": "Greater Noida",
+  "state": "Uttar Pradesh",
+  "stateCode": "09",
+  "pin": "201308",
+  "country": "India",
+  "gstin": "09ACGFA8344K1Z0",
+  "pan": "ACGFA8344K",
+  "phone": "+91-9876543210",
+  "email": "accounts@arkinterno.com",
+  "isSEZ": false,
+  "notes": "Payment terms 30 days net"
+}
+```
+
+````
+
+---
+
+<a id="docs-artha-schemas-03-products-and-inventory-md"></a>
+## `docs/artha_schemas/03_PRODUCTS_AND_INVENTORY.md`
+
+- Path: `docs/artha_schemas/03_PRODUCTS_AND_INVENTORY.md`
+- Lines: 62 | Size: 3.2 KB
+
+````markdown
+# ARTHA Database Schema: Products & Inventory (`data/products/`)
+
+## 1. Overview & Purpose
+The `products` collection maintains the catalog of goods, services, consumables, and labor items traded or supplied by the business. It tracks:
+- Commodity identification (HSN for goods, SAC for services).
+- Statutory GST tax brackets (0%, 5%, 12%, 18%, 28%).
+- Dual pricing (Selling Price for sales invoices, Purchase Price for cost of goods sold).
+- Real-time stock on hand (quantity in stock).
+- Low-stock warning thresholds.
+
+Files are stored individually under `data/products/` as `prod_<id>.json`.
+
+---
+
+## 2. Field Specifications
+
+| Field Name | Type | Required | Description & Constraints |
+| :--- | :--- | :---: | :--- |
+| `id` | `String` | Yes | Unique product identifier (e.g. `prod_1323`, `prod_1793257592000`). |
+| `name` | `String` | Yes | Commercial product or service title. Must be unique per business. |
+| `description` | `String` | No | Extended specification, dimensions, technical parameters, or catalog notes. |
+| `hsn` | `String` | No | Harmonized System of Nomenclature (4, 6, or 8 digits) for goods, or Service Accounting Code (6 digits) for services. Required for GSTR-1 HSN summary. |
+| `unit` | `String` | Yes | Unit Quantity Code / Measurement Unit (e.g., `'Pcs'`, `'Nos'`, `'Kg'`, `'Mtr'`, `'Sq.ft'`, `'Hours'`, `'Bags'`). |
+| `sellingPrice` | `Number (Float)` | Yes | Standard sale rate per unit excluding GST (or inclusive if tax-inclusive mode active). |
+| `purchasePrice` | `Number (Float)` | No | Latest procurement cost per unit from supplier purchase bills. Used to compute gross profit margin. |
+| `taxPercent` | `Number (Float)` | Yes | Statutory GST tax rate (e.g. `0`, `5`, `12`, `18`, `28`). |
+| `cessPercent` | `Number (Float)` | No | Statutory compensation cess percentage (if applicable). |
+| `stock` | `Number (Float)` | Yes | Current physical stock on hand. Automatically adjusted by sales bills (`-qty`), credit notes (`+qty`), and purchase bills (`+qty`). |
+| `lowStockThreshold` | `Number (Float)`| No | Per-item threshold for low-stock ticker warnings. Falls back to global app setting if unset. |
+| `barcode` | `String` | No | EAN-13, UPC, Code 128, or internal barcode string for scanner entry. |
+| `ownerGstin` | `String` | No | Business profile ownership stamp for multi-company isolation. |
+
+---
+
+## 3. Real-Time Stock Movement Engine
+Stock changes in ARTHA are event-driven:
+1. **Sales Invoice Issued:** Deducts sold quantity from `stock`:
+   $$\text{stock}_{\text{new}} = \text{stock}_{\text{current}} - \text{invoiceQty}$$
+2. **Sales Invoice Cancelled:** Reverses the deduction (+qty).
+3. **Credit Note Issued:** Adds returned goods back to stock (+qty).
+4. **Purchase Bill Booked:** Increases inventory (+qty) and updates `purchasePrice` with the latest purchase rate.
+5. **Quotations & Delivery Challans:** Have zero effect on physical accounting stock.
+
+---
+
+## 4. Sample JSON Document
+```json
+{
+  "id": "prod_1323",
+  "name": "ACP SHEET WORK",
+  "description": "Aluminum Composite Panel 4mm exterior grade work",
+  "hsn": "998891",
+  "unit": "Sq.ft",
+  "sellingPrice": 200.0,
+  "purchasePrice": 140.0,
+  "taxPercent": 18.0,
+  "cessPercent": 0.0,
+  "stock": 250.0,
+  "lowStockThreshold": 20.0
+}
+```
+
+````
+
+---
+
+<a id="docs-artha-schemas-04-purchases-and-suppliers-md"></a>
+## `docs/artha_schemas/04_PURCHASES_AND_SUPPLIERS.md`
+
+- Path: `docs/artha_schemas/04_PURCHASES_AND_SUPPLIERS.md`
+- Lines: 82 | Size: 3.1 KB
+
+````markdown
+# ARTHA Database Schema: Purchases & Suppliers (`data/purchases/`)
+
+## 1. Overview & Purpose
+The `purchases` collection stores inward supply bills received from registered suppliers and vendors. It serves two primary accounting functions:
+1. **Input Tax Credit (ITC) Ledger:** Tracks CGST, SGST, IGST, and Cess eligible for setoff against sales liabilities in **GSTR-3B** return filing.
+2. **Accounts Payable & Stock Receipt:** Tracks creditor balances and automatically replenishes product stock on hand.
+
+Files are stored individually under `data/purchases/` as `<billId>.json`.
+
+---
+
+## 2. Field Specifications
+
+| Field Name | Type | Required | Description & Constraints |
+| :--- | :--- | :---: | :--- |
+| `id` | `String` | Yes | Unique purchase ID (e.g., `PUR-1-24-25`, `pur_1793257592000`). |
+| `billNumber` | `String` | Yes | Supplier's invoice or bill number as printed on their physical invoice. |
+| `billDate` | `String (YYYY-MM-DD)` | Yes | Date on the supplier's invoice. |
+| `dueDate` | `String (YYYY-MM-DD)` | No | Payment due date to the vendor. |
+| `supplierName` | `String` | Yes | Legal vendor / supplier party name. |
+| `supplierGstin` | `String (15 Chars)`| No | Supplier's 15-character GSTIN. Blank for unregistered purchases. |
+| `supplierAddress` | `String` | No | Supplier's registered address. |
+| `ownerGstin` | `String` | No | Buyer's GSTIN (which of your business profiles purchased this). |
+| `ownerName` | `String` | No | Business profile name of the buyer. |
+| `items` | `Array<PurchaseItem>` | Yes | Line item breakdown of procured goods/services (see below). |
+| `taxableAmount` | `Number (Float)` | Yes | Subtotal taxable amount before GST. |
+| `totalTax` | `Number (Float)` | Yes | Cumulative tax amount (CGST + SGST + IGST + Cess). |
+| `roundOff` | `Number (Float)` | No | Round-off fraction applied to the bill. |
+| `totalAmount` | `Number (Float)` | Yes | Final payable amount on the supplier's bill. |
+| `paymentStatus` | `String` | Yes | Enum: `'Paid'`, `'Unpaid'`, `'Partial'`. |
+| `interstate` | `Boolean` | Yes | True if supply was inter-state (IGST), false for intra-state (CGST + SGST). |
+| `notes` | `String` | No | Internal notes, batch references, or transport details. |
+
+---
+
+## 3. The `items` Line Items Array Schema
+
+Each object in `purchase.items` contains:
+```json
+{
+  "name": "PLYWOOD 18MM COMM",
+  "hsn": "4412",
+  "quantity": 50.0,
+  "rate": 1850.0,
+  "taxPercent": 18.0,
+  "cessPercent": 0.0
+}
+```
+
+---
+
+## 4. Sample JSON Document
+```json
+{
+  "id": "PUR-1-24-25",
+  "billNumber": "PUR-1-24-25",
+  "billDate": "2024-08-02",
+  "supplierName": "A.B. ENTERPRISES",
+  "supplierGstin": "07ACBPB7902P1ZJ",
+  "supplierAddress": "12/4 Industrial Area, Kirti Nagar, New Delhi",
+  "ownerGstin": "06BPSPS2861B1ZO",
+  "ownerName": "HPS FURNITURE & DECORATION",
+  "items": [
+    {
+      "name": "PLYWOOD 18MM COMM",
+      "hsn": "4412",
+      "quantity": 2.0,
+      "rate": 1816.52,
+      "taxPercent": 18.0,
+      "cessPercent": 0.0
+    }
+  ],
+  "taxableAmount": 3633.04,
+  "totalTax": 653.96,
+  "roundOff": 0.0,
+  "totalAmount": 4287.0,
+  "paymentStatus": "Paid",
+  "interstate": true,
+  "notes": "Imported from BusyWin FY 2024-25"
+}
+```
+
+````
+
+---
+
+<a id="docs-artha-schemas-05-expenses-and-overheads-md"></a>
+## `docs/artha_schemas/05_EXPENSES_AND_OVERHEADS.md`
+
+- Path: `docs/artha_schemas/05_EXPENSES_AND_OVERHEADS.md`
+- Lines: 56 | Size: 2.9 KB
+
+````markdown
+# ARTHA Database Schema: Expenses & Overheads (`data/expenses/`)
+
+## 1. Overview & Purpose
+The `expenses` collection records operational overheads, administrative costs, utility bills, capital expenditure, and vendor payments that do not flow through standard merchandise purchase bills (e.g. rent, electricity, freight, SaaS subscriptions, legal fees).
+
+Expenses tracking fulfills:
+- **Net Profit & Loss Reporting:** Subtracts operating overheads from gross margin to report Net Profit.
+- **Service ITC Eligibility:** Identifies eligible GST paid on operational expenses (e.g. AWS, telecom, freight) for inclusion in **GSTR-3B Table 4(A)(5) - All Other ITC**.
+
+Files are stored individually under `data/expenses/` as `exp_<id>.json`.
+
+---
+
+## 2. Field Specifications
+
+| Field Name | Type | Required | Description & Constraints |
+| :--- | :--- | :---: | :--- |
+| `id` | `String` | Yes | Unique expense identifier (e.g., `exp_1793257592000`). |
+| `date` | `String (YYYY-MM-DD)` | Yes | Expense voucher or bill date (defaults to `localToday()`). |
+| `description` | `String` | Yes | Description of expense (e.g., `'Office Rent May 2026'`, `'Cloud Hosting'`). |
+| `category` | `String` | Yes | Accounting category enum: `'Rent'`, `'Utilities'`, `'Salaries'`, `'Office Supplies'`, `'Travel'`, `'Marketing'`, `'Repairs'`, `'Freight'`, `'Professional Fees'`, `'Other'`. |
+| `amount` | `Number (Float)` | Yes | Total gross expense amount paid or incurred. |
+| `gstAmount` | `Number (Float)` | No | Statutory GST component included in or added to the amount. |
+| `gstPercent` | `Number (Float)` | No | Tax slab percentage (e.g. `18`, `12`, `5`, `28`). |
+| `interstate` | `Boolean` | Yes | True if vendor is out-of-state (IGST), false for local (CGST + SGST). |
+| `vendorName` | `String` | No | Service provider, landlord, or vendor entity name. |
+| `vendorGstin` | `String (15 Chars)`| No | Vendor's GSTIN (required if claiming Input Tax Credit). |
+| `invoiceNo` | `String` | No | Vendor's original bill or receipt reference number. |
+| `paymentMode` | `String` | Yes | Enum: `'Bank Transfer'`, `'UPI'`, `'Cash'`, `'Cheque'`, `'Card'`, `'Other'`. |
+| `ownerGstin` | `String` | No | Business profile ownership stamp for multi-company isolation. |
+| `ownerName` | `String` | No | Business profile name. |
+| `note` | `String` | No | Additional remarks, voucher references, or internal comments. |
+
+---
+
+## 3. Sample JSON Document
+```json
+{
+  "id": "exp_1793257592001",
+  "date": "2026-10-31",
+  "description": "High-Speed Commercial Internet Lease",
+  "category": "Utilities",
+  "amount": 2360.0,
+  "gstAmount": 360.0,
+  "gstPercent": 18.0,
+  "interstate": false,
+  "vendorName": "Airtel Telecommunications Ltd",
+  "vendorGstin": "06AAACA2892G1ZV",
+  "invoiceNo": "DEL/OCT26/90214",
+  "paymentMode": "Bank Transfer",
+  "ownerGstin": "06BPSPS2861B1ZO",
+  "ownerName": "HPS FURNITURE & DECORATION",
+  "note": "Office fiber connection 200 Mbps"
+}
+```
+
+````
+
+---
+
+<a id="docs-artha-schemas-06-receipts-and-payments-md"></a>
+## `docs/artha_schemas/06_RECEIPTS_AND_PAYMENTS.md`
+
+- Path: `docs/artha_schemas/06_RECEIPTS_AND_PAYMENTS.md`
+- Lines: 50 | Size: 2.3 KB
+
+````markdown
+# ARTHA Database Schema: Receipts & Payment Vouchers (`data/receipts/`)
+
+## 1. Overview & Purpose
+The `receipts` collection stores formal Payment Receipt Vouchers issued to clients upon receiving payment settlements, advances, or security deposits.
+
+Key capabilities:
+- **Bi-Directional Invoice Synchronization:** Saving a receipt linked to an invoice (`againstInvoice`) automatically updates the corresponding sales invoice's `paidAmount`, appends to its `payments` ledger, and transitions its status (`unpaid` -> `partial` -> `paid`).
+- **Audit Numbering:** Sequenced with the document numbering engine (`RCP` prefix) or company-specific custom series.
+
+Files are stored individually under `data/receipts/` as `rcp_<id>.json`.
+
+---
+
+## 2. Field Specifications
+
+| Field Name | Type | Required | Description & Constraints |
+| :--- | :--- | :---: | :--- |
+| `id` | `String` | Yes | Unique receipt identifier (e.g. `rcp_1793257592000`). |
+| `receiptNo` | `String` | Yes | Official serialized receipt number (e.g., `RCP-0042/2026-27`). |
+| `date` | `String (YYYY-MM-DD)` | Yes | Date on which the funds were received. |
+| `clientName` | `String` | Yes | Payer party or client legal name. |
+| `clientAddress`| `String` | No | Address of the client. |
+| `amount` | `Number (Float)` | Yes | Net amount received. |
+| `paymentMode` | `String` | Yes | Enum: `'Bank Transfer'`, `'UPI'`, `'Cash'`, `'Cheque'`, `'Card'`, `'Other'`. |
+| `referenceNo` | `String` | No | Cheque number, IMPS/NEFT UTR reference, or UPI transaction ID. |
+| `againstInvoice`| `String` | No | Invoice number or bill ID being settled. Leave blank for unallocated advances. |
+| `ownerGstin` | `String` | No | Business profile ownership stamp for multi-company isolation. |
+| `ownerName` | `String` | No | Business profile name. |
+| `note` | `String` | No | Settlement remarks, balance confirmation, or receipt acknowledgment text. |
+
+---
+
+## 3. Sample JSON Document
+```json
+{
+  "id": "rcp_1793257592005",
+  "receiptNo": "RCP-0012/2026-27",
+  "date": "2026-10-31",
+  "clientName": "ARK INTERNO LLP",
+  "clientAddress": "PLOT NO-10, ECOTECH-X, Greater Noida",
+  "amount": 7930.0,
+  "paymentMode": "Bank Transfer",
+  "referenceNo": "NEFT-SBIN2630592817",
+  "againstInvoice": "HPS00001",
+  "ownerGstin": "06BPSPS2861B1ZO",
+  "ownerName": "HPS FURNITURE & DECORATION",
+  "note": "Full and final settlement against invoice HPS00001"
+}
+```
+
+````
+
+---
+
+<a id="docs-artha-schemas-07-profiles-and-templates-md"></a>
+## `docs/artha_schemas/07_PROFILES_AND_TEMPLATES.md`
+
+- Path: `docs/artha_schemas/07_PROFILES_AND_TEMPLATES.md`
+- Lines: 94 | Size: 4.4 KB
+
+````markdown
+# ARTHA Database Schema: Business Profiles & Templates
+
+## 1. Business Profiles (`data/profiles/` & `data/profile.json`)
+
+ARTHA supports multi-company and multi-state GST accounting. The active company profile is persisted at `data/profile.json` (as well as individual profile files in `data/profiles/<profileId>.json` for multi-profile installations).
+
+### Field Specifications
+
+| Field Name | Type | Description |
+| :--- | :--- | :--- |
+| `businessName` | `String` | Legal trade or registered enterprise name (e.g., `'HPS FURNITURE & DECORATION'`). |
+| `address` | `String` | Registered street address, premises name, road. |
+| `city` | `String` | City / District. |
+| `state` | `String` | Indian State or Union Territory name (determines origin for GST routing). |
+| `country` | `String` | Country name (defaults to `'India'`). |
+| `pin` | `String` | 6-digit postal PIN code. |
+| `gstin` | `String (15 Chars)` | 15-character statutory GSTIN. |
+| `pan` | `String (10 Chars)` | 10-character Income Tax Permanent Account Number. |
+| `email` | `String` | Official corporate communication email. |
+| `phone` | `String` | Primary telephone or mobile number. |
+| `bankName` | `String` | Primary settlement bank name (e.g. `'STATE BANK OF INDIA'`). |
+| `accountNumber` | `String` | Bank account number. |
+| `ifsc` | `String (11 Chars)`| Indian Financial System Code (e.g. `'SBIN0018817'`). |
+| `swift` | `String` | SWIFT / BIC code for inward foreign remittances. |
+| `upiId` | `String` | Virtual Payment Address (VPA) for invoice UPI QR code generation. |
+| `logo` | `String (Base64)` | Brand logo image encoded as a data URL (`data:image/png;base64,...`). |
+| `signature` | `String (Base64)` | Authorized signatory stamp/signature image data URL. |
+| `googleClientId` | `String` | Google OAuth Client ID for cloud drive synchronization. |
+| `googleDriveFolder` | `String` | Target Google Drive folder name for offsite PDF backups. |
+| `paymentAccounts` | `Array<Account>` | Multi-bank accounts directory (see below). |
+
+### `paymentAccounts` Schema
+Allows users to switch which bank account appears on invoices (e.g. HDFC Current vs SBI Overdraft):
+```json
+{
+  "id": "acc_1793257592700_8eaypd",
+  "label": "Primary SBI Current",
+  "bankName": "STATE BANK OF INDIA",
+  "accountHolderName": "HPS FURNITURE AND DECORATION",
+  "accountNumber": "45552725264",
+  "accountType": "current",
+  "ifsc": "SBIN0018817",
+  "swift": "",
+  "upiId": "hpsfurniture@sbi",
+  "isDefault": true,
+  "isActive": true,
+  "notes": "Main operating account"
+}
+```
+
+---
+
+## 2. Terms & Conditions Templates (`data/templates/`)
+
+Stores reusable Terms of Sale, Payment Clauses, Warranty Conditions, and Jurisdiction Disclaimers. Persisted under `data/templates/<templateId>.json`.
+
+### Field Specifications
+
+| Field Name | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `String` | Template identifier (e.g. `'default'`, `'service_terms'`, `'export_terms'`). |
+| `name` | `String` | Descriptive name shown in the UI dropdown (e.g. `'Standard Retail Terms'`). |
+| `content` | `String (HTML/Text)`| Sanitized multi-line terms and conditions text. |
+
+### Sample Template Document
+```json
+{
+  "id": "default",
+  "name": "Standard Terms",
+  "content": "1. Payment is due within 15 days of invoice date unless otherwise agreed in writing.\n2. Goods once sold will not be taken back or exchanged.\n3. All disputes are subject to Faridabad jurisdiction only."
+}
+```
+
+---
+
+## 3. Recurring Invoice Schedules (`data/recurring/`)
+
+Automates periodic billing (retainers, rent, monthly AMC contracts, subscriptions). Persisted under `data/recurring/<id>.json`.
+
+### Field Specifications
+
+| Field Name | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `String` | Unique schedule identifier (e.g. `rec_1793257592000`). |
+| `clientName` | `String` | Target client name. |
+| `frequency` | `String` | Enum: `'weekly'`, `'monthly'`, `'quarterly'`, `'annually'`. |
+| `interval` | `Integer` | Step interval (e.g. every `1` month, every `2` quarters). |
+| `nextDate` | `String (YYYY-MM-DD)` | Date when the next automatic invoice will be created. |
+| `endDate` | `String (YYYY-MM-DD)` | Expiration date of recurring contract (optional). |
+| `maxOccurrences`| `Integer` | Maximum billing cycles to generate before auto-stopping. |
+| `active` | `Boolean` | True if active, false if paused. |
+| `items` | `Array<Item>` | Line items template with prices, tax slabs, and quantities. |
+| `ownerGstin` | `String` | Business profile owner. |
+
+````
+
+---
+
+<a id="docs-artha-schemas-08-system-meta-and-config-md"></a>
+## `docs/artha_schemas/08_SYSTEM_META_AND_CONFIG.md`
+
+- Path: `docs/artha_schemas/08_SYSTEM_META_AND_CONFIG.md`
+- Lines: 93 | Size: 4.0 KB
+
+````markdown
+# ARTHA Database Schema: System Meta, Config & Security
+
+## 1. System Metadata (`data/meta.json`)
+
+`data/meta.json` acts as ARTHA's operational catalog, managing atomic sequence generation, display defaults, and import audit stamps.
+
+### Core Keys in `meta.json`
+
+| Key | Type | Description |
+| :--- | :--- | :--- |
+| `regionMode` | `String` | Regional tax mode enum: `'india'`, `'international'`, `'both'`. Controls visibility of GST-only fields. |
+| `invoiceNumberSettings` | `Object` | Global numbering sequence configuration (see below). |
+| `invoiceNumberSeries` | `Object` | Map of per-business custom numbering sequences `{ [businessKey]: settings }`. |
+| `invoiceDisplayOptions` | `Object` | Default toggle states for invoice sections (bank, logo, HSN, UPI QR, round-off, terms). |
+| `stockAlertSettings` | `Object` | Global inventory warning settings (`{ enabled: true, threshold: 5 }`). |
+| `lastBusyWinImport` | `Object` | Audit trail of BusyWin ERP data migration (timestamp, file paths, entity counts). |
+| `counter_*` | `Integer` | Atomic integer counters for sequential voucher generation. |
+
+### `invoiceNumberSettings` Schema
+```json
+{
+  "format": "branded",
+  "brandPrefix": "HPS",
+  "separator": "/",
+  "showFinYear": true,
+  "startNumber": 1,
+  "padDigits": 5
+}
+```
+*Generated output example:* `HPS00001/2026-27`
+
+### `invoiceDisplayOptions` Schema
+Controls rendering flags across invoice PDFs and printouts:
+- `showGST`, `showGSTIN`, `showPlaceOfSupply`: Statutory tax indicators.
+- `showHSN`: HSN/SAC column visibility.
+- `showBankDetails`, `showUPI`: Bank credentials and dynamic UPI QR code.
+- `showLogo`, `showSignature`: Visual brand assets.
+- `showTerms`, `showNotes`: Legal disclaimers and customer memos.
+- `showRoundOff`: Mathematical 50-paise rounding row.
+- `paperSize`: Standard paper layout (`'A4'`, `'A5'`, `'thermal'`).
+- `thermalFontSize`, `thermalCompact`: POS slip formatting options.
+- `showTDS`, `tdsSection`, `tdsRate`: Tax Deducted at Source (Section 194Q/194C).
+- `showTCS`, `tcsSection`, `tcsRate`: Tax Collected at Source (Section 206C).
+
+---
+
+## 2. Local Preferences & User State (`data/local-prefs.json`)
+
+Maintains user interface state and client preferences across app launches:
+- `freegstbill_theme`: Active color theme (`'light'` or `'dark'`).
+- `gst_dashboardColumns`: JSON map of column visibility toggles for the Dashboard invoices table.
+- `freegstbill_sidebarAutoHide`: Automatic sidebar collapse preference.
+- `gst_printSettings`: Thermal printing font family, pitch, and capitalization presets.
+- `gst_itrCalcInputs`: Income Tax regime comparison tool inputs (salary, business turnover, 80C deductions).
+- `gst_itrPresumptive`: Presumptive taxation model inputs (Section 44AD / 44ADA).
+- `gst_itrAdvanceTax`: Advance tax quarterly installment payment records.
+
+---
+
+## 3. Security, Locks & Trash Bin
+
+### PIN Lock (`data/lock.json`)
+If enabled, ARTHA's Express backend locks API routes until authenticated by client PIN:
+- Stores salted hash of 4-6 digit numeric PIN.
+- Verified on boot via `POST /api/lock/verify`.
+
+### Trash Bin (`data/trash/`)
+When documents or bills are deleted:
+- The JSON document moves to `data/trash/<id>.json`.
+- The corresponding generated PDF moves from `Saved Invoices/` to `data/trash/<filename>.pdf`.
+- Can be restored to active collections or permanently purged.
+
+### Daily Automatic Backups (`data/backups/`)
+ARTHA takes automatic daily directory snapshots at midnight and before major imports:
+```
+data/backups/
+  ├── 2026-10-29/
+  ├── 2026-10-30/
+  └── 2026-10-31/
+        ├── bills/
+        ├── clients/
+        ├── products/
+        ├── purchases/
+        ├── expenses/
+        ├── receipts/
+        ├── profiles/
+        ├── meta.json
+        └── profile.json
+```
+- Preserves 30 days of rollback snapshots.
+- Users can trigger manual snapshots via `POST /api/backups/now`.
+- Supports secondary offsite backup target folder on external or secondary drives (e.g. `D:\Backups\ARTHA`).
+
+````
 
 ---
 
@@ -55224,6 +56118,76 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     import_busywin(args.busy_path, args.artha_data, args.company, args.dry_run)
+
+```
+
+---
+
+<a id="scripts-inspect-artha-schema-py"></a>
+## `scripts/inspect_artha_schema.py`
+
+- Path: `scripts/inspect_artha_schema.py`
+- Lines: 59 | Size: 2.7 KB
+
+```python
+import os, json
+
+data_dir = r'd:\VEGA\ARTHA\data'
+dirs = ['bills', 'clients', 'products', 'purchases', 'expenses', 'receipts', 'profiles', 'templates', 'recurring', 'trash']
+
+print("==================================================")
+print("  ARTHA Database Collections Schema Inspection")
+print("==================================================")
+
+for d in dirs:
+    dp = os.path.join(data_dir, d)
+    if os.path.exists(dp):
+        files = [f for f in os.listdir(dp) if f.endswith('.json')]
+        if files:
+            sample_file = os.path.join(dp, files[0])
+            with open(sample_file, 'r', encoding='utf-8') as f:
+                try:
+                    data = json.load(f)
+                    print(f"\n--- COLLECTION: {d} (count: {len(files)}, sample: {files[0]}) ---")
+                    if isinstance(data, dict):
+                        print("Keys:", list(data.keys()))
+                        for k, v in data.items():
+                            v_type = type(v).__name__
+                            if isinstance(v, dict):
+                                print(f"  {k} (object): {list(v.keys())}")
+                            elif isinstance(v, list):
+                                item_type = type(v[0]).__name__ if v else "empty"
+                                print(f"  {k} (array of {item_type}, len={len(v)})")
+                                if v and isinstance(v[0], dict):
+                                    print(f"    sample item keys: {list(v[0].keys())}")
+                            else:
+                                print(f"  {k} ({v_type}): {repr(v)[:80]}")
+                    else:
+                        print("Type:", type(data))
+                except Exception as e:
+                    print(f"{d} read error: {e}")
+        else:
+            print(f"\n--- COLLECTION: {d} (0 files) ---")
+
+for meta_f in ['meta.json', 'local-prefs.json', 'profile.json']:
+    mp = os.path.join(data_dir, meta_f)
+    if os.path.exists(mp):
+        with open(mp, 'r', encoding='utf-8') as f:
+            try:
+                data = json.load(f)
+                print(f"\n--- ROOT DOCUMENT: {meta_f} ---")
+                if isinstance(data, dict):
+                    print("Keys:", list(data.keys()))
+                    for k, v in list(data.items())[:12]:
+                        v_type = type(v).__name__
+                        if isinstance(v, dict):
+                            print(f"  {k} (object): {list(v.keys())}")
+                        elif isinstance(v, list):
+                            print(f"  {k} (array[{len(v)}])")
+                        else:
+                            print(f"  {k} ({v_type}): {repr(v)[:80]}")
+            except Exception as e:
+                print(f"{meta_f} error: {e}")
 
 ```
 
