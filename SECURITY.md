@@ -28,7 +28,7 @@ Two private options:
    [Report a vulnerability](https://github.com/Kvijay199428/Artha/security/advisories/new)
    button on the Security tab. Keeps everything in one thread and lets us
    credit you on the published advisory.
-2. **Email** — Contact@dicecodes.com, with `SECURITY` in the subject.
+2. **Email** — contact@vijaykrsha.online, with `SECURITY` in the subject.
 
 Please include:
 

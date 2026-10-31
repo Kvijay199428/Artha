@@ -53,3 +53,4 @@ Files are stored individually under `data/expenses/` as `exp_<id>.json`.
   "note": "Office fiber connection 200 Mbps"
 }
 ```
+

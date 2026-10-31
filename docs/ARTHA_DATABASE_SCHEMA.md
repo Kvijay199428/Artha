@@ -117,3 +117,4 @@ Before any destructive operation or at midnight:
 2. Copies all collections into the snapshot directory.
 3. Automatically prunes snapshots older than 30 days.
 4. Allows instantaneous rollback via `POST /api/backups/:date/restore`.
+

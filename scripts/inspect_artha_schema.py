@@ -56,3 +56,4 @@ for meta_f in ['meta.json', 'local-prefs.json', 'profile.json']:
                             print(f"  {k} ({v_type}): {repr(v)[:80]}")
             except Exception as e:
                 print(f"{meta_f} error: {e}")
+

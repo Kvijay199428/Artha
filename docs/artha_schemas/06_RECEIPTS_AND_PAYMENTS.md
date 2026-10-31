@@ -47,3 +47,4 @@ Files are stored individually under `data/receipts/` as `rcp_<id>.json`.
   "note": "Full and final settlement against invoice HPS00001"
 }
 ```
+

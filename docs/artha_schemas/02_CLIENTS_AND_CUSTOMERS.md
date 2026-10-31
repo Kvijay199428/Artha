@@ -59,3 +59,4 @@ For B2C unregistered consumers, `gstin` remains blank, and `state` dictates plac
   "notes": "Payment terms 30 days net"
 }
 ```
+

@@ -4,7 +4,7 @@ import QRCode from 'qrcode';
 import { SITE } from '../site.mjs';
 
 const UPI_ID = 'princeramgarhiaa-1@okaxis';
-const upi = (amount) => `upi://pay?pa=${encodeURIComponent(UPI_ID)}&pn=DiceCodes&cu=INR`
+const upi = (amount) => `upi://pay?pa=${encodeURIComponent(UPI_ID)}&pn=VIJAYKRSHA.ONLINE&cu=INR`
   + `&tn=${encodeURIComponent('Free GST Billing support')}${amount ? `&am=${amount}.00` : ''}`;
 // Drawn at build time: the page needs no script, and the QR works offline once saved.
 const qrSvg = await QRCode.toString(upi(0), { type: 'svg', margin: 1, errorCorrectionLevel: 'M' });
@@ -25,11 +25,11 @@ export default [
   slug: 'support',
   title: 'Support & About',
   nav: 'Support & About',
-  lead: 'Who makes Free GST Billing, how you can help it grow, and what DiceCodes builds for businesses.',
+  lead: 'Who makes Free GST Billing, how you can help it grow, and what VIJAYKRSHA.ONLINE builds for businesses.',
   body: `
 <section id="about">
 <h2>Free, and it stays free</h2>
-<p>Free GST Billing is built and maintained by <a href="${SITE.publisher.url}">DiceCodes</a> in India. No ads, no account, no locked features, and your invoices never leave your computer. The full source code is on <a href="${SITE.repo}">GitHub</a> under the MIT licence.</p>
+<p>Free GST Billing is built and maintained by <a href="${SITE.publisher.url}">VIJAYKRSHA.ONLINE</a> in India. No ads, no account, no locked features, and your invoices never leave your computer. The full source code is on <a href="${SITE.repo}">GitHub</a> under the MIT licence.</p>
 <p>If it saves you time every month, you can help keep the fixes and new features coming.</p>
 </section>
 
@@ -37,7 +37,7 @@ export default [
 <h2>Support with UPI</h2>
 <p>Scan with GPay, PhonePe, Paytm or any UPI app. Any amount helps.</p>
 <div class="upi-box">
-  <div class="upi-qr" role="img" aria-label="UPI QR code to pay DiceCodes">${qrSvg}</div>
+  <div class="upi-qr" role="img" aria-label="UPI QR code to pay VIJAYKRSHA.ONLINE">${qrSvg}</div>
   <div class="upi-text">
     <p class="upi-label">UPI ID</p>
     <p class="upi-id"><code>${UPI_ID}</code></p>
@@ -45,7 +45,7 @@ export default [
       <a href="${upi(101)}">₹101</a> <a href="${upi(251)}">₹251</a> <a href="${upi(501)}">₹501</a> <a href="${upi(0)}">Any amount</a></p>
   </div>
 </div>
-<p>The payment note says "Free GST Billing support". Paying from the app's Support &amp; About page adds your business name to it, so DiceCodes can thank you.</p>
+<p>The payment note says "Free GST Billing support". Paying from the app's Support &amp; About page adds your business name to it, so VIJAYKRSHA.ONLINE can thank you.</p>
 </section>
 
 <section id="supporters" class="supporters" hidden>
@@ -72,12 +72,12 @@ export default [
 </section>
 
 <section id="services">
-<h2>Work with DiceCodes</h2>
+<h2>Work with VIJAYKRSHA.ONLINE</h2>
 <p>The team behind this app builds software for businesses too.</p>
 <div class="service-grid">
 ${SERVICES.map(([t, d]) => `  <div class="service"><strong>${t}</strong><span>${d}</span></div>`).join('\n')}
 </div>
-<p>Email <a href="mailto:contact@dicecodes.com?subject=${encodeURIComponent('Project enquiry (from the Free GST Billing docs)')}">contact@dicecodes.com</a> or visit <a href="${SITE.publisher.url}">dicecodes.com</a>.</p>
+<p>Email <a href="mailto:contact@vijaykrsha.online?subject=${encodeURIComponent('Project enquiry (from the Free GST Billing docs)')}">contact@vijaykrsha.online</a> or visit <a href="${SITE.publisher.url}">vijaykrsha.online</a>.</p>
 </section>
 
 <section id="in-the-app">

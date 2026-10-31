@@ -91,3 +91,4 @@ Automates periodic billing (retainers, rent, monthly AMC contracts, subscription
 | `active` | `Boolean` | True if active, false if paused. |
 | `items` | `Array<Item>` | Line items template with prices, tax slabs, and quantities. |
 | `ownerGstin` | `String` | Business profile owner. |
+

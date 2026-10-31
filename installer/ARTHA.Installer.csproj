@@ -14,9 +14,9 @@
     <AssemblyVersion>1.10.80.0</AssemblyVersion>
     <Title>ARTHA Accounting Software Setup</Title>
     <Description>ARTHA Accounting Software Windows Installer</Description>
-    <Company>DiceCodes</Company>
+    <Company>VIJAYKRSHA.ONLINE</Company>
     <Product>ARTHA Accounting Software</Product>
-    <Copyright>Copyright (c) 2026 DiceCodes</Copyright>
+    <Copyright>Copyright (c) 2026 VIJAYKRSHA.ONLINE</Copyright>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
 

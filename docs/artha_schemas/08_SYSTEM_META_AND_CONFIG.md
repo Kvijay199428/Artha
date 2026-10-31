@@ -90,3 +90,4 @@ data/backups/
 - Preserves 30 days of rollback snapshots.
 - Users can trigger manual snapshots via `POST /api/backups/now`.
 - Supports secondary offsite backup target folder on external or secondary drives (e.g. `D:\Backups\ARTHA`).
+

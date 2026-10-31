@@ -540,16 +540,16 @@ https://github.com/Kvijay199428/Artha/issues
   and always shows that invoice's own options (the app-wide defaults used to
   replace them a moment after it opened).
 - **User Guide** in the sidebar (and "Read the 5-minute guide" on the Dashboard)
-  now opens the [online documentation](https://dicecodes.com/free-gst-software-documentation/),
+  now opens the [online documentation](https://vijaykrsha.online/free-gst-software-documentation/),
   which covers every screen. The old built-in guide had fallen behind the app
   and is removed.
 - **Support & About** in the sidebar: who makes the app, free ways to help
   (star, share, report bugs), a UPI QR for anyone who wants to give, and what
-  DiceCodes builds for businesses. After 50 invoices the Dashboard shows one
+  VIJAYKRSHA.ONLINE builds for businesses. After 50 invoices the Dashboard shows one
   small thank-you card (Maybe later / Don't show again). Nothing is locked and
   nothing is printed on your invoices.
   The documentation has the same page, linked from its top bar next to the
-  name: [Support & About](https://dicecodes.com/free-gst-software-documentation/support.html).
+  name: [Support & About](https://vijaykrsha.online/free-gst-software-documentation/support.html).
 - A one-line **"Star on GitHub"** note at the top of the app, at most once a
   month: first 3 days after you start using the app, then 30 days after you
   close it with ✕. **Star on GitHub** or **Already starred** hides it for good.
@@ -562,7 +562,7 @@ https://github.com/Kvijay199428/Artha/issues
   stacked top bars used to take about 140px, one of them a light strip in dark
   mode.)
 - A small floating line on the **Dashboard** shows the app version, **by
-  DiceCodes** and a **Support** link. It is only on screen, never printed.
+  VIJAYKRSHA.ONLINE** and a **Support** link. It is only on screen, never printed.
 
 ## [1.10.74] - 2026-09-28
 
@@ -4845,7 +4845,7 @@ Every type has its own atomic counter, so switching Tax Invoice
 **Also fixed** — the client-side `getNextInvoiceNumber` was
 overriding the passed-in `prefix` with the global `brandPrefix`
 from Invoice Number Settings (so setting `RPT` was silently swapped
-back to `DICECODES`). Added an `explicitPrefix: true` option that
+back to `ARTHA`). Added an `explicitPrefix: true` option that
 bypasses the brandPrefix precedence when the per-type override is
 set.
 

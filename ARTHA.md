@@ -1,7 +1,7 @@
 # ARTHA - Project Source Code Bundle
 
-> Generated on: **2026-10-31 11:27:22**
-> Total Files: **173** | Total Lines: **94,912** | Total Size: **4.04 MB**
+> Generated on: **2026-10-31 12:16:07**
+> Total Files: **173** | Total Lines: **94,922** | Total Size: **4.04 MB**
 
 ## Table of Contents
 
@@ -37,15 +37,15 @@
 30. [docs-site/pages/setup.mjs](#docs-site-pages-setup-mjs) (299 lines)
 31. [docs-site/pages/start.mjs](#docs-site-pages-start-mjs) (276 lines)
 32. [docs-site/site.mjs](#docs-site-site-mjs) (57 lines)
-33. [docs/ARTHA_DATABASE_SCHEMA.md](#docs-artha-database-schema-md) (120 lines)
-34. [docs/artha_schemas/01_BILLS_AND_INVOICES.md](#docs-artha-schemas-01-bills-and-invoices-md) (166 lines)
-35. [docs/artha_schemas/02_CLIENTS_AND_CUSTOMERS.md](#docs-artha-schemas-02-clients-and-customers-md) (62 lines)
-36. [docs/artha_schemas/03_PRODUCTS_AND_INVENTORY.md](#docs-artha-schemas-03-products-and-inventory-md) (62 lines)
-37. [docs/artha_schemas/04_PURCHASES_AND_SUPPLIERS.md](#docs-artha-schemas-04-purchases-and-suppliers-md) (82 lines)
-38. [docs/artha_schemas/05_EXPENSES_AND_OVERHEADS.md](#docs-artha-schemas-05-expenses-and-overheads-md) (56 lines)
-39. [docs/artha_schemas/06_RECEIPTS_AND_PAYMENTS.md](#docs-artha-schemas-06-receipts-and-payments-md) (50 lines)
-40. [docs/artha_schemas/07_PROFILES_AND_TEMPLATES.md](#docs-artha-schemas-07-profiles-and-templates-md) (94 lines)
-41. [docs/artha_schemas/08_SYSTEM_META_AND_CONFIG.md](#docs-artha-schemas-08-system-meta-and-config-md) (93 lines)
+33. [docs/ARTHA_DATABASE_SCHEMA.md](#docs-artha-database-schema-md) (121 lines)
+34. [docs/artha_schemas/01_BILLS_AND_INVOICES.md](#docs-artha-schemas-01-bills-and-invoices-md) (167 lines)
+35. [docs/artha_schemas/02_CLIENTS_AND_CUSTOMERS.md](#docs-artha-schemas-02-clients-and-customers-md) (63 lines)
+36. [docs/artha_schemas/03_PRODUCTS_AND_INVENTORY.md](#docs-artha-schemas-03-products-and-inventory-md) (63 lines)
+37. [docs/artha_schemas/04_PURCHASES_AND_SUPPLIERS.md](#docs-artha-schemas-04-purchases-and-suppliers-md) (83 lines)
+38. [docs/artha_schemas/05_EXPENSES_AND_OVERHEADS.md](#docs-artha-schemas-05-expenses-and-overheads-md) (57 lines)
+39. [docs/artha_schemas/06_RECEIPTS_AND_PAYMENTS.md](#docs-artha-schemas-06-receipts-and-payments-md) (51 lines)
+40. [docs/artha_schemas/07_PROFILES_AND_TEMPLATES.md](#docs-artha-schemas-07-profiles-and-templates-md) (95 lines)
+41. [docs/artha_schemas/08_SYSTEM_META_AND_CONFIG.md](#docs-artha-schemas-08-system-meta-and-config-md) (94 lines)
 42. [docs/AUDIT_2026-04-30.md](#docs-audit-2026-04-30-md) (272 lines)
 43. [docs/AUDIT_2026-10-22.md](#docs-audit-2026-10-22-md) (178 lines)
 44. [docs/BUSYWIN_DATABASE_SCHEMA.md](#docs-busywin-database-schema-md) (478 lines)
@@ -107,7 +107,7 @@
 100. [scripts/generate-artha-md.mjs](#scripts-generate-artha-md-mjs) (186 lines)
 101. [scripts/generate-icons.mjs](#scripts-generate-icons-mjs) (176 lines)
 102. [scripts/import-busywin.py](#scripts-import-busywin-py) (505 lines)
-103. [scripts/inspect_artha_schema.py](#scripts-inspect-artha-schema-py) (59 lines)
+103. [scripts/inspect_artha_schema.py](#scripts-inspect-artha-schema-py) (60 lines)
 104. [scripts/inspect_fonts.py](#scripts-inspect-fonts-py) (57 lines)
 105. [scripts/inspect_fy_tables.py](#scripts-inspect-fy-tables-py) (12 lines)
 106. [scripts/inspect_key_tables.py](#scripts-inspect-key-tables-py) (24 lines)
@@ -633,7 +633,7 @@ pause
             <li>If nothing happens after 30 seconds, open the install folder and double-click <code>Start FreeGSTBill.bat</code> directly. A small black window should appear briefly.</li>
             <li>If you see "Node.js is not installed", run <code>Install FreeGSTBill.bat</code> first.</li>
             <li>If the port is busy, open <code>data\port.txt</code> in Notepad to see which port the app picked, or delete that file and restart to let the server pick a fresh one.</li>
-            <li>Still stuck? Email <a href="mailto:Contact@dicecodes.com">Contact@dicecodes.com</a> or open a <a href="https://github.com/Kvijay199428/Artha/issues" target="_blank" rel="noopener">GitHub issue</a>.</li>
+            <li>Still stuck? Email <a href="mailto:contact@vijaykrsha.online">contact@vijaykrsha.online</a> or open a <a href="https://github.com/Kvijay199428/Artha/issues" target="_blank" rel="noopener">GitHub issue</a>.</li>
           </ol>
           <p><strong>Tip:</strong> Press <kbd>F12</kbd> to open browser developer tools and check the Console tab for any errors. Share what you see if you ask for support.</p>
         </div>
@@ -643,7 +643,7 @@ pause
     <footer>
       Free GST Billing Software &middot; MIT Licensed &middot;
       <a href="https://github.com/Kvijay199428/Artha" target="_blank" rel="noopener">GitHub</a> &middot;
-      made by <a href="https://dicecodes.com" target="_blank" rel="noopener">DiceCodes</a>
+      made by <a href="https://vijaykrsha.online" target="_blank" rel="noopener">VIJAYKRSHA.ONLINE</a>
     </footer>
   </div>
 
@@ -1054,7 +1054,7 @@ Write-Host ''
 ```
 MIT License
 
-Copyright (c) 2026 DiceCodes (Contact@dicecodes.com)
+Copyright (c) 2026 VIJAYKRSHA.ONLINE (contact@vijaykrsha.online)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -1082,14 +1082,14 @@ SOFTWARE.
 ## `package.json`
 
 - Path: `package.json`
-- Lines: 134 | Size: 4.6 KB
+- Lines: 134 | Size: 4.7 KB
 
 ```json
 {
   "name": "artha-accounting-software",
   "version": "1.10.80",
-  "description": "ARTHA Accounting Software & billing software for India. Tax Invoice, Proforma, Credit Note, Bill of Supply, Delivery Challan, GSTR-1 / GSTR-3B JSON exports, GSTR-2B reconciliation, e-Way Bill, TDS / TCS reports (Form 26Q / 27EQ), multi-currency for 22 countries, per-line custom units, rich-text Terms with 13 India presets, granular backup with optional Google Drive sync. Offline-first PWA. By DiceCodes.",
-  "author": "DiceCodes <Contact@dicecodes.com>",
+  "description": "ARTHA Accounting Software & billing software for India. Tax Invoice, Proforma, Credit Note, Bill of Supply, Delivery Challan, GSTR-1 / GSTR-3B JSON exports, GSTR-2B reconciliation, e-Way Bill, TDS / TCS reports (Form 26Q / 27EQ), multi-currency for 22 countries, per-line custom units, rich-text Terms with 13 India presets, granular backup with optional Google Drive sync. Offline-first PWA. By VIJAYKRSHA.ONLINE.",
+  "author": "VIJAYKRSHA.ONLINE <contact@vijaykrsha.online>",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -1158,7 +1158,7 @@ SOFTWARE.
     "vite",
     "expressjs",
     "india",
-    "diceCodes"
+    "VIJAYKRSHA.ONLINE"
   ],
   "type": "module",
   "engines": {
@@ -1227,7 +1227,7 @@ SOFTWARE.
 ## `README.md`
 
 - Path: `README.md`
-- Lines: 866 | Size: 64.8 KB
+- Lines: 866 | Size: 64.9 KB
 
 ````markdown
 <div align="center">
@@ -1248,11 +1248,11 @@ SOFTWARE.
 
 Your data never leaves your computer. No cloud. No signup. No tracking. No limits. Open-source and offline-first.
 
-<a href="https://github.com/Kvijay199428/Artha/releases/latest/download/Free-GST-Billing.zip"><img src="https://img.shields.io/github/v/release/Kvijay199428/Artha?style=for-the-badge&label=%E2%AC%87%EF%B8%8F%20Download&color=16a34a&labelColor=15803d" alt="Download the latest version" height="48"></a>&nbsp;&nbsp;<a href="https://dicecodes.com/free-gst-software-documentation/"><img src="https://img.shields.io/badge/%F0%9F%93%96%20Documentation-Read%20the%20guide-2563eb?style=for-the-badge&labelColor=1d4ed8" alt="Read the documentation" height="48"></a>
+<a href="https://github.com/Kvijay199428/Artha/releases/latest/download/Free-GST-Billing.zip"><img src="https://img.shields.io/github/v/release/Kvijay199428/Artha?style=for-the-badge&label=%E2%AC%87%EF%B8%8F%20Download&color=16a34a&labelColor=15803d" alt="Download the latest version" height="48"></a>&nbsp;&nbsp;<a href="https://vijaykrsha.online/free-gst-software-documentation/"><img src="https://img.shields.io/badge/%F0%9F%93%96%20Documentation-Read%20the%20guide-2563eb?style=for-the-badge&labelColor=1d4ed8" alt="Read the documentation" height="48"></a>
 
 <sub>Always the newest version · about 16 MB · Windows, macOS and Linux in one ZIP · <a href="https://github.com/Kvijay199428/Artha/releases/latest">release notes</a></sub>
 
-[⬇ Download ZIP](https://github.com/Kvijay199428/Artha/releases/latest/download/Free-GST-Billing.zip) &nbsp;|&nbsp; [📦 Releases](https://github.com/Kvijay199428/Artha/releases) &nbsp;|&nbsp; [📖 Documentation](https://dicecodes.com/free-gst-software-documentation/) &nbsp;|&nbsp; [⚡ 3-Step Install](#quick-start--installation) &nbsp;|&nbsp; [☁ Run Online (Vercel / Supabase / Railway)](./docs/DEPLOY_ONLINE.md) &nbsp;|&nbsp; [🧾 First Invoice in 5 Minutes](#your-first-invoice-in-5-minutes) &nbsp;|&nbsp; [📸 Screenshots](#screenshots) &nbsp;|&nbsp; [🐛 Report Bug](https://github.com/Kvijay199428/Artha/issues)
+[⬇ Download ZIP](https://github.com/Kvijay199428/Artha/releases/latest/download/Free-GST-Billing.zip) &nbsp;|&nbsp; [📦 Releases](https://github.com/Kvijay199428/Artha/releases) &nbsp;|&nbsp; [📖 Documentation](https://vijaykrsha.online/free-gst-software-documentation/) &nbsp;|&nbsp; [⚡ 3-Step Install](#quick-start--installation) &nbsp;|&nbsp; [☁ Run Online (Vercel / Supabase / Railway)](./docs/DEPLOY_ONLINE.md) &nbsp;|&nbsp; [🧾 First Invoice in 5 Minutes](#your-first-invoice-in-5-minutes) &nbsp;|&nbsp; [📸 Screenshots](#screenshots) &nbsp;|&nbsp; [🐛 Report Bug](https://github.com/Kvijay199428/Artha/issues)
 
 </div>
 
@@ -1434,7 +1434,7 @@ Once you're comfortable with the basics, explore:
 - **GSTR-2B Reconciliation** — download your 2B JSON from gst.gov.in, click Import in our 2B tab — we auto-match against your purchase records and flag mismatches.
 - **TDS / TCS** — Customize → tick TDS or TCS, pick a section (194Q / 206C(1H) / etc.). The Reports view aggregates these for Form 26Q / 27EQ filing.
 
-📖 **Full walkthrough** — see [docs/USER_GUIDE.md](docs/USER_GUIDE.md) or the [online documentation](https://dicecodes.com/free-gst-software-documentation/), which the app's **User Guide** button opens.
+📖 **Full walkthrough** — see [docs/USER_GUIDE.md](docs/USER_GUIDE.md) or the [online documentation](https://vijaykrsha.online/free-gst-software-documentation/), which the app's **User Guide** button opens.
 
 ---
 
@@ -1910,7 +1910,7 @@ The deep-dive material lives in **[docs/](./docs/)**:
 
 ## Why Is This Free?
 
-Free GST Billing Software is built and maintained by [DiceCodes](mailto:Contact@dicecodes.com). It is:
+Free GST Billing Software is built and maintained by [VIJAYKRSHA.ONLINE](mailto:contact@vijaykrsha.online). It is:
 
 - **Open-source** under the MIT license — fork it, modify it, use it commercially
 - **Community-driven** — features are built based on what users actually need
@@ -1928,7 +1928,7 @@ If the app saves you time, you can help keep it going:
 - 🐛 **[Report a bug or ask for a feature](https://github.com/Kvijay199428/Artha/issues)**
 - 💛 **UPI, any amount:** `princeramgarhiaa-1@okaxis` (also as a QR code in the app, under **Support & About**)
 
-**Work with DiceCodes:** custom software and web apps, customising this app for your business, setup and data migration, support plans, AI integration and automation, and mobile apps. [contact@dicecodes.com](mailto:contact@dicecodes.com)
+**Work with VIJAYKRSHA.ONLINE:** custom software and web apps, customising this app for your business, setup and data migration, support plans, AI integration and automation, and mobile apps. [contact@vijaykrsha.online](mailto:contact@vijaykrsha.online)
 
 ---
 
@@ -2067,7 +2067,7 @@ CSV import is supported today for clients and products. Direct Tally XML import 
 
 ## Contact & Support
 
-- **Email:** [Contact@dicecodes.com](mailto:Contact@dicecodes.com)
+- **Email:** [contact@vijaykrsha.online](mailto:contact@vijaykrsha.online)
 - **Issues / bugs / feature requests:** [GitHub Issues](https://github.com/Kvijay199428/Artha/issues)
 - **Releases:** [GitHub Releases](https://github.com/Kvijay199428/Artha/releases)
 - **Discussions:** *(coming soon)*
@@ -2084,15 +2084,15 @@ This project is licensed under the [MIT License](LICENSE) — free to use, modif
 
 ### Ready to stop paying for billing software?
 
-[**⬇ Download Now**](https://github.com/Kvijay199428/Artha/releases/latest/download/Free-GST-Billing.zip) &nbsp;·&nbsp; [⭐ **Star on GitHub**](https://github.com/Kvijay199428/Artha) &nbsp;·&nbsp; [📖 **Read the User Guide**](docs/USER_GUIDE.md) &nbsp;·&nbsp; [🐛 **Report an Issue**](https://github.com/Kvijay199428/Artha/issues) &nbsp;·&nbsp; [📧 **Email DiceCodes**](mailto:Contact@dicecodes.com)
+[**⬇ Download Now**](https://github.com/Kvijay199428/Artha/releases/latest/download/Free-GST-Billing.zip) &nbsp;·&nbsp; [⭐ **Star on GitHub**](https://github.com/Kvijay199428/Artha) &nbsp;·&nbsp; [📖 **Read the User Guide**](docs/USER_GUIDE.md) &nbsp;·&nbsp; [🐛 **Report an Issue**](https://github.com/Kvijay199428/Artha/issues) &nbsp;·&nbsp; [📧 **Email VIJAYKRSHA.ONLINE**](mailto:contact@vijaykrsha.online)
 
 ---
 
-**Free GST Billing Software** by [DiceCodes](mailto:Contact@dicecodes.com) · MIT Licensed · v1.10.42
+**Free GST Billing Software** by [VIJAYKRSHA.ONLINE](mailto:contact@vijaykrsha.online) · MIT Licensed · v1.10.42
 
 <sub>Free GST billing software India · Free GST invoice software for small business · Open source GST billing software · Free alternative to Tally Prime Vyapar Zoho Books ClearTax myBillBook Marg ERP · No subscription invoice software · Offline billing software India · GSTR-1 GSTR-3B filing software free · GSTR-2B reconciliation tool free · TDS Form 26Q TCS Form 27EQ software · Section 194Q 206C(1H) TCS calculator with ₹50 lakh threshold · UTGST invoice software · CGST SGST IGST auto calculator · E-way bill JSON generator free · HSN SAC code invoice generator · Bill of Supply generator · Delivery Challan software · Credit Note Debit Note software · Proforma invoice estimate software · Composition scheme invoice · UPI QR invoice maker · Thermal receipt printer software 58mm 80mm · Direct vector thermal print software · POS billing software free India · Retail shop kirana billing software · Restaurant cafe billing software · Freelancer consultant invoice software India · Multi-currency invoice generator (USD EUR GBP AED SGD AUD JPY) 22 countries · Country-aware VAT SST MwSt TVA PPN tax labels · Recurring invoice software · Payment receipt voucher software · Bulk PDF invoice export · Google Drive backup billing software · Automatic daily backup + Trash bin · Multi-business multi-GSTIN switcher · Multi-language invoice Hindi Tamil Marathi Bengali · Dark mode PWA billing app · Rich-text Terms & Conditions with 13 India presets · OCR bill scan tesseract · Ctrl+K command palette · Split-view live PDF preview · Income Tax (ITR) computation old vs new regime 234B 234C · Client credit balance carry-forward · Watermark DUPLICATE DRAFT PDF · Rule 48 multi-copy (Original Duplicate Triplicate) · WhatsApp share invoice PDF · Self-file GST return software · GST invoice software without subscription · No signup no login billing software · Vyapar alternative open source · Tally alternative free · Zoho Books alternative · ClearTax alternative · myBillBook alternative · Marg ERP alternative · Made in India</sub>
 
-Made in India 🇮🇳 · [DiceCodes](https://dicecodes.com)
+Made in India 🇮🇳 · [VIJAYKRSHA.ONLINE](https://vijaykrsha.online)
 
 </div>
 
@@ -2137,7 +2137,7 @@ Two private options:
    [Report a vulnerability](https://github.com/Kvijay199428/Artha/security/advisories/new)
    button on the Security tab. Keeps everything in one thread and lets us
    credit you on the published advisory.
-2. **Email** — Contact@dicecodes.com, with `SECURITY` in the subject.
+2. **Email** — contact@vijaykrsha.online, with `SECURITY` in the subject.
 
 Please include:
 
@@ -4390,7 +4390,7 @@ setInterval(() => { processDueRecurring().catch(err => logFatal(err, 'recurring'
 ## `setup.bat`
 
 - Path: `setup.bat`
-- Lines: 70 | Size: 3.3 KB
+- Lines: 70 | Size: 3.4 KB
 
 ```batch
 @echo off
@@ -4451,7 +4451,7 @@ echo [3/4] Creating Windows Shortcuts...
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$wsh = New-Object -ComObject WScript.Shell; $exe = Join-Path '%~dp0' 'ARTHA.exe'; $ico = Join-Path '%~dp0' 'release-templates\_system-scripts\app-icon.ico'; if(-not (Test-Path $ico)){ $ico = $exe }; $desktop = [Environment]::GetFolderPath('Desktop'); $sc = $wsh.CreateShortcut((Join-Path $desktop 'ARTHA.lnk')); $sc.TargetPath = $exe; $sc.WorkingDirectory = '%~dp0'; $sc.IconLocation = \"$ico,0\"; $sc.Description = 'ARTHA Accounting Software'; $sc.Save(); $sm = Join-Path ([Environment]::GetFolderPath('Programs')) 'ARTHA'; if(-not (Test-Path $sm)){ New-Item -ItemType Directory -Path $sm -Force | Out-Null }; $sc2 = $wsh.CreateShortcut((Join-Path $sm 'ARTHA.lnk')); $sc2.TargetPath = $exe; $sc2.WorkingDirectory = '%~dp0'; $sc2.IconLocation = \"$ico,0\"; $sc2.Description = 'ARTHA Accounting Software'; $sc2.Save(); Write-Host '  Shortcuts created on Desktop and Start Menu.'"
 
 echo [4/4] Registering Windows Application...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$reg = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\ARTHA'; if(-not (Test-Path $reg)){ New-Item -Path $reg -Force | Out-Null }; Set-ItemProperty -Path $reg -Name 'DisplayName' -Value 'ARTHA Accounting Software'; Set-ItemProperty -Path $reg -Name 'DisplayVersion' -Value '1.10.80'; Set-ItemProperty -Path $reg -Name 'Publisher' -Value 'DiceCodes'; Set-ItemProperty -Path $reg -Name 'InstallLocation' -Value '%~dp0'; Set-ItemProperty -Path $reg -Name 'DisplayIcon' -Value (Join-Path '%~dp0' 'release-templates\_system-scripts\app-icon.ico'); Set-ItemProperty -Path $reg -Name 'UninstallString' -Value (Join-Path '%~dp0' 'Uninstall.bat');"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$reg = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\ARTHA'; if(-not (Test-Path $reg)){ New-Item -Path $reg -Force | Out-Null }; Set-ItemProperty -Path $reg -Name 'DisplayName' -Value 'ARTHA Accounting Software'; Set-ItemProperty -Path $reg -Name 'DisplayVersion' -Value '1.10.80'; Set-ItemProperty -Path $reg -Name 'Publisher' -Value 'VIJAYKRSHA.ONLINE'; Set-ItemProperty -Path $reg -Name 'InstallLocation' -Value '%~dp0'; Set-ItemProperty -Path $reg -Name 'DisplayIcon' -Value (Join-Path '%~dp0' 'release-templates\_system-scripts\app-icon.ico'); Set-ItemProperty -Path $reg -Name 'UninstallString' -Value (Join-Path '%~dp0' 'Uninstall.bat');"
 
 echo.
 echo ========================================================
@@ -5755,7 +5755,7 @@ ${order.map((slug) => `  <url><loc>${pageUrl(slug)}</loc><lastmod>${TODAY}</last
 </urlset>
 `);
 // Search engines only read robots.txt at the root of the domain. This copy is
-// a ready-made block to add to https://dicecodes.com/robots.txt.
+// a ready-made block to add to https://vijaykrsha.online/robots.txt.
 writeFileSync(join(OUT, 'robots.txt'), `User-agent: *\nAllow: /\n\nSitemap: ${SITE.url}sitemap.xml\n`);
 writeFileSync(join(OUT, 'llms.txt'), llmsTxt());
 writeFileSync(join(OUT, 'llms-full.txt'), llmsFullTxt());
@@ -5773,7 +5773,7 @@ console.log(`Built ${PAGES.length} pages, ${index.length} search entries, ${imgS
 ## `docs-site/pages/about.mjs`
 
 - Path: `docs-site/pages/about.mjs`
-- Lines: 90 | Size: 4.6 KB
+- Lines: 90 | Size: 4.7 KB
 
 ```javascript
 // Support & About - the docs-site twin of the app's Support & About page
@@ -5782,7 +5782,7 @@ import QRCode from 'qrcode';
 import { SITE } from '../site.mjs';
 
 const UPI_ID = 'princeramgarhiaa-1@okaxis';
-const upi = (amount) => `upi://pay?pa=${encodeURIComponent(UPI_ID)}&pn=DiceCodes&cu=INR`
+const upi = (amount) => `upi://pay?pa=${encodeURIComponent(UPI_ID)}&pn=VIJAYKRSHA.ONLINE&cu=INR`
   + `&tn=${encodeURIComponent('Free GST Billing support')}${amount ? `&am=${amount}.00` : ''}`;
 // Drawn at build time: the page needs no script, and the QR works offline once saved.
 const qrSvg = await QRCode.toString(upi(0), { type: 'svg', margin: 1, errorCorrectionLevel: 'M' });
@@ -5803,11 +5803,11 @@ export default [
   slug: 'support',
   title: 'Support & About',
   nav: 'Support & About',
-  lead: 'Who makes Free GST Billing, how you can help it grow, and what DiceCodes builds for businesses.',
+  lead: 'Who makes Free GST Billing, how you can help it grow, and what VIJAYKRSHA.ONLINE builds for businesses.',
   body: `
 <section id="about">
 <h2>Free, and it stays free</h2>
-<p>Free GST Billing is built and maintained by <a href="${SITE.publisher.url}">DiceCodes</a> in India. No ads, no account, no locked features, and your invoices never leave your computer. The full source code is on <a href="${SITE.repo}">GitHub</a> under the MIT licence.</p>
+<p>Free GST Billing is built and maintained by <a href="${SITE.publisher.url}">VIJAYKRSHA.ONLINE</a> in India. No ads, no account, no locked features, and your invoices never leave your computer. The full source code is on <a href="${SITE.repo}">GitHub</a> under the MIT licence.</p>
 <p>If it saves you time every month, you can help keep the fixes and new features coming.</p>
 </section>
 
@@ -5815,7 +5815,7 @@ export default [
 <h2>Support with UPI</h2>
 <p>Scan with GPay, PhonePe, Paytm or any UPI app. Any amount helps.</p>
 <div class="upi-box">
-  <div class="upi-qr" role="img" aria-label="UPI QR code to pay DiceCodes">${qrSvg}</div>
+  <div class="upi-qr" role="img" aria-label="UPI QR code to pay VIJAYKRSHA.ONLINE">${qrSvg}</div>
   <div class="upi-text">
     <p class="upi-label">UPI ID</p>
     <p class="upi-id"><code>${UPI_ID}</code></p>
@@ -5823,7 +5823,7 @@ export default [
       <a href="${upi(101)}">₹101</a> <a href="${upi(251)}">₹251</a> <a href="${upi(501)}">₹501</a> <a href="${upi(0)}">Any amount</a></p>
   </div>
 </div>
-<p>The payment note says "Free GST Billing support". Paying from the app's Support &amp; About page adds your business name to it, so DiceCodes can thank you.</p>
+<p>The payment note says "Free GST Billing support". Paying from the app's Support &amp; About page adds your business name to it, so VIJAYKRSHA.ONLINE can thank you.</p>
 </section>
 
 <section id="supporters" class="supporters" hidden>
@@ -5850,12 +5850,12 @@ export default [
 </section>
 
 <section id="services">
-<h2>Work with DiceCodes</h2>
+<h2>Work with VIJAYKRSHA.ONLINE</h2>
 <p>The team behind this app builds software for businesses too.</p>
 <div class="service-grid">
 ${SERVICES.map(([t, d]) => `  <div class="service"><strong>${t}</strong><span>${d}</span></div>`).join('\n')}
 </div>
-<p>Email <a href="mailto:contact@dicecodes.com?subject=${encodeURIComponent('Project enquiry (from the Free GST Billing docs)')}">contact@dicecodes.com</a> or visit <a href="${SITE.publisher.url}">dicecodes.com</a>.</p>
+<p>Email <a href="mailto:contact@vijaykrsha.online?subject=${encodeURIComponent('Project enquiry (from the Free GST Billing docs)')}">contact@vijaykrsha.online</a> or visit <a href="${SITE.publisher.url}">vijaykrsha.online</a>.</p>
 </section>
 
 <section id="in-the-app">
@@ -6416,14 +6416,14 @@ export default [
   <li><strong>Notifications</strong>, <strong>Dark Mode</strong> or <strong>Light Mode</strong>, <a href="#support"><strong>Support &amp; About</strong></a>, <strong>Control Panel</strong> and <strong>Settings</strong>.</li>
   <li>At the bottom, <b>App Ready</b> when all is well.</li>
 </ul>
-<p>At the end of the Dashboard, below the invoices, a small line shows the app's version, a link to DiceCodes and <a href="#support">Support</a>. It is never printed.</p>
+<p>At the end of the Dashboard, below the invoices, a small line shows the app's version, a link to VIJAYKRSHA.ONLINE and <a href="#support">Support</a>. It is never printed.</p>
 <p>Tick <b>Auto-hide menu</b>, under the app name, to shrink the sidebar to a slim strip of icons and give the page more room. Point at it to open it (the checkbox and your business name are there again). Untick it to keep it open.</p>
 <p>On a narrow screen, the sidebar folds away behind the ☰ menu button.</p>
 </section>
 
 <section id="support">
 <h2>Support &amp; About</h2>
-<p>Who makes the app, and how to help it grow. Free ways come first: star it on GitHub, tell another business, report a bug or ask for a feature. If you want to give money, scan the UPI QR with any UPI app, for any amount. The page also lists what DiceCodes builds for businesses: custom software and web apps, changes to this app, setup and data migration, support plans, AI integration and automation, and mobile apps.</p>
+<p>Who makes the app, and how to help it grow. Free ways come first: star it on GitHub, tell another business, report a bug or ask for a feature. If you want to give money, scan the UPI QR with any UPI app, for any amount. The page also lists what VIJAYKRSHA.ONLINE builds for businesses: custom software and web apps, changes to this app, setup and data migration, support plans, AI integration and automation, and mobile apps.</p>
 <p>The app stays free whatever you choose. Nothing is locked, and nothing is ever printed on your invoices. After your 50th invoice, the Dashboard shows one small thank-you card; ${ui('Maybe later')} hides it for a few months and ${ui("Don't show again")} hides it for good.</p>
 <p>Once a month at most, a one-line note at the top of the app asks for a star on GitHub. ${ui('✕')} hides it for 30 days; ${ui('Star on GitHub')} or ${ui('Already starred')} hides it for good. It never appears while you are making an invoice.</p>
 </section>
@@ -8475,8 +8475,8 @@ export const SITE = {
   folder: 'free-gst-software-documentation',
   // Where the folder is published. Used for canonical links, the sitemap,
   // social previews and llms.txt, which all need full addresses.
-  url: 'https://dicecodes.com/free-gst-software-documentation/',
-  publisher: { name: 'DiceCodes', url: 'https://dicecodes.com' },
+  url: 'https://vijaykrsha.online/free-gst-software-documentation/',
+  publisher: { name: 'VIJAYKRSHA.ONLINE', url: 'https://vijaykrsha.online' },
   version: '1.10.80',
   repo: 'https://github.com/Kvijay199428/Artha',
   // Always the newest release: GitHub resolves this to the latest release's
@@ -8531,7 +8531,7 @@ export const NAV = [
 ## `docs/ARTHA_DATABASE_SCHEMA.md`
 
 - Path: `docs/ARTHA_DATABASE_SCHEMA.md`
-- Lines: 120 | Size: 8.4 KB
+- Lines: 121 | Size: 8.4 KB
 
 ````markdown
 # ARTHA Database Architecture & Schema Specification
@@ -8654,6 +8654,7 @@ Before any destructive operation or at midnight:
 3. Automatically prunes snapshots older than 30 days.
 4. Allows instantaneous rollback via `POST /api/backups/:date/restore`.
 
+
 ````
 
 ---
@@ -8662,7 +8663,7 @@ Before any destructive operation or at midnight:
 ## `docs/artha_schemas/01_BILLS_AND_INVOICES.md`
 
 - Path: `docs/artha_schemas/01_BILLS_AND_INVOICES.md`
-- Lines: 166 | Size: 7.7 KB
+- Lines: 167 | Size: 7.7 KB
 
 ````markdown
 # ARTHA Database Schema: Bills & Invoices (`data/bills/`)
@@ -8831,6 +8832,7 @@ Each line item object contains:
 }
 ```
 
+
 ````
 
 ---
@@ -8839,7 +8841,7 @@ Each line item object contains:
 ## `docs/artha_schemas/02_CLIENTS_AND_CUSTOMERS.md`
 
 - Path: `docs/artha_schemas/02_CLIENTS_AND_CUSTOMERS.md`
-- Lines: 62 | Size: 3.0 KB
+- Lines: 63 | Size: 3.1 KB
 
 ````markdown
 # ARTHA Database Schema: Clients & Customers (`data/clients/`)
@@ -8904,6 +8906,7 @@ For B2C unregistered consumers, `gstin` remains blank, and `state` dictates plac
 }
 ```
 
+
 ````
 
 ---
@@ -8912,7 +8915,7 @@ For B2C unregistered consumers, `gstin` remains blank, and `state` dictates plac
 ## `docs/artha_schemas/03_PRODUCTS_AND_INVENTORY.md`
 
 - Path: `docs/artha_schemas/03_PRODUCTS_AND_INVENTORY.md`
-- Lines: 62 | Size: 3.2 KB
+- Lines: 63 | Size: 3.2 KB
 
 ````markdown
 # ARTHA Database Schema: Products & Inventory (`data/products/`)
@@ -8977,6 +8980,7 @@ Stock changes in ARTHA are event-driven:
 }
 ```
 
+
 ````
 
 ---
@@ -8985,7 +8989,7 @@ Stock changes in ARTHA are event-driven:
 ## `docs/artha_schemas/04_PURCHASES_AND_SUPPLIERS.md`
 
 - Path: `docs/artha_schemas/04_PURCHASES_AND_SUPPLIERS.md`
-- Lines: 82 | Size: 3.1 KB
+- Lines: 83 | Size: 3.1 KB
 
 ````markdown
 # ARTHA Database Schema: Purchases & Suppliers (`data/purchases/`)
@@ -9070,6 +9074,7 @@ Each object in `purchase.items` contains:
 }
 ```
 
+
 ````
 
 ---
@@ -9078,7 +9083,7 @@ Each object in `purchase.items` contains:
 ## `docs/artha_schemas/05_EXPENSES_AND_OVERHEADS.md`
 
 - Path: `docs/artha_schemas/05_EXPENSES_AND_OVERHEADS.md`
-- Lines: 56 | Size: 2.9 KB
+- Lines: 57 | Size: 2.9 KB
 
 ````markdown
 # ARTHA Database Schema: Expenses & Overheads (`data/expenses/`)
@@ -9137,6 +9142,7 @@ Files are stored individually under `data/expenses/` as `exp_<id>.json`.
 }
 ```
 
+
 ````
 
 ---
@@ -9145,7 +9151,7 @@ Files are stored individually under `data/expenses/` as `exp_<id>.json`.
 ## `docs/artha_schemas/06_RECEIPTS_AND_PAYMENTS.md`
 
 - Path: `docs/artha_schemas/06_RECEIPTS_AND_PAYMENTS.md`
-- Lines: 50 | Size: 2.3 KB
+- Lines: 51 | Size: 2.3 KB
 
 ````markdown
 # ARTHA Database Schema: Receipts & Payment Vouchers (`data/receipts/`)
@@ -9198,6 +9204,7 @@ Files are stored individually under `data/receipts/` as `rcp_<id>.json`.
 }
 ```
 
+
 ````
 
 ---
@@ -9206,7 +9213,7 @@ Files are stored individually under `data/receipts/` as `rcp_<id>.json`.
 ## `docs/artha_schemas/07_PROFILES_AND_TEMPLATES.md`
 
 - Path: `docs/artha_schemas/07_PROFILES_AND_TEMPLATES.md`
-- Lines: 94 | Size: 4.4 KB
+- Lines: 95 | Size: 4.4 KB
 
 ````markdown
 # ARTHA Database Schema: Business Profiles & Templates
@@ -9303,6 +9310,7 @@ Automates periodic billing (retainers, rent, monthly AMC contracts, subscription
 | `items` | `Array<Item>` | Line items template with prices, tax slabs, and quantities. |
 | `ownerGstin` | `String` | Business profile owner. |
 
+
 ````
 
 ---
@@ -9311,7 +9319,7 @@ Automates periodic billing (retainers, rent, monthly AMC contracts, subscription
 ## `docs/artha_schemas/08_SYSTEM_META_AND_CONFIG.md`
 
 - Path: `docs/artha_schemas/08_SYSTEM_META_AND_CONFIG.md`
-- Lines: 93 | Size: 4.0 KB
+- Lines: 94 | Size: 4.0 KB
 
 ````markdown
 # ARTHA Database Schema: System Meta, Config & Security
@@ -9406,6 +9414,7 @@ data/backups/
 - Preserves 30 days of rollback snapshots.
 - Users can trigger manual snapshots via `POST /api/backups/now`.
 - Supports secondary offsite backup target folder on external or secondary drives (e.g. `D:\Backups\ARTHA`).
+
 
 ````
 
@@ -18385,7 +18394,7 @@ the wrong version number.
 
 **Status:** Approved, in implementation
 **Target release:** v1.5.0
-**Author:** DiceCodes
+**Author:** VIJAYKRSHA.ONLINE
 **Date:** 2026-04-30
 
 ## Problem
@@ -19218,7 +19227,7 @@ PRs welcome. The project follows
 ## Need help?
 
 - File an issue: <https://github.com/Kvijay199428/Artha/issues>
-- Email DiceCodes: contact@dicecodes.com
+- Email VIJAYKRSHA.ONLINE: contact@vijaykrsha.online
 
 ````
 
@@ -19277,7 +19286,7 @@ public partial class App : Application
 ## `installer/ARTHA.Installer.csproj`
 
 - Path: `installer/ARTHA.Installer.csproj`
-- Lines: 29 | Size: 0.9 KB
+- Lines: 29 | Size: 1.0 KB
 
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
@@ -19296,9 +19305,9 @@ public partial class App : Application
     <AssemblyVersion>1.10.80.0</AssemblyVersion>
     <Title>ARTHA Accounting Software Setup</Title>
     <Description>ARTHA Accounting Software Windows Installer</Description>
-    <Company>DiceCodes</Company>
+    <Company>VIJAYKRSHA.ONLINE</Company>
     <Product>ARTHA Accounting Software</Product>
-    <Copyright>Copyright (c) 2026 DiceCodes</Copyright>
+    <Copyright>Copyright (c) 2026 VIJAYKRSHA.ONLINE</Copyright>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
 
@@ -19317,7 +19326,7 @@ public partial class App : Application
 ## `installer/InstallerEngine.cs`
 
 - Path: `installer/InstallerEngine.cs`
-- Lines: 234 | Size: 9.4 KB
+- Lines: 234 | Size: 9.6 KB
 
 ```csharp
 using System;
@@ -19541,7 +19550,7 @@ pause
             {
                 key.SetValue("DisplayName", "ARTHA Accounting Software");
                 key.SetValue("DisplayVersion", "1.10.80");
-                key.SetValue("Publisher", "DiceCodes");
+                key.SetValue("Publisher", "VIJAYKRSHA.ONLINE");
                 key.SetValue("DisplayIcon", iconPath);
                 key.SetValue("InstallLocation", targetDir);
                 key.SetValue("UninstallString", $"cmd.exe /c \"{Path.Combine(targetDir, "Uninstall.bat")}\"");
@@ -19941,9 +19950,9 @@ public partial class App : System.Windows.Application
     <AssemblyVersion>1.10.80.0</AssemblyVersion>
     <Title>ARTHA Accounting Software</Title>
     <Description>ARTHA Server Launcher &amp; Background Service Manager</Description>
-    <Company>DiceCodes</Company>
+    <Company>VIJAYKRSHA.ONLINE</Company>
     <Product>ARTHA Accounting Software</Product>
-    <Copyright>Copyright (c) 2026 DiceCodes</Copyright>
+    <Copyright>Copyright (c) 2026 VIJAYKRSHA.ONLINE</Copyright>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
 
@@ -23565,7 +23574,7 @@ bash "$SYSTEM_DIR/start-unix.sh"
 ```text
 ===========================================================
   FREE GST BILLING SOFTWARE
-  By DiceCodes - free, and yours to keep
+  By VIJAYKRSHA.ONLINE - free, and yours to keep
 ===========================================================
 
   Your invoices, clients and data stay on THIS computer.
@@ -56127,7 +56136,7 @@ if __name__ == '__main__':
 ## `scripts/inspect_artha_schema.py`
 
 - Path: `scripts/inspect_artha_schema.py`
-- Lines: 59 | Size: 2.7 KB
+- Lines: 60 | Size: 2.7 KB
 
 ```python
 import os, json
@@ -56188,6 +56197,7 @@ for meta_f in ['meta.json', 'local-prefs.json', 'profile.json']:
                             print(f"  {k} ({v_type}): {repr(v)[:80]}")
             except Exception as e:
                 print(f"{meta_f} error: {e}")
+
 
 ```
 
@@ -57113,8 +57123,8 @@ console.log('\n[V73] Customize options, order details, Quotation, docs links');
   eq(INVOICE_TYPES.quotation.prefix, 'QUO', 'Quotations number as QUO');
   eq(salesSign({ invoiceType: 'quotation', totalAmount: 100 }), 0, 'A quotation is not a sale');
 
-  eq(docsLink('invoices#toolbar'), 'https://dicecodes.com/free-gst-software-documentation/invoices.html#toolbar', 'Help links go to the docs section');
-  eq(docsLink('index'), 'https://dicecodes.com/free-gst-software-documentation/', 'The docs home link');
+  eq(docsLink('invoices#toolbar'), 'https://vijaykrsha.online/free-gst-software-documentation/invoices.html#toolbar', 'Help links go to the docs section');
+  eq(docsLink('index'), 'https://vijaykrsha.online/free-gst-software-documentation/', 'The docs home link');
   eq(TCS_SECTIONS.some((t) => t.code === '206C(1H)'), false, '206C(1H) (omitted from 1 April 2025) is not offered on new invoices');
 }
 
@@ -57916,7 +57926,7 @@ try {
 ## `src/App.jsx`
 
 - Path: `src/App.jsx`
-- Lines: 1290 | Size: 65.1 KB
+- Lines: 1290 | Size: 65.0 KB
 
 ```jsx
 import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
@@ -58651,7 +58661,7 @@ function App() {
       <div className="server-down-overlay">
         <div className="server-down-modal">
           <FileText size={48} color="#3b82f6" />
-          <h2>Free GST Billing Software Needs a Quick Start</h2>
+          <h2>ARTHA Needs a Quick Start</h2>
           <p>
             Your data is <strong>100% safe</strong> on your computer — nothing is lost.
             The app just needs to be started once.
@@ -58667,8 +58677,8 @@ function App() {
           <div className="server-down-steps">
             <p className="server-down-hint">How to start it:</p>
             <ol>
-              <li>Double-click <strong>Free GST Billing</strong> on your Desktop, then click <strong>Open App</strong></li>
-              <li>Or search <strong>"Free GST Billing"</strong> in the Start Menu</li>
+              <li>Double-click <strong>ARTHA</strong> on your Desktop, then click <strong>Open App</strong></li>
+              <li>Or search <strong>"ARTHA"</strong> in the Start Menu</li>
             </ol>
           </div>
           <p className="server-down-safe">All your invoices, clients, and data are safely stored on your computer. They are never deleted or shared.</p>
@@ -58742,8 +58752,8 @@ function App() {
             <FileText size={22} />
           </div>
           <div>
-            <h2 className="sidebar-title">GST Billing</h2>
-            <p className="sidebar-subtitle">by DiceCodes</p>
+            <h2 className="sidebar-title">ARTHA</h2>
+            <p className="sidebar-subtitle">by VIJAYKRSHA.ONLINE</p>
           </div>
           {/* Auto-hide as a ☰ button (was a text checkbox): pressed = the menu
               shrinks to icons and opens when pointed at. */}
@@ -58968,7 +58978,7 @@ function App() {
           <SupportView />
         )}
         </Suspense>
-        {/* Version + DiceCodes line: Dashboard only, so it never takes space on working screens. */}
+        {/* Version + VIJAYKRSHA.ONLINE line: Dashboard only, so it never takes space on working screens. */}
         {currentView === 'dashboard' && <AppFooter onOpenSupport={() => setCurrentView('support')} />}
       </div>
 
@@ -59346,9 +59356,9 @@ export default function AppFooter({ onOpenSupport }) {
         padding: '0.3rem 0.85rem', borderRadius: 999, background: 'var(--card-bg)', border: '1px solid var(--border)',
         backdropFilter: 'blur(12px)',
       }}>
-        <span>Free GST Billing{version ? ` v${version}` : ''}</span>
+        <span>ARTHA{version ? ` v${version}` : ''}</span>
         <span aria-hidden="true">·</span>
-        <a href="https://dicecodes.com" target="_blank" rel="noopener noreferrer" style={link}>by DiceCodes</a>
+        <a href="https://vijaykrsha.online" target="_blank" rel="noopener noreferrer" style={link}>by VIJAYKRSHA.ONLINE</a>
         <span aria-hidden="true">·</span>
         <button type="button" onClick={onOpenSupport}
           style={{ ...link, background: 'none', border: 0, padding: 0, font: 'inherit', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
@@ -83813,7 +83823,7 @@ export default function SupportNudge({ invoiceCount, onOpen }) {
 
 ```jsx
 // v1.10.75 - Support & About. Who builds the app, how to help (free ways
-// first, then UPI), and what DiceCodes does for businesses. Decided with the
+// first, then UPI), and what VIJAYKRSHA.ONLINE does for businesses. Decided with the
 // maintainer: ask gently, never lock a feature, never print anything on a
 // user's invoice. UPI only for money: it works offline (the QR is drawn here)
 // and costs the giver nothing.
@@ -83828,10 +83838,10 @@ import useSupporters from './useSupporters';
 const inr = (n) => `₹${Number(n).toLocaleString('en-IN')}`;
 
 const SUPPORT_UPI_ID = 'princeramgarhiaa-1@okaxis';
-const UPI_NAME = 'DiceCodes';
+const UPI_NAME = 'VIJAYKRSHA.ONLINE';
 const REPO = 'https://github.com/Kvijay199428/Artha';
-const EMAIL = 'contact@dicecodes.com';
-const SITE = 'https://dicecodes.com';
+const EMAIL = 'contact@vijaykrsha.online';
+const SITE = 'https://vijaykrsha.online';
 const AMOUNTS = [0, 101, 251, 501];
 
 const SERVICES = [
@@ -83900,7 +83910,7 @@ export default function SupportView() {
         <div>
           <h3 style={{ margin: '0 0 0.4rem', fontSize: '1.05rem' }}>Free, and it stays free</h3>
           <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: '70ch' }}>
-            Free GST Billing is built and maintained by <b>DiceCodes</b> in India. No ads, no account, no locked features,
+            ARTHA is built and maintained by <b>VIJAYKRSHA.ONLINE</b> in India. No ads, no account, no locked features,
             and your invoices never leave this computer. If it saves you time every month, you can help keep the
             fixes and new features coming.
           </p>
@@ -83937,7 +83947,7 @@ export default function SupportView() {
             {businessName && (
               <label style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', marginTop: '0.35rem', cursor: 'pointer' }}>
                 <input type="checkbox" checked={withName} onChange={(e) => setWithName(e.target.checked)} />
-                Include my business name, so DiceCodes can thank you
+                Include my business name, so VIJAYKRSHA.ONLINE can thank you
               </label>
             )}
           </div>
@@ -83995,7 +84005,7 @@ export default function SupportView() {
       )}
 
       <div className="glass-panel" style={card}>
-        <h3 style={{ margin: '0 0 0.25rem', fontSize: '1rem' }}>Work with DiceCodes</h3>
+        <h3 style={{ margin: '0 0 0.25rem', fontSize: '1rem' }}>Work with VIJAYKRSHA.ONLINE</h3>
         <p style={{ margin: '0 0 1rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>The team behind this app builds software for businesses too.</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem', marginBottom: '1.1rem' }}>
           {SERVICES.map((w) => (
@@ -84012,7 +84022,7 @@ export default function SupportView() {
           <a className="btn btn-primary" href={`mailto:${EMAIL}?subject=${encodeURIComponent('Project enquiry (from Free GST Billing)')}`}>
             <Mail size={16} /> Email {EMAIL}
           </a>
-          <a className="btn btn-secondary" href={SITE} target="_blank" rel="noopener noreferrer"><Globe size={16} /> dicecodes.com</a>
+          <a className="btn btn-secondary" href={SITE} target="_blank" rel="noopener noreferrer"><Globe size={16} /> vijaykrsha.online</a>
         </div>
       </div>
     </div>
@@ -88457,15 +88467,15 @@ html:not([data-theme="dark"]) .mobile-topbar-btn { background: rgba(15, 23, 42, 
 
     <!-- Primary SEO -->
     <title>ARTHA — Accounting &amp; Billing Software</title>
-    <meta name="description" content="Free GST Billing Software v1.4.2 — open-source GST invoice generator with GSTR-1, GSTR-3B, GSTR-2B reconciliation, TDS / TCS reports (Form 26Q, 27EQ), e-Way Bill JSON, multi-currency for 22 countries (USD, EUR, GBP, AED, AUD, SGD), per-line custom units, rich-text Terms with 13 India business presets, granular backup with Google Drive option, and a searchable in-app user guide. 100% offline, private, free forever. By DiceCodes." />
-    <meta name="keywords" content="GST invoice generator, free billing software India, free GST software, GST billing app, offline invoice maker, tax invoice generator, proforma invoice, bill of supply, credit note, delivery challan, e-way bill generator, CGST SGST IGST calculator, GSTR-1 filing, GSTR-1 JSON export, GSTR-3B filing, GSTR-3B JSON export, GSTR-2A reconciliation, GSTR-2B reconciliation, GSTR-2B JSON import, ITC reconciliation tool, GST return software, HSN code invoice, HSN summary GSTR-1, UQC unit code, SAC code service, TDS on invoice, TCS on invoice, Section 194Q, Section 194C, Section 194J, Section 206C, Form 26Q TDS, Form 27EQ TCS, TDS receivable report, TCS collected report, small business billing, freelancer invoice, export invoice India, LUT export invoice, SEZ invoice IGST, place of supply override, multi currency invoice, invoice in USD India, invoice in AED India, foreign client invoice India, country aware tax label, VAT invoice UAE, MwSt invoice Germany, TVA invoice France, SST invoice Malaysia, PPN invoice Indonesia, open source billing software, billing software free download, GST bill maker, invoice generator PDF, free invoice software, FreeGSTBill, DiceCodes, Zoho alternative free, Tally alternative free, Vyapar alternative, myBillBook alternative, ClearTax GST alternative, Marg ERP alternative, Busy alternative, free GST billing software download, GST invoice app offline, billing for consultants, billing for designers, billing for developers, invoice for photographers, billing for exporters, billing for doctors, billing for retailers, billing for restaurants, billing for shopkeepers, UPI QR invoice, payment tracking software, expense tracker GST, profit loss report, recurring invoice software, receipt voucher generator, free accounting software India, multi business GSTIN switcher, multi profile billing software, custom unit invoice, kg ltr mtr custom unit, rich text terms conditions, India business invoice templates, freelancer terms India, retail shop terms India, restaurant terms India, granular backup software, Google Drive invoice backup, JSON backup billing, dark mode invoice software, searchable user guide PDF, PWA invoicing app, install as desktop app, no admin install, atomic invoice number, GST compliance audit, e invoicing IRN ready, e-invoice JSON IRP, NIC e-way bill, atomic counter race free, place of supply IGST" />
-    <meta name="author" content="DiceCodes" />
+    <meta name="description" content="Free GST Billing Software v1.4.2 — open-source GST invoice generator with GSTR-1, GSTR-3B, GSTR-2B reconciliation, TDS / TCS reports (Form 26Q, 27EQ), e-Way Bill JSON, multi-currency for 22 countries (USD, EUR, GBP, AED, AUD, SGD), per-line custom units, rich-text Terms with 13 India business presets, granular backup with Google Drive option, and a searchable in-app user guide. 100% offline, private, free forever. By VIJAYKRSHA.ONLINE." />
+    <meta name="keywords" content="GST invoice generator, free billing software India, free GST software, GST billing app, offline invoice maker, tax invoice generator, proforma invoice, bill of supply, credit note, delivery challan, e-way bill generator, CGST SGST IGST calculator, GSTR-1 filing, GSTR-1 JSON export, GSTR-3B filing, GSTR-3B JSON export, GSTR-2A reconciliation, GSTR-2B reconciliation, GSTR-2B JSON import, ITC reconciliation tool, GST return software, HSN code invoice, HSN summary GSTR-1, UQC unit code, SAC code service, TDS on invoice, TCS on invoice, Section 194Q, Section 194C, Section 194J, Section 206C, Form 26Q TDS, Form 27EQ TCS, TDS receivable report, TCS collected report, small business billing, freelancer invoice, export invoice India, LUT export invoice, SEZ invoice IGST, place of supply override, multi currency invoice, invoice in USD India, invoice in AED India, foreign client invoice India, country aware tax label, VAT invoice UAE, MwSt invoice Germany, TVA invoice France, SST invoice Malaysia, PPN invoice Indonesia, open source billing software, billing software free download, GST bill maker, invoice generator PDF, free invoice software, FreeGSTBill, VIJAYKRSHA.ONLINE, ARTHA, Zoho alternative free, Tally alternative free, Vyapar alternative, myBillBook alternative, ClearTax GST alternative, Marg ERP alternative, Busy alternative, free GST billing software download, GST invoice app offline, billing for consultants, billing for designers, billing for developers, invoice for photographers, billing for exporters, billing for doctors, billing for retailers, billing for restaurants, billing for shopkeepers, UPI QR invoice, payment tracking software, expense tracker GST, profit loss report, recurring invoice software, receipt voucher generator, free accounting software India, multi business GSTIN switcher, multi profile billing software, custom unit invoice, kg ltr mtr custom unit, rich text terms conditions, India business invoice templates, freelancer terms India, retail shop terms India, restaurant terms India, granular backup software, Google Drive invoice backup, JSON backup billing, dark mode invoice software, searchable user guide PDF, PWA invoicing app, install as desktop app, no admin install, atomic invoice number, GST compliance audit, e invoicing IRN ready, e-invoice JSON IRP, NIC e-way bill, atomic counter race free, place of supply IGST" />
+    <meta name="author" content="VIJAYKRSHA.ONLINE" />
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://github.com/Kvijay199428/Artha" />
 
     <!-- Open Graph / Social -->
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="ARTHA Accounting Software by DiceCodes" />
+    <meta property="og:site_name" content="ARTHA Accounting Software by VIJAYKRSHA.ONLINE" />
     <meta property="og:title" content="Free GST Billing Software v1.4.2 — Open-Source GST Invoice Generator + GSTR-2B Reconciliation + TDS/TCS Reports + Multi-Currency" />
     <meta property="og:description" content="Open-source billing software for Indian businesses. GSTR-1 / GSTR-3B JSON exports, GSTR-2B reconciliation, e-Way Bill, TDS/TCS reports for Form 26Q/27EQ, multi-currency invoicing for 22 countries, custom units, rich Terms with 13 India presets, granular backup. Offline-first, no signup, free forever." />
     <meta property="og:image" content="/og-preview.png" />
@@ -88517,8 +88527,8 @@ html:not([data-theme="dark"]) .mobile-topbar-btn { background: rgba(15, 23, 42, 
       "description": "Free, open-source GST invoice generator and billing software for India. Tax Invoice, Proforma, Credit Note, Bill of Supply, Delivery Challan, E-Way Bill. GSTR-1/3B reports, expense tracker, profit & loss. Multi-currency (USD, EUR, GBP). Offline, no signup. Alternative to Zoho, Tally, Vyapar.",
       "author": {
         "@type": "Organization",
-        "name": "DiceCodes",
-        "email": "Contact@dicecodes.com"
+        "name": "VIJAYKRSHA.ONLINE",
+        "email": "contact@vijaykrsha.online"
       }
     }
     </script>
@@ -90295,7 +90305,7 @@ export const markUnpaidPatch = (bill) => {
 // The online documentation. Help buttons link straight to the section for
 // their screen, and the sidebar User Guide opens the start (v1.10.75). The
 // build of docs-site checks that every doc="page#section" used in src exists.
-export const DOCS_URL = 'https://dicecodes.com/free-gst-software-documentation/';
+export const DOCS_URL = 'https://vijaykrsha.online/free-gst-software-documentation/';
 export const docsLink = (doc = '') => {
   const [page, section] = String(doc).split('#');
   if (!page || page === 'index') return DOCS_URL + (section ? `#${section}` : '');

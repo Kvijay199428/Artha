@@ -452,4 +452,4 @@ PRs welcome. The project follows
 ## Need help?
 
 - File an issue: <https://github.com/Kvijay199428/Artha/issues>
-- Email DiceCodes: contact@dicecodes.com
+- Email VIJAYKRSHA.ONLINE: contact@vijaykrsha.online

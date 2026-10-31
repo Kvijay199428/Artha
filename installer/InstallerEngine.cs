@@ -219,7 +219,7 @@ pause
             {
                 key.SetValue("DisplayName", "ARTHA Accounting Software");
                 key.SetValue("DisplayVersion", "1.10.80");
-                key.SetValue("Publisher", "DiceCodes");
+                key.SetValue("Publisher", "VIJAYKRSHA.ONLINE");
                 key.SetValue("DisplayIcon", iconPath);
                 key.SetValue("InstallLocation", targetDir);
                 key.SetValue("UninstallString", $"cmd.exe /c \"{Path.Combine(targetDir, "Uninstall.bat")}\"");

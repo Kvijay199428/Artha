@@ -59,3 +59,4 @@ Stock changes in ARTHA are event-driven:
   "lowStockThreshold": 20.0
 }
 ```
+
