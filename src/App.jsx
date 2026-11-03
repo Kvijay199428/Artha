@@ -37,6 +37,9 @@ const SupportView = lazy(() => import('./components/SupportView'));
 import StarBanner from './components/StarBanner';
 import AppFooter from './components/AppFooter';
 import LockButton from './components/LockButton';
+import CompanySwitcher from './components/CompanySwitcher';
+import { NAV_BTN, NAV_BTN_ACTIVE, NAV_BADGE, NAV_BTN_SUPPORT, NAV_BTN_SUPPORT_ACTIVE } from './components/navStyles';
+import { cn } from './lib/utils';
 import { lockNow } from './utils/appLock';
 import { getPrintSettings } from './utils/printSettings';
 
@@ -389,6 +392,9 @@ function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+    // Tailwind / shadcn read `.dark`, the legacy stylesheet reads
+    // `data-theme`. Keep both in step so either one can theme the app.
+    document.documentElement.classList.toggle('dark', darkMode);
     localStorage.setItem('freegstbill_theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
 
@@ -792,22 +798,18 @@ function App() {
         <button type="button"
           onClick={() => setShowWizard(true)}
           title="Come back to the setup wizard — pick a business type, paper size, and language."
+          className="fixed right-5 z-[9998] flex cursor-pointer items-center gap-[0.4rem] rounded-full border-0 bg-primary px-4 py-[0.6rem] text-[0.85rem] font-semibold text-primary-foreground shadow-[0_6px_20px_rgba(30,64,175,0.35),0_2px_4px_rgba(0,0,0,0.15)]"
           style={{
             // Above the docked Save bar on Settings, so it never covers Save.
-            position: 'fixed', bottom: currentView === 'settings' ? '5.5rem' : '1.25rem', right: '1.25rem', zIndex: 9998,
-            padding: '0.6rem 1rem', borderRadius: 999,
-            background: 'var(--primary)', color: '#fff', border: 'none',
-            fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer',
-            boxShadow: '0 6px 20px rgba(30,64,175,0.35), 0 2px 4px rgba(0,0,0,0.15)',
-            display: 'flex', alignItems: 'center', gap: '0.4rem',
+            bottom: currentView === 'settings' ? '5.5rem' : '1.25rem',
           }}>
           ✨ Finish setup
         </button>
       )}
       {/* v1.10.66 (#59) — phone-only top bar with the menu button. CSS hides it
           on wider screens, where the sidebar is always shown. */}
-      <div className="mobile-topbar">
-        <button type="button" className="mobile-topbar-btn" onClick={() => setNavOpen(true)}
+      <div className="mobile-topbar bg-sidebar text-sidebar-foreground-strong">
+        <button type="button" className="mobile-topbar-btn bg-sidebar-accent text-sidebar-foreground-strong hover:bg-sidebar-accent-hover" onClick={() => setNavOpen(true)}
           aria-label="Open menu" aria-expanded={navOpen}>
           <Menu size={22} />
         </button>
@@ -815,18 +817,28 @@ function App() {
         <span className="mobile-topbar-business">{profile?.businessName || ''}</span>
       </div>
       {navOpen && <div className="sidebar-backdrop" onClick={() => setNavOpen(false)} aria-hidden="true" />}
-      <div className={`sidebar${navOpen ? ' sidebar-open' : ''}`} onClick={closeNavAfterPick}>
+      <div
+        className={cn(
+          'sidebar bg-sidebar text-sidebar-foreground border-r border-sidebar-border',
+          navOpen && 'sidebar-open',
+        )}
+        onClick={closeNavAfterPick}
+      >
         <div className="sidebar-brand">
-          <div className="sidebar-logo">
+          <div className="sidebar-logo text-white">
             <FileText size={22} />
           </div>
           <div>
-            <h2 className="sidebar-title">ARTHA</h2>
-            <p className="sidebar-subtitle">by VIJAYKRSHA.ONLINE</p>
+            <h2 className="sidebar-title text-sidebar-foreground-strong">ARTHA</h2>
+            <p className="sidebar-subtitle text-sidebar-muted">by VIJAYKRSHA.ONLINE</p>
           </div>
           {/* Auto-hide as a ☰ button (was a text checkbox): pressed = the menu
               shrinks to icons and opens when pointed at. */}
-          <button type="button" className={`sidebar-autohide-toggle${sidebarAutoHide ? ' on' : ''}`}
+          <button type="button"
+            className={cn(
+              'sidebar-autohide-toggle text-sidebar-muted hover:bg-sidebar-accent-hover hover:text-sidebar-foreground-strong',
+              sidebarAutoHide && 'on border-primary/45 bg-primary/15 text-primary hover:text-primary',
+            )}
             aria-pressed={sidebarAutoHide} aria-label="Auto-hide menu"
             title={sidebarAutoHide ? 'Keep this menu open' : 'Auto-hide this menu: icons only, it opens when you point at it'}
             onClick={(e) => { e.stopPropagation(); toggleSidebarAutoHide(!sidebarAutoHide); }}>
@@ -837,7 +849,7 @@ function App() {
         <div className="profile-switcher" ref={profileMenuRef} style={{ position: 'relative' }}>
           <div className="profile-switcher-row">
             <button
-              className="profile-switcher-btn"
+              className="profile-switcher-btn border border-sidebar-border bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent-hover"
               onClick={() => allProfiles.length > 1 && setShowProfileMenu(v => !v)}
               title={allProfiles.length > 1 ? 'Switch business profile' : profile?.businessName || 'My Business'}
               style={{ cursor: allProfiles.length > 1 ? 'pointer' : 'default' }}
@@ -847,7 +859,7 @@ function App() {
               {allProfiles.length > 1 && <ChevronDown size={13} style={{ marginLeft: 'auto', opacity: 0.6 }} />}
             </button>
             <button
-              className="profile-switcher-edit"
+              className="profile-switcher-edit border border-sidebar-border bg-sidebar-accent text-sidebar-muted hover:bg-sidebar-accent-hover hover:text-primary"
               onClick={() => { setShowProfileMenu(false); setCurrentView('settings'); }}
               title="Edit business profile"
             >
@@ -855,18 +867,23 @@ function App() {
             </button>
           </div>
           {showProfileMenu && (
-            <div className="profile-switcher-menu">
+            <div className="profile-switcher-menu border border-border bg-popover text-popover-foreground">
               {allProfiles.map(bp => (
                 <button
                   key={bp.id || bp.businessName}
-                  className={`profile-switcher-item${bp.businessName?.trim().toLowerCase() === profile?.businessName?.trim().toLowerCase() ? ' active' : ''}`}
+                  className={cn(
+                    'profile-switcher-item hover:bg-accent',
+                    bp.businessName?.trim().toLowerCase() === profile?.businessName?.trim().toLowerCase()
+                      ? 'active font-semibold text-primary'
+                      : 'text-popover-foreground',
+                  )}
                   onClick={() => handleSwitchProfile(bp)}
                 >
                   {bp.businessName}
                 </button>
               ))}
               <button
-                className="profile-switcher-item profile-switcher-manage"
+                className="profile-switcher-item profile-switcher-manage border-t border-border text-muted-foreground hover:bg-accent"
                 onClick={() => { setShowProfileMenu(false); setCurrentView('settings'); }}
               >
                 Manage profiles...
@@ -879,10 +896,10 @@ function App() {
           {navItems.map(item => (
             <button
               key={item.id}
-              className={`nav-btn ${currentView === item.id ? 'nav-btn-active' : ''}`}
+              className={cn(NAV_BTN, currentView === item.id && NAV_BTN_ACTIVE)}
               onClick={item.onClick || (() => setCurrentView(item.id))}
             >
-              <item.icon size={18} /> {item.label}
+              <item.icon size={18} /> <span>{item.label}</span>
             </button>
           ))}
           <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
@@ -891,88 +908,71 @@ function App() {
                 releases re-show the banner. Click to view notes + update. */}
             {updateBannerVisible && (
               <button
-                className="nav-btn"
+                className={cn(NAV_BTN, 'relative border-info-border bg-info font-semibold text-info-foreground hover:bg-info/80')}
                 onClick={() => setShowUpdateModal(true)}
                 title={`v${updateInfo.latest} is available`}
-                style={{
-                  background: 'var(--info-bg)',
-                  borderColor: 'var(--info-border)',
-                  color: 'var(--info-text)',
-                  fontWeight: 600,
-                  position: 'relative',
-                }}
               >
                 <Download size={18} />
                 <span style={{ flex: 1, textAlign: 'left' }}>
                   Update to v{updateInfo.latest}
                 </span>
-                <span style={{
-                  width: 8, height: 8, borderRadius: '50%',
-                  background: '#f59e0b', boxShadow: '0 0 0 3px rgba(245,158,11,0.25)',
-                  flexShrink: 0,
-                }} />
+                <span className="h-2 w-2 shrink-0 rounded-full bg-amber-500 shadow-[0_0_0_3px_rgba(245,158,11,0.25)]" />
               </button>
             )}
             {/* Notification bell — opens a popover listing overdue / due-soon
                 invoices, GST filing deadlines, and low-stock items. Each row
                 is a single click away from the page that fixes it. */}
             <button
-              className="nav-btn"
+              className={cn(NAV_BTN, 'relative')}
               onClick={() => setShowNotifs(s => !s)}
               title="Notifications"
-              style={{ position: 'relative' }}
             >
               <Bell size={18} />
-              Notifications
+              <span>Notifications</span>
               {notifTotal > 0 && (
-                <span className="nav-badge" style={{
-                  position: 'absolute', top: '8px', right: '12px',
-                  minWidth: 18, height: 18, padding: '0 5px', borderRadius: '9px',
-                  background: 'var(--danger)', color: '#fff',
-                  fontSize: '0.65rem', fontWeight: 700,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>{notifTotal > 99 ? '99+' : notifTotal}</span>
+                <span className={NAV_BADGE}>{notifTotal > 99 ? '99+' : notifTotal}</span>
               )}
             </button>
+            {/* Multi-company: which company is open, and Logout / Switch. */}
+            <CompanySwitcher />
             {/* v1.10.80 (#98) - only when a PIN is set. */}
-            <LockButton className="nav-btn" label="Lock app" />
+            <LockButton className={NAV_BTN} label="Lock app" />
             <button
-              className="nav-btn"
+              className={NAV_BTN}
               onClick={() => setDarkMode(!darkMode)}
               title={darkMode ? 'Light Mode' : 'Dark Mode'}
             >
               {darkMode ? <Sun size={18} /> : <Moon size={18} />}
-              {darkMode ? 'Light Mode' : 'Dark Mode'}
+              <span>{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
             </button>
             <button
-              className={`nav-btn nav-btn-support${currentView === 'support' ? ' nav-btn-support-active' : ''}`}
+              className={currentView === 'support' ? NAV_BTN_SUPPORT_ACTIVE : NAV_BTN_SUPPORT}
               onClick={() => setCurrentView('support')}
               title="Who makes this app, and how to help"
             >
-              <Heart size={18} /> Support &amp; About
+              <Heart size={18} /> <span>Support &amp; About</span>
             </button>
             <button
-              className={`nav-btn ${currentView === 'controlpanel' ? 'nav-btn-active' : ''}`}
+              className={cn(NAV_BTN, currentView === 'controlpanel' && NAV_BTN_ACTIVE)}
               onClick={() => setCurrentView('controlpanel')}
               title="Update, backup, restore, move to another PC"
             >
-              <HardDrive size={18} /> Control Panel
+              <HardDrive size={18} /> <span>Control Panel</span>
             </button>
             <button
-              className={`nav-btn ${currentView === 'settings' ? 'nav-btn-active' : ''}`}
+              className={cn(NAV_BTN, currentView === 'settings' && NAV_BTN_ACTIVE)}
               onClick={() => setCurrentView('settings')}
               style={updateBannerVisible ? { position: 'relative' } : undefined}
             >
-              <Settings size={18} /> Settings
+              <Settings size={18} /> <span>Settings</span>
               {updateBannerVisible && (
-                <span className="nav-badge" style={{
-                  position: 'absolute', top: '8px', right: '12px',
-                  width: 8, height: 8, borderRadius: '50%',
-                  background: '#f59e0b',
-                }} title="Update available" />
+                <span
+                  className="absolute right-3 top-2 h-2 w-2 rounded-full bg-amber-500"
+                  title="Update available"
+                />
               )}
             </button>
-            <div className={`server-status server-status-${serverStatus}`}>
+            <div className={cn('server-status', `server-status-${serverStatus}`, 'bg-sidebar-accent')}>
               <span className="server-status-dot" />
               {serverStatus === 'online' ? 'App Ready' : serverStatus === 'offline' ? 'App Not Running' : 'Connecting...'}
             </div>

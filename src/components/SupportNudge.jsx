@@ -5,10 +5,15 @@
 // tomorrow, "Hide for 30 days" for a month. Never a popup, never blocks work,
 // never printed on an invoice. Per browser (localStorage), which is fine for a
 // reminder: losing it only means one more card.
+//
+// Ported to Tailwind: the progress track read `--border-color` with a #e5e7eb
+// fallback, so on dark it painted a light grey bar. Track and fill are tokens
+// now.
 import { useState } from 'react';
 import { Heart } from 'lucide-react';
 import useSupporters from './useSupporters';
 import { shouldShowSupportNudge, localDay, SNOOZE_DAYS } from '../utils/supporters';
+import { Button } from '@/components/ui/button';
 
 const KEY = 'freegstbill_supportNudge';
 
@@ -34,33 +39,49 @@ export default function SupportNudge({ invoiceCount, onOpen }) {
   const line = LINES[Math.floor(now.getTime() / 86400000) % LINES.length];
   const goal = tracker?.goal;
   return (
-    <div className="glass-panel" role="note" aria-label="Support Free GST Billing"
-      style={{ padding: '0.9rem 1.25rem', marginBottom: '1.25rem', display: 'flex', gap: '0.9rem', alignItems: 'center', flexWrap: 'wrap' }}>
-      <Heart size={22} style={{ color: '#e11d48', flexShrink: 0 }} />
-      <div style={{ flex: '1 1 300px', minWidth: 0 }}>
-        <div style={{ fontWeight: 700 }}>{invoiceCount} invoices made with Free GST Billing</div>
-        <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{line}</div>
+    <div
+      className="glass-panel mb-5 flex flex-wrap items-center gap-[0.9rem] rounded-xl border border-border bg-card px-5 py-[0.9rem] text-card-foreground shadow-sm"
+      role="note"
+      aria-label="Support Free GST Billing"
+    >
+      <Heart size={22} className="shrink-0 text-rose-600" />
+      <div className="min-w-0 flex-[1_1_300px]">
+        <div className="font-bold">{invoiceCount} invoices made with Free GST Billing</div>
+        <div className="text-[0.82rem] text-muted-foreground">{line}</div>
         {tracker && tracker.totalReceived > 0 && (
-          <div style={{ fontSize: '0.8rem', marginTop: '0.4rem' }}>
+          <div className="mt-[0.4rem] text-[0.8rem]">
             {goal
               ? <>{inr(tracker.totalReceived)} of {inr(goal.amount)} raised{goal.label ? ` for ${goal.label}` : ''}</>
               : <>{inr(tracker.totalReceived)} received so far{tracker.supporters ? ` from ${tracker.supporters} supporters` : ''}</>}
             {goal && (
-              <div role="progressbar" aria-label="Progress towards the goal" aria-valuemin={0} aria-valuemax={goal.amount}
+              <div
+                role="progressbar"
+                aria-label="Progress towards the goal"
+                aria-valuemin={0}
+                aria-valuemax={goal.amount}
                 aria-valuenow={Math.min(tracker.totalReceived, goal.amount)}
-                style={{ height: 6, maxWidth: 360, marginTop: 4, background: 'var(--border-color, #e5e7eb)', borderRadius: 3, overflow: 'hidden' }}>
-                <div style={{ width: `${Math.min(100, (tracker.totalReceived / goal.amount) * 100)}%`, height: '100%', background: 'var(--primary)' }} />
+                className="mt-1 h-1.5 max-w-[360px] overflow-hidden rounded-full bg-muted"
+              >
+                <div
+                  className="h-full bg-primary"
+                  style={{ width: `${Math.min(100, (tracker.totalReceived / goal.amount) * 100)}%` }}
+                />
               </div>
             )}
           </div>
         )}
       </div>
-      <button type="button" className="btn btn-primary" onClick={() => { hideToday(); onOpen(); }}
-        style={{ fontSize: '0.82rem' }}>Support with UPI</button>
-      <button type="button" className="btn btn-secondary" onClick={hideToday}
-        style={{ fontSize: '0.82rem' }}>Not today</button>
-      <button type="button" onClick={() => save({ ...state, snoozedUntil: now.getTime() + SNOOZE_DAYS * 86400000 })}
-        style={{ background: 'none', border: 0, color: 'var(--text-muted)', cursor: 'pointer', padding: '0.25rem', fontSize: '0.78rem', textDecoration: 'underline' }}>
+      <Button type="button" size="sm" className="text-[0.82rem]" onClick={() => { hideToday(); onOpen(); }}>
+        Support with UPI
+      </Button>
+      <Button type="button" variant="secondary" size="sm" className="text-[0.82rem]" onClick={hideToday}>
+        Not today
+      </Button>
+      <button
+        type="button"
+        onClick={() => save({ ...state, snoozedUntil: now.getTime() + SNOOZE_DAYS * 86400000 })}
+        className="cursor-pointer border-0 bg-transparent p-1 text-[0.78rem] text-muted-foreground underline underline-offset-2 hover:text-foreground"
+      >
         Hide for 30 days
       </button>
     </div>

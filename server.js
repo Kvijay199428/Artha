@@ -14,8 +14,19 @@ import { fileURLToPath } from 'url';
 // v1.10.1 extraction fixed. Same source of truth now.
 import { templateTotals, clientYearToDate, nextCounterValue, startFor, numberSeriesFor, counterKeyFor, formatDocNumber, businessKeyOf, getFinancialYearLabel, INVOICE_TYPES, decodeGstin, getStatesForCountry } from './src/utils.js';
 
+import {
+  DATA_ROOT, COMPANY_DIRS, dataDir, currentCompanyId, currentSessionId, runInCompany, ensureCompanyDirs,
+  listRegistry, getCompany, createCompany, touchCompany, companySizeMB, forEachCompany, migrateLegacyData,
+  createSession, getSession, destroySession, parseCookies, sessionCookie, clearedSessionCookie, SESSION_COOKIE, ID_RE,
+} from './companies.js';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.join(__dirname, 'data');
+// Multi-company: there is no single data folder any more. DATA_ROOT (data/) holds
+// the company registry, the port file and the error log; every company's own
+// files are under data/COMPxxxx/, reached through dataDir() (see companies.js).
+fs.mkdirSync(DATA_ROOT, { recursive: true });
+// An install from before multi-company support is moved into data/COMP0001 once.
+migrateLegacyData();
 
 // Port choice — we deliberately default to a high, unusual number rather than
 // the conventional 3001. The 3000-range is heavily used by every other Node /
@@ -27,7 +38,7 @@ const DATA_DIR = path.join(__dirname, 'data');
 // wins over this default — so a single user who genuinely needs 47371 for
 // something else can edit that file and we'll respect it forever.
 const DEFAULT_PORT = parseInt(process.env.PORT, 10) || 11001;
-const PORT_FILE = path.join(__dirname, 'data', 'port.txt');
+const PORT_FILE = path.join(DATA_ROOT, 'port.txt');
 
 // Read the persisted port (if any) — written once on first successful start
 // and every time we get bumped off our preferred port by EADDRINUSE.
@@ -90,11 +101,123 @@ app.use((req, res, next) => {
 });
 
 // Ensure data directory and sub-directories exist
-const DIRS = ['bills', 'clients', 'templates', 'products', 'expenses', 'recurring', 'receipts', 'profiles', 'purchases'];
-for (const dir of DIRS) {
-  const dirPath = path.join(DATA_DIR, dir);
-  if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true });
-}
+// ========================
+// COMPANIES + LOGIN (multi-company)
+// ========================
+// The browser first picks a company on the "Select Company" page. Logging in
+// to one gives it a session cookie; every other /api route then runs inside
+// that company's folder (data/COMPxxxx), so one company can never see or
+// change another company's files. Registered BEFORE the session check below,
+// so these few routes work without a session.
+const noStore = (res) => res.setHeader('Cache-Control', 'no-store');
+const sessionIdOf = (req) => parseCookies(req.headers.cookie)[SESSION_COOKIE];
+const ensuredCompanies = new Set();
+const ensureOnce = (id) => { if (!ensuredCompanies.has(id)) { ensureCompanyDirs(id); ensuredCompanies.add(id); } };
+
+// The PIN lock of a company, read without applying a RESET-PIN file (list only).
+const storedLockOf = (companyId) => runInCompany(companyId, () => {
+  const meta = readJSON(META_PATH(), {});
+  return meta[LOCK_KEY] || null;
+});
+
+// GET /api/companies -> every company, for the Select Company page.
+app.get('/api/companies', (req, res) => {
+  noStore(res);
+  const companies = listRegistry().map((c) => {
+    const lock = storedLockOf(c.id);
+    return {
+      id: c.id, name: c.name, createdAt: c.createdAt, lastOpenedAt: c.lastOpenedAt,
+      sizeMB: companySizeMB(c.id), locked: !!lock, pinLength: lock?.length || 0,
+    };
+  });
+  res.json({ dataDirectory: DATA_ROOT, companies });
+});
+
+// POST /api/companies { name } -> new company COMP000N with its own folder.
+// The new company is opened straight away (the setup wizard then fills in its
+// first settings).
+app.post('/api/companies', (req, res) => {
+  noStore(res);
+  try {
+    const company = createCompany(req.body?.name);
+    ensuredCompanies.add(company.id);
+    destroySession(sessionIdOf(req));
+    const token = createSession(company.id);
+    touchCompany(company.id);
+    res.setHeader('Set-Cookie', sessionCookie(token));
+    res.status(201).json({ ok: true, company: { id: company.id, name: company.name } });
+  } catch (err) {
+    if (err.code === 'name-required') return res.status(400).json({ error: 'Company name is required', code: 'name-required' });
+    return errRes(res, 500, 'server-error', err);
+  }
+});
+
+// POST /api/auth/login { companyId, pin? } -> opens that company for this browser.
+// A company with a PIN lock (Settings > App lock) asks for the PIN here:
+// 401 { error: 'pin-required', length } first, then the PIN decides.
+app.post('/api/auth/login', (req, res) => {
+  noStore(res);
+  const { companyId, pin } = req.body || {};
+  const company = getCompany(companyId);
+  if (!company) return errRes(res, 404, 'not-found');
+  let denied = null;
+  const allowed = runInCompany(company.id, () => {
+    ensureOnce(company.id);
+    const lock = currentLock();
+    if (!lock) return true;
+    if (pin === undefined || pin === null || pin === '') {
+      denied = { status: 401, body: { ok: false, error: 'pin-required', length: lock.length || 6 } };
+      return false;
+    }
+    return checkPin(res, lock, pin, company.id); // answers res itself when wrong
+  });
+  if (denied) return res.status(denied.status).json(denied.body);
+  if (!allowed) return undefined;
+  destroySession(sessionIdOf(req)); // one company per browser at a time
+  const token = createSession(company.id);
+  touchCompany(company.id);
+  res.setHeader('Set-Cookie', sessionCookie(token));
+  return res.json({ ok: true, company: { id: company.id, name: company.name } });
+});
+
+// POST /api/auth/logout -> closes the company; the browser goes back to the list.
+app.post('/api/auth/logout', (req, res) => {
+  noStore(res);
+  destroySession(sessionIdOf(req));
+  res.setHeader('Set-Cookie', clearedSessionCookie());
+  res.json({ ok: true });
+});
+
+// GET /api/auth/session -> who is logged in (the page asks this when it opens).
+app.get('/api/auth/session', (req, res) => {
+  noStore(res);
+  const session = getSession(sessionIdOf(req));
+  const company = session ? getCompany(session.companyId) : null;
+  if (!company) return res.json({ authenticated: false });
+  return res.json({ authenticated: true, company: { id: company.id, name: company.name } });
+});
+
+// Everything else under /api needs a company. Routes that are about the app
+// itself (not a company's books) stay open: health, version, update check.
+const OPEN_API = new Set(['/api/health', '/api/version', '/api/check-update']);
+app.use('/api', (req, res, next) => {
+  const full = `/api${req.path}`;
+  if (OPEN_API.has(full)) return next();
+  const sid = sessionIdOf(req);
+  const session = getSession(sid);
+  const company = session ? getCompany(session.companyId) : null;
+  if (!company) {
+    // The page watches for this header and shows the Select Company screen.
+    res.setHeader('X-Artha-Auth', 'required');
+    return res.status(401).json({ error: 'Select a company to continue', code: 'no-session' });
+  }
+  ensureOnce(company.id);
+  return runInCompany(company.id, () => next(), { sessionId: sid });
+});
+
+const DIRS = COMPANY_DIRS;
+// Each company's folders are created when the company is created / opened
+// (ensureCompanyDirs), not here.
 
 // Helper: safe filename from ID (replace slashes, etc.)
 function safeFileName(id) {
@@ -167,7 +290,7 @@ function writeFileAtomic(filePath, contents) {
 
 // Errors log path — declared here so errRes() can find it. The actual
 // file is created lazily; ERRORS_LOG constant below still points here.
-const ERRORS_LOG = path.join(DATA_DIR, 'errors.log');
+const ERRORS_LOG = path.join(DATA_ROOT, 'errors.log');
 
 // In-memory cache for directory reads — invalidated on write/delete.
 // v1.10.6 — audit L12: added a 5s TTL. Users are documented as being
@@ -176,13 +299,14 @@ const ERRORS_LOG = path.join(DATA_DIR, 'errors.log');
 // cached entry older than 5 seconds is treated as stale and re-read.
 const dirCache = {};
 const DIR_CACHE_TTL_MS = 5000;
-function invalidateCache(dir) { delete dirCache[dir]; }
+// Keyed by absolute folder, so two companies never share a cached listing.
+function invalidateCache(dir) { delete dirCache[path.join(dataDir(), dir)]; }
 
 // Helper: read all JSON files from a directory (cached, 5s TTL)
 function readAllFromDir(dir) {
-  const entry = dirCache[dir];
+  const dirPath = path.join(dataDir(), dir);
+  const entry = dirCache[dirPath];
   if (entry && (Date.now() - entry.at) < DIR_CACHE_TTL_MS) return entry.value;
-  const dirPath = path.join(DATA_DIR, dir);
   if (!fs.existsSync(dirPath)) return [];
   const results = fs.readdirSync(dirPath)
     .filter(f => f.endsWith('.json'))
@@ -191,7 +315,7 @@ function readAllFromDir(dir) {
       catch { return null; }
     })
     .filter(Boolean);
-  dirCache[dir] = { at: Date.now(), value: results };
+  dirCache[dirPath] = { at: Date.now(), value: results };
   return results;
 }
 
@@ -209,15 +333,13 @@ function readJSON(filePath, fallback = null) {
 function writeJSON(filePath, data) {
   writeFileAtomic(filePath, JSON.stringify(data, null, 2));
   // Invalidate cache for the parent directory
-  const parentDir = path.basename(path.dirname(filePath));
-  if (DIRS.includes(parentDir)) invalidateCache(parentDir);
+  delete dirCache[path.dirname(filePath)];
 }
 
 // Helper: delete file (with cache invalidation)
 function deleteFile(filePath) {
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-  const parentDir = path.basename(path.dirname(filePath));
-  if (DIRS.includes(parentDir)) invalidateCache(parentDir);
+  delete dirCache[path.dirname(filePath)];
 }
 
 // ========================
@@ -232,7 +354,7 @@ app.get('/api/bills', (req, res) => {
 app.post('/api/bills', (req, res) => {
   const bill = req.body;
   if (!bill || !bill.id) return res.status(400).json({ error: 'Bill must have an id' });
-  const filePath = path.join(DATA_DIR, 'bills', safeFileName(bill.id) + '.json');
+  const filePath = path.join(dataDir(), 'bills', safeFileName(bill.id) + '.json');
 
   // Dupe-check: the invoice-number field is free-text on the client, so a
   // typo (INV/2026/0007 typed again for a fresh bill) would silently
@@ -257,7 +379,7 @@ app.post('/api/bills', (req, res) => {
 // by passing `?force=1` (they accept the ledger inconsistency).
 function findCreditDependents(billId) {
   try {
-    const billsDir = path.join(DATA_DIR, 'bills');
+    const billsDir = path.join(dataDir(), 'bills');
     const dependents = [];
     for (const f of fs.readdirSync(billsDir).filter(n => n.endsWith('.json'))) {
       let other;
@@ -284,7 +406,7 @@ app.delete('/api/bills/:id', (req, res) => {
   // users can restore within 30 days. Query ?permanent=1 skips trash and
   // deletes forever (used by the Trash bin UI's "Delete forever" action).
   const fname = safeFileName(req.params.id) + '.json';
-  const filePath = path.join(DATA_DIR, 'bills', fname);
+  const filePath = path.join(dataDir(), 'bills', fname);
   if (!fs.existsSync(filePath)) return res.json({ success: true });
 
   // v1.10.31 — Data-F9.1: client-credit dependency check. Blocks silent
@@ -307,7 +429,7 @@ app.delete('/api/bills/:id', (req, res) => {
     return res.json({ success: true, permanent: true });
   }
   try {
-    const trashDir = path.join(DATA_DIR, 'trash');
+    const trashDir = path.join(dataDir(), 'trash');
     if (!fs.existsSync(trashDir)) fs.mkdirSync(trashDir, { recursive: true });
     fs.renameSync(filePath, path.join(trashDir, fname));
     // The list must not serve the moved bill from cache for 5 more seconds.
@@ -321,7 +443,7 @@ app.delete('/api/bills/:id', (req, res) => {
 // ========================
 // PROFILE
 // ========================
-const PROFILE_PATH = path.join(DATA_DIR, 'profile.json');
+const PROFILE_PATH = () => path.join(dataDir(), 'profile.json');
 const DEFAULT_PROFILE = {
   businessName: '', address: '', state: '', gstin: '', pan: '',
   email: '', phone: '', bankName: '', accountNumber: '', ifsc: '',
@@ -329,7 +451,7 @@ const DEFAULT_PROFILE = {
 };
 
 app.get('/api/profile', (req, res) => {
-  res.json(readJSON(PROFILE_PATH, DEFAULT_PROFILE));
+  res.json(readJSON(PROFILE_PATH(), DEFAULT_PROFILE));
 });
 
 function validateProfileOnServer(profile) {
@@ -415,7 +537,7 @@ app.post('/api/profile', (req, res) => {
     if (!result.ok) {
       return res.status(400).json({ error: 'Validation failed', errors: result.errors });
     }
-    writeJSON(PROFILE_PATH, result.profile);
+    writeJSON(PROFILE_PATH(), result.profile);
     res.json({ success: true });
   } catch (err) {
     errRes(res, 500, 'server-error', err);
@@ -434,13 +556,13 @@ app.get('/api/clients', (req, res) => {
 app.post('/api/clients', (req, res) => {
   const client = req.body;
   if (!client.id) client.id = 'cli_' + Date.now();
-  const filePath = path.join(DATA_DIR, 'clients', safeFileName(client.id) + '.json');
+  const filePath = path.join(dataDir(), 'clients', safeFileName(client.id) + '.json');
   writeJSON(filePath, client);
   res.json({ success: true, id: client.id });
 });
 
 app.delete('/api/clients/:id', (req, res) => {
-  const filePath = path.join(DATA_DIR, 'clients', safeFileName(req.params.id) + '.json');
+  const filePath = path.join(dataDir(), 'clients', safeFileName(req.params.id) + '.json');
   deleteFile(filePath);
   res.json({ success: true });
 });
@@ -457,7 +579,7 @@ app.get('/api/templates', (req, res) => {
       name: 'Standard Terms',
       content: '1. Payment is due within 15 days of invoice date unless otherwise agreed in writing.\n2. Interest @ 18% p.a. will be charged on overdue payments beyond the due date.\n3. The scope of work is limited to what is explicitly mentioned in the project proposal/agreement. Any additional requirements will be quoted and billed separately.\n4. All intellectual property and source code will be transferred to the client only upon receipt of full payment.\n5. We shall not be liable for any delays caused by incomplete or late submission of content, credentials, or approvals from the client\'s end.\n6. Any change requests after project approval may attract additional charges and revised timelines.\n7. This invoice is subject to the jurisdiction of courts at the service provider\'s registered location.\n8. E. & O.E.'
     };
-    writeJSON(path.join(DATA_DIR, 'templates', 'default.json'), defaultTpl);
+    writeJSON(path.join(dataDir(), 'templates', 'default.json'), defaultTpl);
     templates = [defaultTpl];
   }
   templates.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
@@ -467,13 +589,13 @@ app.get('/api/templates', (req, res) => {
 app.post('/api/templates', (req, res) => {
   const tpl = req.body;
   if (!tpl.id) tpl.id = 'tpl_' + Date.now();
-  const filePath = path.join(DATA_DIR, 'templates', safeFileName(tpl.id) + '.json');
+  const filePath = path.join(dataDir(), 'templates', safeFileName(tpl.id) + '.json');
   writeJSON(filePath, tpl);
   res.json({ success: true, id: tpl.id });
 });
 
 app.delete('/api/templates/:id', (req, res) => {
-  const filePath = path.join(DATA_DIR, 'templates', safeFileName(req.params.id) + '.json');
+  const filePath = path.join(dataDir(), 'templates', safeFileName(req.params.id) + '.json');
   deleteFile(filePath);
   res.json({ success: true });
 });
@@ -490,13 +612,13 @@ app.get('/api/products', (req, res) => {
 app.post('/api/products', (req, res) => {
   const product = req.body;
   if (!product.id) product.id = 'prod_' + Date.now();
-  const filePath = path.join(DATA_DIR, 'products', safeFileName(product.id) + '.json');
+  const filePath = path.join(dataDir(), 'products', safeFileName(product.id) + '.json');
   writeJSON(filePath, product);
   res.json({ success: true, id: product.id });
 });
 
 app.delete('/api/products/:id', (req, res) => {
-  const filePath = path.join(DATA_DIR, 'products', safeFileName(req.params.id) + '.json');
+  const filePath = path.join(dataDir(), 'products', safeFileName(req.params.id) + '.json');
   deleteFile(filePath);
   res.json({ success: true });
 });
@@ -513,13 +635,13 @@ app.get('/api/expenses', (req, res) => {
 app.post('/api/expenses', (req, res) => {
   const expense = req.body;
   if (!expense.id) expense.id = 'exp_' + Date.now();
-  const filePath = path.join(DATA_DIR, 'expenses', safeFileName(expense.id) + '.json');
+  const filePath = path.join(dataDir(), 'expenses', safeFileName(expense.id) + '.json');
   writeJSON(filePath, expense);
   res.json({ success: true, id: expense.id });
 });
 
 app.delete('/api/expenses/:id', (req, res) => {
-  const filePath = path.join(DATA_DIR, 'expenses', safeFileName(req.params.id) + '.json');
+  const filePath = path.join(dataDir(), 'expenses', safeFileName(req.params.id) + '.json');
   deleteFile(filePath);
   res.json({ success: true });
 });
@@ -536,13 +658,13 @@ app.get('/api/recurring', (req, res) => {
 app.post('/api/recurring', (req, res) => {
   const item = req.body;
   if (!item.id) item.id = 'rec_' + Date.now();
-  const filePath = path.join(DATA_DIR, 'recurring', safeFileName(item.id) + '.json');
+  const filePath = path.join(dataDir(), 'recurring', safeFileName(item.id) + '.json');
   writeJSON(filePath, item);
   res.json({ success: true, id: item.id });
 });
 
 app.delete('/api/recurring/:id', (req, res) => {
-  const filePath = path.join(DATA_DIR, 'recurring', safeFileName(req.params.id) + '.json');
+  const filePath = path.join(dataDir(), 'recurring', safeFileName(req.params.id) + '.json');
   deleteFile(filePath);
   res.json({ success: true });
 });
@@ -559,13 +681,13 @@ app.get('/api/receipts', (req, res) => {
 app.post('/api/receipts', (req, res) => {
   const receipt = req.body;
   if (!receipt.id) receipt.id = 'rcp_' + Date.now();
-  const filePath = path.join(DATA_DIR, 'receipts', safeFileName(receipt.id) + '.json');
+  const filePath = path.join(dataDir(), 'receipts', safeFileName(receipt.id) + '.json');
   writeJSON(filePath, receipt);
   res.json({ success: true, id: receipt.id });
 });
 
 app.delete('/api/receipts/:id', (req, res) => {
-  const filePath = path.join(DATA_DIR, 'receipts', safeFileName(req.params.id) + '.json');
+  const filePath = path.join(dataDir(), 'receipts', safeFileName(req.params.id) + '.json');
   deleteFile(filePath);
   res.json({ success: true });
 });
@@ -582,13 +704,13 @@ app.get('/api/purchases', (req, res) => {
 app.post('/api/purchases', (req, res) => {
   const purchase = req.body;
   if (!purchase.id) purchase.id = 'pur_' + Date.now();
-  const filePath = path.join(DATA_DIR, 'purchases', safeFileName(purchase.id) + '.json');
+  const filePath = path.join(dataDir(), 'purchases', safeFileName(purchase.id) + '.json');
   writeJSON(filePath, purchase);
   res.json({ success: true, id: purchase.id });
 });
 
 app.delete('/api/purchases/:id', (req, res) => {
-  const filePath = path.join(DATA_DIR, 'purchases', safeFileName(req.params.id) + '.json');
+  const filePath = path.join(dataDir(), 'purchases', safeFileName(req.params.id) + '.json');
   deleteFile(filePath);
   res.json({ success: true });
 });
@@ -605,13 +727,13 @@ app.get('/api/profiles', (req, res) => {
 app.post('/api/profiles', (req, res) => {
   const prof = req.body;
   if (!prof.id) prof.id = 'biz_' + Date.now();
-  const filePath = path.join(DATA_DIR, 'profiles', safeFileName(prof.id) + '.json');
+  const filePath = path.join(dataDir(), 'profiles', safeFileName(prof.id) + '.json');
   writeJSON(filePath, prof);
   res.json({ success: true, id: prof.id });
 });
 
 app.delete('/api/profiles/:id', (req, res) => {
-  const filePath = path.join(DATA_DIR, 'profiles', safeFileName(req.params.id) + '.json');
+  const filePath = path.join(dataDir(), 'profiles', safeFileName(req.params.id) + '.json');
   deleteFile(filePath);
   res.json({ success: true });
 });
@@ -619,7 +741,7 @@ app.delete('/api/profiles/:id', (req, res) => {
 // ========================
 // META (counters, etc.)
 // ========================
-const META_PATH = path.join(DATA_DIR, 'meta.json');
+const META_PATH = () => path.join(dataDir(), 'meta.json');
 
 // v1.10.77 (#84) - the PIN lock lives in meta.json too, but only the
 // /api/lock routes below may read or change it.
@@ -629,16 +751,16 @@ const withLock = (meta, lock) => (lock ? { ...withoutLock(meta), [LOCK_KEY]: loc
 
 app.get('/api/meta/:key', (req, res) => {
   if (req.params.key === LOCK_KEY) return errRes(res, 403, 'forbidden');
-  const meta = readJSON(META_PATH, {});
+  const meta = readJSON(META_PATH(), {});
   res.json({ value: meta[req.params.key] ?? null });
 });
 
 app.post('/api/meta/:key', (req, res) => {
   if (req.params.key === LOCK_KEY) return errRes(res, 403, 'forbidden');
   if (!req.body || !('value' in req.body)) return errRes(res, 400, 'bad-request');
-  const meta = readJSON(META_PATH, {});
+  const meta = readJSON(META_PATH(), {});
   meta[req.params.key] = req.body.value;
-  writeJSON(META_PATH, meta);
+  writeJSON(META_PATH(), meta);
   res.json({ success: true });
 });
 
@@ -649,12 +771,12 @@ app.post('/api/meta/:key', (req, res) => {
 // "two saves both reading 5, both writing 6" duplicate-invoice-number bug.
 app.post('/api/meta/:key/increment', (req, res) => {
   if (req.params.key === LOCK_KEY) return errRes(res, 403, 'forbidden');
-  const meta = readJSON(META_PATH, {});
+  const meta = readJSON(META_PATH(), {});
   // v1.10.78 (#93) - a tax invoice sends its start ("Start numbering from");
   // see nextCounterValue. Nothing else jumps.
   const next = nextCounterValue(meta[req.params.key], req.body?.start);
   meta[req.params.key] = next;
-  writeJSON(META_PATH, meta);
+  writeJSON(META_PATH(), meta);
   res.json({ value: next });
 });
 
@@ -666,18 +788,18 @@ app.post('/api/meta/:key/increment', (req, res) => {
 // prefsMirror.js). Own file, not meta.json: Print settings can carry a
 // letterhead and signature image, and meta.json is rewritten on every new
 // invoice number. 25mb for those images; the server answers this PC only.
-const LOCAL_PREFS_PATH = path.join(DATA_DIR, 'local-prefs.json');
+const LOCAL_PREFS_PATH = () => path.join(dataDir(), 'local-prefs.json');
 app.get(LOCAL_PREFS_ROUTE, (req, res) => {
-  res.json({ value: readJSON(LOCAL_PREFS_PATH, {}) });
+  res.json({ value: readJSON(LOCAL_PREFS_PATH(), {}) });
 });
 // { set: { key: string }, remove: [key] } - merged, never replaced wholesale.
 app.post(LOCAL_PREFS_ROUTE, express.json({ limit: '25mb' }), (req, res) => {
   const { set = {}, remove = [] } = req.body || {};
   if (!set || typeof set !== 'object' || Array.isArray(set) || !Array.isArray(remove)) return errRes(res, 400, 'bad-request');
-  const prefs = readJSON(LOCAL_PREFS_PATH, {});
+  const prefs = readJSON(LOCAL_PREFS_PATH(), {});
   for (const [k, v] of Object.entries(set)) if (typeof v === 'string') prefs[k] = v;
   for (const k of remove) delete prefs[String(k)];
-  writeJSON(LOCAL_PREFS_PATH, prefs);
+  writeJSON(LOCAL_PREFS_PATH(), prefs);
   return res.json({ success: true });
 });
 
@@ -700,12 +822,17 @@ const pinMatches = (lock, pin) => {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 };
 // Five wrong PINs in a row -> wait 30 seconds before the next try.
-const pinTries = { wrong: 0, until: 0 };
+// Counted per company, so a wrong PIN on one company never locks another.
+const pinTriesByCompany = new Map();
+const triesFor = (companyId) => {
+  if (!pinTriesByCompany.has(companyId)) pinTriesByCompany.set(companyId, { wrong: 0, until: 0 });
+  return pinTriesByCompany.get(companyId);
+};
 const currentLock = () => {
-  const meta = readJSON(META_PATH, {});
+  const meta = readJSON(META_PATH(), {});
   const reset = RESET_PIN_FILES.filter((f) => fs.existsSync(f));
   if (reset.length) {
-    if (meta[LOCK_KEY]) { delete meta[LOCK_KEY]; writeJSON(META_PATH, meta); }
+    if (meta[LOCK_KEY]) { delete meta[LOCK_KEY]; writeJSON(META_PATH(), meta); }
     for (const f of reset) { try { fs.unlinkSync(f); } catch { /* removed already */ } }
     console.log('[lock] RESET-PIN file found: PIN lock removed');
     return null;
@@ -714,7 +841,8 @@ const currentLock = () => {
 };
 // Checks a PIN; answers the response itself (and returns false) when it is
 // wrong or the user must wait.
-const checkPin = (res, lock, pin) => {
+const checkPin = (res, lock, pin, companyId = currentCompanyId()) => {
+  const pinTries = triesFor(companyId);
   const wait = Math.ceil((pinTries.until - Date.now()) / 1000);
   if (wait > 0) { res.status(429).json({ ok: false, wait }); return false; }
   if (pinMatches(lock, pin)) { pinTries.wrong = 0; return true; }
@@ -742,13 +870,13 @@ app.post('/api/lock/set', (req, res) => {
   if (pin !== null && !PIN_RE.test(String(pin ?? ''))) return errRes(res, 400, 'bad-request');
   const lock = currentLock();
   if (lock && !checkPin(res, lock, currentPin)) return undefined;
-  const meta = readJSON(META_PATH, {});
+  const meta = readJSON(META_PATH(), {});
   if (pin === null) delete meta[LOCK_KEY];
   else {
     const salt = crypto.randomBytes(16).toString('hex');
     meta[LOCK_KEY] = { salt, hash: pinHash(pin, salt), length: String(pin).length };
   }
-  writeJSON(META_PATH, meta);
+  writeJSON(META_PATH(), meta);
   return res.json({ ok: true, enabled: pin !== null });
 });
 
@@ -758,7 +886,7 @@ app.post('/api/lock/set', (req, res) => {
 app.get('/api/export', (req, res) => {
   const data = {
     bills: readAllFromDir('bills'),
-    profile: readJSON(PROFILE_PATH, DEFAULT_PROFILE),
+    profile: readJSON(PROFILE_PATH(), DEFAULT_PROFILE),
     clients: readAllFromDir('clients'),
     termsTemplates: readAllFromDir('templates'),
     products: readAllFromDir('products'),
@@ -768,7 +896,7 @@ app.get('/api/export', (req, res) => {
     profiles: readAllFromDir('profiles'),
     purchases: readAllFromDir('purchases'),
     // v1.10.77 - never the PIN hash: a backup file can travel (email, Drive).
-    meta: withoutLock(readJSON(META_PATH, {})),
+    meta: withoutLock(readJSON(META_PATH(), {})),
     exportedAt: new Date().toISOString(),
   };
   res.json(data);
@@ -803,7 +931,7 @@ app.post('/api/import', (req, res) => {
   // Helper: upsert one entity to a directory, honouring the overwrite flag.
   const upsertOne = (dirName, entity, countKey, skipKey) => {
     if (!entity?.id) return;
-    const p = path.join(DATA_DIR, dirName, safeFileName(entity.id) + '.json');
+    const p = path.join(dataDir(), dirName, safeFileName(entity.id) + '.json');
     if (!overwrite && fs.existsSync(p)) { counts[skipKey]++; return; }
     writeJSON(p, entity);
     counts[countKey]++;
@@ -811,8 +939,8 @@ app.post('/api/import', (req, res) => {
 
   // Profile is a singleton (single file); overwrite-gated same way.
   if (data.profile) {
-    if (overwrite || !fs.existsSync(PROFILE_PATH)) {
-      writeJSON(PROFILE_PATH, data.profile);
+    if (overwrite || !fs.existsSync(PROFILE_PATH())) {
+      writeJSON(PROFILE_PATH(), data.profile);
     }
   }
   (data.bills || []).forEach(b => upsertOne('bills', b, 'billCount', 'billSkipped'));
@@ -828,20 +956,20 @@ app.post('/api/import', (req, res) => {
   // meta.json — same gating. Previously always overwrote → counters could
   // regress below existing bill numbers → collision loop on next save.
   if (data.meta) {
-    if (overwrite || !fs.existsSync(META_PATH)) {
+    if (overwrite || !fs.existsSync(META_PATH())) {
       // The PIN on this PC stays as it is: a backup never sets, removes or
       // brings back an old PIN.
-      writeJSON(META_PATH, withLock(withoutLock(data.meta), readJSON(META_PATH, {})[LOCK_KEY]));
+      writeJSON(META_PATH(), withLock(withoutLock(data.meta), readJSON(META_PATH(), {})[LOCK_KEY]));
     } else {
       // v1.10.79 (#95) - a merge keeps what is here and adds the backup's own
       // number series and the higher of each counter, so no number is reused.
-      const meta = readJSON(META_PATH, {});
+      const meta = readJSON(META_PATH(), {});
       const series = { ...(data.meta.invoiceNumberSeries || {}), ...(meta.invoiceNumberSeries || {}) };
       if (Object.keys(series).length) meta.invoiceNumberSeries = series;
       for (const [k, v] of Object.entries(data.meta)) {
         if (k.startsWith('counter_') && Number(v) > (Number(meta[k]) || 0)) meta[k] = Number(v);
       }
-      writeJSON(META_PATH, meta);
+      writeJSON(META_PATH(), meta);
     }
   }
 
@@ -850,13 +978,13 @@ app.post('/api/import', (req, res) => {
   // suffix from its invoice number. Bump each `counter_<PREFIX>` in meta
   // to at least max(existing) so the next reservation doesn't collide.
   try {
-    const meta = readJSON(META_PATH, {});
-    const billFiles = fs.readdirSync(path.join(DATA_DIR, 'bills')).filter(f => f.endsWith('.json'));
+    const meta = readJSON(META_PATH(), {});
+    const billFiles = fs.readdirSync(path.join(dataDir(), 'bills')).filter(f => f.endsWith('.json'));
     const maxByPrefix = {};
     const maxByKey = {};
     for (const f of billFiles) {
       let bill;
-      try { bill = readJSON(path.join(DATA_DIR, 'bills', f), null); } catch { continue; }
+      try { bill = readJSON(path.join(dataDir(), 'bills', f), null); } catch { continue; }
       const num = String(bill?.invoiceNumber || bill?.id || '');
       // Extract prefix + last numeric suffix (e.g. INV/2026-27/0007 → prefix INV, suffix 7)
       const m = num.match(/^([A-Z]+)[\W_].*?(\d+)\s*$/i);
@@ -890,7 +1018,7 @@ app.post('/api/import', (req, res) => {
         metaChanged = true;
       }
     }
-    if (metaChanged) writeJSON(META_PATH, meta);
+    if (metaChanged) writeJSON(META_PATH(), meta);
   } catch (err) {
     console.error('Post-import counter reconciliation failed:', err);
   }
@@ -901,8 +1029,8 @@ app.post('/api/import', (req, res) => {
 // ========================
 // Save PDF to local folder
 // ========================
-const INVOICES_DIR = path.join(__dirname, 'Saved Invoices');
-if (!fs.existsSync(INVOICES_DIR)) fs.mkdirSync(INVOICES_DIR, { recursive: true });
+// Per company: data/COMPxxxx/Saved Invoices (created on first save).
+const INVOICES_DIR = () => path.join(dataDir(), 'Saved Invoices');
 
 app.post('/api/save-pdf', express.raw({ type: 'application/pdf', limit: '20mb' }), (req, res) => {
   try {
@@ -918,16 +1046,16 @@ app.post('/api/save-pdf', express.raw({ type: 'application/pdf', limit: '20mb' }
     let safeName = safePathSegment(rawName, `invoice-${Date.now()}.pdf`);
     if (!safeName.toLowerCase().endsWith('.pdf')) safeName += '.pdf';
 
-    const folderPath = path.join(INVOICES_DIR, safeClient, safeMonth);
+    const folderPath = path.join(INVOICES_DIR(), safeClient, safeMonth);
     const filePath = path.join(folderPath, safeName);
-    if (!isPathInside(filePath, INVOICES_DIR)) return errRes(res, 400, 'invalid-path');
+    if (!isPathInside(filePath, INVOICES_DIR())) return errRes(res, 400, 'invalid-path');
 
     if (!fs.existsSync(folderPath)) fs.mkdirSync(folderPath, { recursive: true });
     fs.writeFileSync(filePath, req.body);
     // v1.10.79 (#94) - a PDF saved now replaces any original kept for Undo of
     // a CANCELLED stamp, so an old copy can never come back over a new one.
-    const keptOriginal = path.join(DATA_DIR, 'cancelled-pdf-originals', path.relative(INVOICES_DIR, filePath));
-    if (isPathInside(keptOriginal, path.join(DATA_DIR, 'cancelled-pdf-originals')) && fs.existsSync(keptOriginal)) {
+    const keptOriginal = path.join(dataDir(), 'cancelled-pdf-originals', path.relative(INVOICES_DIR(), filePath));
+    if (isPathInside(keptOriginal, path.join(dataDir(), 'cancelled-pdf-originals')) && fs.existsSync(keptOriginal)) {
       try { fs.unlinkSync(keptOriginal); } catch { /* leave it */ }
     }
     // Don't leak absolute FS path — client only needs to know it saved
@@ -948,7 +1076,7 @@ app.post('/api/save-pdf', express.raw({ type: 'application/pdf', limit: '20mb' }
 app.post('/api/number-series/rename', (req, res) => {
   const { from, to } = req.body || {};
   if (!from || !to || typeof from !== 'string' || typeof to !== 'string' || from === to) return errRes(res, 400, 'bad-request');
-  const meta = readJSON(META_PATH, {});
+  const meta = readJSON(META_PATH(), {});
   const series = meta.invoiceNumberSeries || {};
   if (!series[from] || series[to]) return res.json({ moved: false });
   series[to] = series[from];
@@ -961,7 +1089,7 @@ app.post('/api/number-series/rename', (req, res) => {
       delete meta[key];
     }
   }
-  writeJSON(META_PATH, meta);
+  writeJSON(META_PATH(), meta);
   return res.json({ moved: true });
 });
 
@@ -971,7 +1099,7 @@ app.post('/api/number-series/rename', (req, res) => {
 // Cancelling an invoice stamps "CANCELLED" across every page of its PDF in
 // Saved Invoices; Undo puts the original back, byte for byte. The original is
 // kept under data/ (so backups carry it), never in the folder people browse.
-const PDF_ORIGINALS_DIR = path.join(DATA_DIR, 'cancelled-pdf-originals');
+const PDF_ORIGINALS_DIR = () => path.join(dataDir(), 'cancelled-pdf-originals');
 
 // The copies of one invoice's PDF in Saved Invoices: <client>/<month>/<name>,
 // or loose in the folder. Same lookup as Move saved PDF to Trash below.
@@ -979,15 +1107,15 @@ function findSavedPdfs(fileName, clientName) {
   const safeClient = safePathSegment(clientName, 'General');
   const safeName = safePathSegment(fileName, 'Untitled.pdf');
   const out = [];
-  const clientDir = path.join(INVOICES_DIR, safeClient);
-  if (isPathInside(clientDir, INVOICES_DIR) && fs.existsSync(clientDir)) {
+  const clientDir = path.join(INVOICES_DIR(), safeClient);
+  if (isPathInside(clientDir, INVOICES_DIR()) && fs.existsSync(clientDir)) {
     for (const month of fs.readdirSync(clientDir)) {
       const file = path.join(clientDir, month, safeName);
-      if (isPathInside(file, INVOICES_DIR) && fs.existsSync(file)) out.push(file);
+      if (isPathInside(file, INVOICES_DIR()) && fs.existsSync(file)) out.push(file);
     }
   }
-  const flat = path.join(INVOICES_DIR, safeName);
-  if (isPathInside(flat, INVOICES_DIR) && fs.existsSync(flat)) out.push(flat);
+  const flat = path.join(INVOICES_DIR(), safeName);
+  if (isPathInside(flat, INVOICES_DIR()) && fs.existsSync(flat)) out.push(flat);
   return out;
 }
 
@@ -1020,8 +1148,8 @@ app.post('/api/saved-pdf/cancel-mark', express.json(), async (req, res) => {
     let updated = 0;
     let failed = 0;
     for (const file of findSavedPdfs(fileName, clientName)) {
-      const original = path.join(PDF_ORIGINALS_DIR, path.relative(INVOICES_DIR, file));
-      if (!isPathInside(original, PDF_ORIGINALS_DIR)) continue;
+      const original = path.join(PDF_ORIGINALS_DIR(), path.relative(INVOICES_DIR(), file));
+      if (!isPathInside(original, PDF_ORIGINALS_DIR())) continue;
       // One copy that cannot be written (open in a PDF reader) never stops the rest.
       try {
         if (cancelled) {
@@ -1048,9 +1176,9 @@ app.post('/api/saved-pdf/cancel-mark', express.json(), async (req, res) => {
 // ========================
 // Move saved PDF to Trash
 // ========================
-const TRASH_DIR = path.join(__dirname, 'Trash');
-
-if (!fs.existsSync(TRASH_DIR)) fs.mkdirSync(TRASH_DIR, { recursive: true });
+// "pdf-trash", not "Trash": next to the bill trash folder "trash" it would be
+// the same folder on Windows and macOS.
+const TRASH_DIR = () => path.join(dataDir(), 'pdf-trash');
 
 app.post('/api/trash-pdf', express.json(), (req, res) => {
   try {
@@ -1063,9 +1191,9 @@ app.post('/api/trash-pdf', express.json(), (req, res) => {
     const safeClient = safePathSegment(clientName, 'General');
     const safeName = safePathSegment(fileName, 'Untitled.pdf');
 
-    const clientDir = path.join(INVOICES_DIR, safeClient);
+    const clientDir = path.join(INVOICES_DIR(), safeClient);
     // Extra guard — reject if the constructed client dir somehow escaped.
-    if (!isPathInside(clientDir, INVOICES_DIR)) return errRes(res, 400, 'invalid-path');
+    if (!isPathInside(clientDir, INVOICES_DIR())) return errRes(res, 400, 'invalid-path');
     let found = false;
 
     if (fs.existsSync(clientDir)) {
@@ -1074,11 +1202,11 @@ app.post('/api/trash-pdf', express.json(), (req, res) => {
       });
       for (const month of months) {
         const filePath = path.join(clientDir, month, safeName);
-        if (!isPathInside(filePath, INVOICES_DIR)) continue;
+        if (!isPathInside(filePath, INVOICES_DIR())) continue;
         if (fs.existsSync(filePath)) {
-          const trashPath = path.join(TRASH_DIR, safeClient, month);
+          const trashPath = path.join(TRASH_DIR(), safeClient, month);
           const trashFile = path.join(trashPath, safeName);
-          if (!isPathInside(trashFile, TRASH_DIR)) return errRes(res, 400, 'invalid-path');
+          if (!isPathInside(trashFile, TRASH_DIR())) return errRes(res, 400, 'invalid-path');
           if (!fs.existsSync(trashPath)) fs.mkdirSync(trashPath, { recursive: true });
           try {
             fs.renameSync(filePath, trashFile);
@@ -1093,11 +1221,11 @@ app.post('/api/trash-pdf', express.json(), (req, res) => {
     }
 
     if (!found) {
-      const flatPath = path.join(INVOICES_DIR, safeName);
-      if (isPathInside(flatPath, INVOICES_DIR) && fs.existsSync(flatPath)) {
-        const trashPath = path.join(TRASH_DIR, safeClient);
+      const flatPath = path.join(INVOICES_DIR(), safeName);
+      if (isPathInside(flatPath, INVOICES_DIR()) && fs.existsSync(flatPath)) {
+        const trashPath = path.join(TRASH_DIR(), safeClient);
         const trashFile = path.join(trashPath, safeName);
-        if (isPathInside(trashFile, TRASH_DIR)) {
+        if (isPathInside(trashFile, TRASH_DIR())) {
           if (!fs.existsSync(trashPath)) fs.mkdirSync(trashPath, { recursive: true });
           try {
             fs.renameSync(flatPath, trashFile);
@@ -1273,7 +1401,7 @@ app.get('/api/control-panel/status', (req, res) => {
           else { try { total += fs.statSync(p).size; } catch { /* ignore */ } }
         }
       };
-      if (fs.existsSync(DATA_DIR)) walk(DATA_DIR);
+      if (fs.existsSync(dataDir())) walk(dataDir());
       return total;
     } catch { return 0; }
   })();
@@ -1291,7 +1419,7 @@ app.get('/api/control-panel/status', (req, res) => {
     node: process.version,
     controlScriptsAvailable: !!controlScriptDir,
     actions: controlActions(),
-    dataFolder: DATA_DIR,
+    dataFolder: dataDir(),
     dataSizeBytes: dataSize,
     port: activePort,
     launcherType: controlScriptDir ? (isWindows ? 'hta' : (isMac ? 'command' : 'sh')) : 'none',
@@ -1306,9 +1434,9 @@ app.post('/api/control-panel/backup', async (req, res) => {
 
 app.post('/api/control-panel/open-data-folder', (req, res) => {
   try {
-    if (isWindows) spawn('explorer.exe', [DATA_DIR], { detached: true }).unref();
-    else if (isMac) spawn('open', [DATA_DIR], { detached: true }).unref();
-    else spawn('xdg-open', [DATA_DIR], { detached: true }).unref();
+    if (isWindows) spawn('explorer.exe', [dataDir()], { detached: true }).unref();
+    else if (isMac) spawn('open', [dataDir()], { detached: true }).unref();
+    else spawn('xdg-open', [dataDir()], { detached: true }).unref();
     res.json({ ok: true });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
@@ -1362,8 +1490,8 @@ app.use(express.static(distPath, { fallthrough: true })); // fallthrough = ok if
 // GET /api/backups and GET /api/trash get swallowed by the catch-all
 // and return 404. Bug discovered by smoke test after v1.9.5 shipped.
 // ============================================================
-const BACKUPS_DIR = path.join(DATA_DIR, 'backups');
-const BILL_TRASH_DIR = path.join(DATA_DIR, 'trash');
+const BACKUPS_DIR = () => path.join(dataDir(), 'backups');
+const BILL_TRASH_DIR = () => path.join(dataDir(), 'trash');
 function ensureDir(p) { if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true }); }
 
 function copyDirRecursive(src, dst) {
@@ -1391,19 +1519,22 @@ function todayLocalIso() {
 // copies go in "<folder>/FreeGSTBill Backups/<date>", 30 days kept, and are
 // listed and restorable like the ones in data/backups.
 const BACKUP_FOLDER_KEY = 'backupFolder';
+// Not part of a company's daily snapshot: the snapshots themselves, and the PDF
+// archives (big, and re-creatable from the invoices).
+const BACKUP_SKIP = new Set(['backups', 'errors.log', 'port.txt', 'Saved Invoices', 'pdf-trash']);
 const EXTRA_BACKUP_SUBDIR = 'FreeGSTBill Backups';
 const DATE_DIR = /^\d{4}-\d{2}-\d{2}$/;
 const extraBackupsDir = () => {
-  const folder = readJSON(META_PATH, {})[BACKUP_FOLDER_KEY];
+  const folder = readJSON(META_PATH(), {})[BACKUP_FOLDER_KEY];
   return typeof folder === 'string' && folder.trim() && path.isAbsolute(folder.trim())
-    ? path.join(folder.trim(), EXTRA_BACKUP_SUBDIR) : null;
+    ? path.join(folder.trim(), EXTRA_BACKUP_SUBDIR, currentCompanyId()) : null;
 };
 let lastExtraBackupError = '';
 function copyBackupToExtraFolder(date) {
   const dir = extraBackupsDir();
   if (!dir) return;
   try {
-    const src = path.join(BACKUPS_DIR, date);
+    const src = path.join(BACKUPS_DIR(), date);
     const dst = path.join(dir, date);
     if (!fs.existsSync(src) || fs.existsSync(dst)) { lastExtraBackupError = ''; return; }
     ensureDir(dir);
@@ -1425,7 +1556,7 @@ function copyBackupToExtraFolder(date) {
 // Where a dated backup is: data/backups, else the extra folder (e.g. after a
 // reinstall, when only the copy on D: is left).
 function backupSourceDir(date) {
-  const local = path.join(BACKUPS_DIR, date);
+  const local = path.join(BACKUPS_DIR(), date);
   if (fs.existsSync(local)) return local;
   const dir = extraBackupsDir();
   const extra = dir ? path.join(dir, date) : null;
@@ -1434,29 +1565,29 @@ function backupSourceDir(date) {
 
 function runDailyBackup() {
   try {
-    ensureDir(BACKUPS_DIR);
+    ensureDir(BACKUPS_DIR());
     const today = todayLocalIso();
-    const target = path.join(BACKUPS_DIR, today);
+    const target = path.join(BACKUPS_DIR(), today);
     if (fs.existsSync(target)) { copyBackupToExtraFolder(today); return; }
     ensureDir(target);
-    const entries = fs.readdirSync(DATA_DIR, { withFileTypes: true });
+    const entries = fs.readdirSync(dataDir(), { withFileTypes: true });
     for (const entry of entries) {
       // v1.10.31 — Data-F7.1: `trash` is now INCLUDED in daily backups.
       // Previously excluded → users restoring last week's backup lost every
       // bill they'd trashed since, breaking the 30-day soft-delete promise.
       // We still skip `backups` (no recursion) and log files.
-      if (entry.name === 'backups' || entry.name === 'errors.log' || entry.name === 'port.txt') continue;
-      const src = path.join(DATA_DIR, entry.name);
+      if (BACKUP_SKIP.has(entry.name)) continue;
+      const src = path.join(dataDir(), entry.name);
       const dst = path.join(target, entry.name);
       if (entry.isDirectory()) copyDirRecursive(src, dst);
       else fs.copyFileSync(src, dst);
     }
     console.log(`[backup] Daily snapshot saved: ${target}`);
     copyBackupToExtraFolder(today);
-    const all = fs.readdirSync(BACKUPS_DIR).filter(n => /^\d{4}-\d{2}-\d{2}$/.test(n)).sort();
+    const all = fs.readdirSync(BACKUPS_DIR()).filter(n => /^\d{4}-\d{2}-\d{2}$/.test(n)).sort();
     while (all.length > 30) {
       const oldest = all.shift();
-      const oldestPath = path.join(BACKUPS_DIR, oldest);
+      const oldestPath = path.join(BACKUPS_DIR(), oldest);
       try { fs.rmSync(oldestPath, { recursive: true, force: true }); } catch { /* ignore */ }
     }
   } catch (err) {
@@ -1464,17 +1595,17 @@ function runDailyBackup() {
   }
 }
 
-setTimeout(runDailyBackup, 5000);
+setTimeout(() => forEachCompany(() => runDailyBackup()), 5000);
 // Checked every hour (it does nothing once today's backup exists), so a PC
 // left on overnight gets the new day's backup soon after midnight rather
 // than up to 24 hours later.
-setInterval(runDailyBackup, 60 * 60 * 1000);
+setInterval(() => forEachCompany(() => runDailyBackup()), 60 * 60 * 1000);
 
 // Backup management endpoints
 app.get('/api/backups', (req, res) => {
   try {
-    ensureDir(BACKUPS_DIR);
-    const dates = new Set(fs.readdirSync(BACKUPS_DIR).filter(n => DATE_DIR.test(n)));
+    ensureDir(BACKUPS_DIR());
+    const dates = new Set(fs.readdirSync(BACKUPS_DIR()).filter(n => DATE_DIR.test(n)));
     // Backups that exist only in the extra folder are listed too (marked).
     const extra = extraBackupsDir();
     const extraDates = new Set();
@@ -1501,8 +1632,8 @@ app.delete('/api/backups/:date', (req, res) => {
     if (m < 1 || m > 12 || d < 1 || d > 31 || y < 2000 || y > 2100) {
       return errRes(res, 400, 'bad-request');
     }
-    const backupDir = path.join(BACKUPS_DIR, date);
-    if (!isPathInside(backupDir, BACKUPS_DIR)) return errRes(res, 400, 'invalid-path');
+    const backupDir = path.join(BACKUPS_DIR(), date);
+    if (!isPathInside(backupDir, BACKUPS_DIR())) return errRes(res, 400, 'invalid-path');
     if (!fs.existsSync(backupDir)) return errRes(res, 404, 'not-found');
     fs.rmSync(backupDir, { recursive: true, force: true });
     res.json({ success: true, date });
@@ -1524,7 +1655,7 @@ app.post('/api/backups/:date/restore', (req, res) => {
     const date = req.params.date;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return errRes(res, 400, 'bad-request');
     const backupDir = backupSourceDir(date);
-    if (!isPathInside(path.join(BACKUPS_DIR, date), BACKUPS_DIR)) return errRes(res, 400, 'invalid-path');
+    if (!isPathInside(path.join(BACKUPS_DIR(), date), BACKUPS_DIR())) return errRes(res, 400, 'invalid-path');
     if (!fs.existsSync(backupDir)) return errRes(res, 404, 'not-found');
 
     // Additional date sanity — a directory can exist with an unrealistic
@@ -1536,16 +1667,16 @@ app.post('/api/backups/:date/restore', (req, res) => {
 
     // The PIN on this PC survives the restore (see withLock), and so does the
     // backup folder setting (the backup may be older than it).
-    const lockBefore = readJSON(META_PATH, {})[LOCK_KEY];
-    const backupFolderBefore = readJSON(META_PATH, {})[BACKUP_FOLDER_KEY];
+    const lockBefore = readJSON(META_PATH(), {})[LOCK_KEY];
+    const backupFolderBefore = readJSON(META_PATH(), {})[BACKUP_FOLDER_KEY];
 
     // Make a snapshot of live data before touching anything.
-    snapshotDir = path.join(BACKUPS_DIR, `pre-restore-${Date.now()}`);
+    snapshotDir = path.join(BACKUPS_DIR(), `pre-restore-${Date.now()}`);
     ensureDir(snapshotDir);
-    const liveEntries = fs.readdirSync(DATA_DIR, { withFileTypes: true });
+    const liveEntries = fs.readdirSync(dataDir(), { withFileTypes: true });
     for (const entry of liveEntries) {
-      if (entry.name === 'backups' || entry.name === 'errors.log' || entry.name === 'port.txt') continue;
-      const src = path.join(DATA_DIR, entry.name);
+      if (BACKUP_SKIP.has(entry.name)) continue;
+      const src = path.join(dataDir(), entry.name);
       const dst = path.join(snapshotDir, entry.name);
       if (entry.isDirectory()) copyDirRecursive(src, dst);
       else fs.copyFileSync(src, dst);
@@ -1556,8 +1687,8 @@ app.post('/api/backups/:date/restore', (req, res) => {
     const backupEntries = fs.readdirSync(backupDir, { withFileTypes: true });
     for (const entry of backupEntries) {
       const src = path.join(backupDir, entry.name);
-      const dst = path.join(DATA_DIR, entry.name);
-      if (!isPathInside(dst, DATA_DIR)) continue;
+      const dst = path.join(dataDir(), entry.name);
+      if (!isPathInside(dst, dataDir())) continue;
       if (entry.isDirectory()) {
         if (fs.existsSync(dst)) fs.rmSync(dst, { recursive: true, force: true });
         copyDirRecursive(src, dst);
@@ -1567,10 +1698,10 @@ app.post('/api/backups/:date/restore', (req, res) => {
       restoredDirs.push(entry.name);
     }
     {
-      const restoredMeta = withLock(readJSON(META_PATH, {}), lockBefore);
+      const restoredMeta = withLock(readJSON(META_PATH(), {}), lockBefore);
       if (backupFolderBefore) restoredMeta[BACKUP_FOLDER_KEY] = backupFolderBefore;
       else delete restoredMeta[BACKUP_FOLDER_KEY];
-      writeJSON(META_PATH, restoredMeta);
+      writeJSON(META_PATH(), restoredMeta);
     }
     for (const dir of DIRS) invalidateCache(dir);
 
@@ -1579,8 +1710,8 @@ app.post('/api/backups/:date/restore', (req, res) => {
     // start-up, before today's work), and the app promises it can be rolled
     // back. Only the 5 newest snapshots are kept.
     try {
-      const snaps = fs.readdirSync(BACKUPS_DIR).filter(n => /^pre-restore-\d+$/.test(n)).sort((x, y) => Number(x.slice(12)) - Number(y.slice(12)));
-      while (snaps.length > 5) fs.rmSync(path.join(BACKUPS_DIR, snaps.shift()), { recursive: true, force: true });
+      const snaps = fs.readdirSync(BACKUPS_DIR()).filter(n => /^pre-restore-\d+$/.test(n)).sort((x, y) => Number(x.slice(12)) - Number(y.slice(12)));
+      while (snaps.length > 5) fs.rmSync(path.join(BACKUPS_DIR(), snaps.shift()), { recursive: true, force: true });
     } catch { /* pruning is best-effort */ }
     res.json({ success: true, restored: date, snapshot: path.basename(snapshotDir) });
   } catch (err) {
@@ -1590,8 +1721,8 @@ app.post('/api/backups/:date/restore', (req, res) => {
     if (snapshotDir && fs.existsSync(snapshotDir)) {
       try {
         for (const name of restoredDirs) {
-          const dst = path.join(DATA_DIR, name);
-          if (!isPathInside(dst, DATA_DIR)) continue;
+          const dst = path.join(dataDir(), name);
+          if (!isPathInside(dst, dataDir())) continue;
           if (fs.existsSync(dst)) fs.rmSync(dst, { recursive: true, force: true });
           const snap = path.join(snapshotDir, name);
           if (fs.existsSync(snap)) {
@@ -1615,21 +1746,21 @@ app.post('/api/backups/:date/restore', (req, res) => {
 // the last copy worked; POST { path } sets it ('' turns it off). The folder
 // is created and test-written before it is accepted.
 app.get('/api/backup-folder', (req, res) => {
-  const folder = readJSON(META_PATH, {})[BACKUP_FOLDER_KEY] || '';
+  const folder = readJSON(META_PATH(), {})[BACKUP_FOLDER_KEY] || '';
   res.json({ path: folder, copiesIn: extraBackupsDir(), error: lastExtraBackupError });
 });
 app.post('/api/backup-folder', (req, res) => {
   const raw = String(req.body?.path ?? '').trim();
-  const meta = readJSON(META_PATH, {});
+  const meta = readJSON(META_PATH(), {});
   if (!raw) {
     delete meta[BACKUP_FOLDER_KEY];
-    writeJSON(META_PATH, meta);
+    writeJSON(META_PATH(), meta);
     lastExtraBackupError = '';
     return res.json({ ok: true, path: '' });
   }
   if (!path.isAbsolute(raw)) return res.status(400).json({ ok: false, error: 'Give the full folder path, for example D:\\Backups' });
-  const dir = path.join(raw, EXTRA_BACKUP_SUBDIR);
-  if (isPathInside(dir, DATA_DIR)) return res.status(400).json({ ok: false, error: 'Choose a folder outside the app\'s data folder.' });
+  const dir = path.join(raw, EXTRA_BACKUP_SUBDIR, currentCompanyId());
+  if (isPathInside(dir, DATA_ROOT)) return res.status(400).json({ ok: false, error: 'Choose a folder outside the app\'s data folder.' });
   try {
     ensureDir(dir);
     const probe = path.join(dir, `.write-test-${Date.now()}`);
@@ -1639,7 +1770,7 @@ app.post('/api/backup-folder', (req, res) => {
     return res.status(400).json({ ok: false, error: `Cannot write to that folder: ${err.code || err.message}` });
   }
   meta[BACKUP_FOLDER_KEY] = raw;
-  writeJSON(META_PATH, meta);
+  writeJSON(META_PATH(), meta);
   runDailyBackup(); // copies today's backup there now
   return res.json({ ok: !lastExtraBackupError, path: raw, copiesIn: dir, error: lastExtraBackupError });
 });
@@ -1656,16 +1787,14 @@ app.post('/api/backups/now', (req, res) => {
 });
 
 // ---- Trash bin (soft delete for invoices) ---------------------------------
-ensureDir(BILL_TRASH_DIR);
-
 app.get('/api/trash', (req, res) => {
   try {
-    ensureDir(BILL_TRASH_DIR);
-    const files = fs.readdirSync(BILL_TRASH_DIR)
+    ensureDir(BILL_TRASH_DIR());
+    const files = fs.readdirSync(BILL_TRASH_DIR())
       .filter(n => n.endsWith('.json'))
       .map(name => {
         try {
-          const p = path.join(BILL_TRASH_DIR, name);
+          const p = path.join(BILL_TRASH_DIR(), name);
           const bill = readJSON(p, null);
           const stat = fs.statSync(p);
           return bill ? { ...bill, _trashedAt: stat.mtime.toISOString() } : null;
@@ -1679,8 +1808,8 @@ app.get('/api/trash', (req, res) => {
 app.post('/api/trash/:id/restore', (req, res) => {
   try {
     const fname = safeFileName(req.params.id) + '.json';
-    const trashPath = path.join(BILL_TRASH_DIR, fname);
-    const billsPath = path.join(DATA_DIR, 'bills', fname);
+    const trashPath = path.join(BILL_TRASH_DIR(), fname);
+    const billsPath = path.join(dataDir(), 'bills', fname);
     if (!fs.existsSync(trashPath)) return res.status(404).json({ error: 'Not in trash' });
     // A new bill may have taken this number since: never replace it.
     if (fs.existsSync(billsPath)) return res.status(409).json({ error: 'An invoice with this number exists again. Rename or delete it first.' });
@@ -1693,7 +1822,7 @@ app.post('/api/trash/:id/restore', (req, res) => {
 app.delete('/api/trash/:id', (req, res) => {
   try {
     const fname = safeFileName(req.params.id) + '.json';
-    const trashPath = path.join(BILL_TRASH_DIR, fname);
+    const trashPath = path.join(BILL_TRASH_DIR(), fname);
     if (fs.existsSync(trashPath)) fs.unlinkSync(trashPath);
     res.json({ success: true });
   } catch (err) { errRes(res, 500, 'server-error', err); }
@@ -1701,11 +1830,11 @@ app.delete('/api/trash/:id', (req, res) => {
 
 function purgeOldTrash() {
   try {
-    ensureDir(BILL_TRASH_DIR);
+    ensureDir(BILL_TRASH_DIR());
     const now = Date.now();
     const thirtyDays = 30 * 24 * 60 * 60 * 1000;
-    for (const name of fs.readdirSync(BILL_TRASH_DIR)) {
-      const p = path.join(BILL_TRASH_DIR, name);
+    for (const name of fs.readdirSync(BILL_TRASH_DIR())) {
+      const p = path.join(BILL_TRASH_DIR(), name);
       const stat = fs.statSync(p);
       if (now - stat.mtime.getTime() > thirtyDays) {
         try { fs.unlinkSync(p); } catch { /* ignore */ }
@@ -1715,8 +1844,8 @@ function purgeOldTrash() {
 }
 // Also once at start-up: the server usually runs only while the PC is on, so
 // a 24-hour timer alone never fired and the trash was never emptied.
-setTimeout(purgeOldTrash, 10000);
-setInterval(purgeOldTrash, 24 * 60 * 60 * 1000);
+setTimeout(() => forEachCompany(() => purgeOldTrash()), 10000);
+setInterval(() => forEachCompany(() => purgeOldTrash()), 24 * 60 * 60 * 1000);
 
 // v1.10.0 — Health-check endpoint moved here (was registered AFTER the
 // SPA catch-all → every GET /api/health returned "No such endpoint" →
@@ -1869,7 +1998,7 @@ function startServer(port) {
     // scans in half on repeated reboots of whatever was holding 47371).
     try { fs.writeFileSync(PORT_FILE, String(port), 'utf-8'); } catch { /* ignore */ }
     console.log(`\n  Free GST Billing Software running at http://localhost:${port}`);
-    console.log(`  Data stored in: ${DATA_DIR}\n`);
+    console.log(`  Data stored in: ${DATA_ROOT}  (one COMPxxxx folder per company)\n`);
   });
   server.on('error', (err) => {
     if (err.code === 'EADDRINUSE' && port < STARTING_PORT + MAX_PORT_SCAN) {
@@ -1965,12 +2094,12 @@ function nextInvoiceNumber(prefix, invoiceType = 'tax-invoice', businessKey = ''
   // The same rules as the app's getNextInvoiceNumber (src/utils.js): the
   // business's own series when it has one (v1.10.79, #95), else the shared
   // one; atomic counter in meta; brand-TYPE prefixes; India's FY label.
-  const meta = readJSON(META_PATH, {});
+  const meta = readJSON(META_PATH(), {});
   const series = numberSeriesFor(meta.invoiceNumberSettings, meta.invoiceNumberSeries, businessKey);
   const key = counterKeyFor(prefix, series, businessKey);
   const next = nextCounterValue(meta[key], startFor(invoiceType, series));
   meta[key] = next;
-  writeJSON(META_PATH, meta);
+  writeJSON(META_PATH(), meta);
   return formatDocNumber({ settings: series, typePrefix: prefix, next, fyLabel: getFinancialYearLabel() });
 }
 
@@ -2005,7 +2134,7 @@ function generateFromTemplate(tpl, today) {
       let profile = profiles.find(p => p.gstin && tpl.ownerGstin && p.gstin === tpl.ownerGstin)
                  || profiles.find(p => p.id && tpl.profileId && p.id === tpl.profileId)
                  || profiles.find(p => p.businessName && p.businessName === (tpl.profileBusinessName || tpl.ownerName))
-                 || readJSON(PROFILE_PATH, {});
+                 || readJSON(PROFILE_PATH(), {});
 
       const prefix = (tpl.invoiceType === 'proforma' ? 'EST'
                    : tpl.invoiceType === 'quotation' ? 'QUO'
@@ -2018,7 +2147,7 @@ function generateFromTemplate(tpl, today) {
       // bills on disk (restored backup, hand-typed numbers), take the next one.
       const bizKey = businessKeyOf(profile);
       let invoiceNumber = nextInvoiceNumber(prefix, tpl.invoiceType, bizKey);
-      for (let i = 0; i < 50 && fs.existsSync(path.join(DATA_DIR, 'bills', safeFileName(invoiceNumber) + '.json')); i++) {
+      for (let i = 0; i < 50 && fs.existsSync(path.join(dataDir(), 'bills', safeFileName(invoiceNumber) + '.json')); i++) {
         invoiceNumber = nextInvoiceNumber(prefix, tpl.invoiceType, bizKey);
       }
       const invoiceDate = today;
@@ -2086,7 +2215,7 @@ function generateFromTemplate(tpl, today) {
         },
       };
 
-      writeJSON(path.join(DATA_DIR, 'bills', safeFileName(invoiceNumber) + '.json'), bill);
+      writeJSON(path.join(dataDir(), 'bills', safeFileName(invoiceNumber) + '.json'), bill);
 
       // Advance the template. The day of month it started on is remembered,
       // so a schedule on the 31st comes back to the 31st after February.
@@ -2095,7 +2224,7 @@ function generateFromTemplate(tpl, today) {
       tpl.nextDate = advanceDate(from, tpl.frequency, tpl.interval, tpl.anchorDay);
       tpl.lastGenerated = today;
       tpl.occurrencesCreated = (tpl.occurrencesCreated || 0) + 1;
-      writeJSON(path.join(DATA_DIR, 'recurring', safeFileName(tpl.id) + '.json'), tpl);
+      writeJSON(path.join(dataDir(), 'recurring', safeFileName(tpl.id) + '.json'), tpl);
       return invoiceNumber;
 }
 
@@ -2119,9 +2248,9 @@ async function processDueRecurring() {
   if (fired > 0) {
     console.log(`  Auto-generated ${fired} recurring invoice${fired !== 1 ? 's' : ''}.`);
     // Surface the count so the frontend notification centre can pick it up.
-    const meta = readJSON(META_PATH, {});
+    const meta = readJSON(META_PATH(), {});
     meta.lastRecurringAutoFire = { date: today, count: fired, at: new Date().toISOString() };
-    writeJSON(META_PATH, meta);
+    writeJSON(META_PATH(), meta);
   }
 }
 
@@ -2149,8 +2278,8 @@ startServer(STARTING_PORT);
 // for users whose server stays up >24h.
 // v1.10.6 — audit L19: async caller. Uncaught rejections logged via
 // the top-level unhandledRejection handler installed above.
-setTimeout(() => { processDueRecurring().catch(err => logFatal(err, 'recurring')); }, 3000);
+setTimeout(() => { forEachCompany(() => processDueRecurring()).catch(err => logFatal(err, 'recurring')); }, 3000);
 // Hourly: a template only fires once its nextDate has come, so checking more
 // often never makes extra invoices - it just stops a template due today from
 // waiting until the same time tomorrow on a PC that stays on.
-setInterval(() => { processDueRecurring().catch(err => logFatal(err, 'recurring')); }, 60 * 60 * 1000);
+setInterval(() => { forEachCompany(() => processDueRecurring()).catch(err => logFatal(err, 'recurring')); }, 60 * 60 * 1000);

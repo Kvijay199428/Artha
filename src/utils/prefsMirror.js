@@ -41,6 +41,10 @@ export async function restorePrefs() {
 // merges them, so nothing this browser did not touch is ever replaced.
 const dirty = new Set();
 let timer = null;
+// Multi-company: the copy in the data folder belongs to the company that is
+// open. While the browser is being switched to another company, nothing may be
+// written to it (see pauseMirroring / services/companies.js).
+let paused = false;
 const push = () => {
   const set = {};
   const remove = [];
@@ -51,9 +55,40 @@ const push = () => {
     }
   } catch { return; }
   dirty.clear();
-  fetch(ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ set, remove }) }).catch(() => {});
+  return fetch(ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ set, remove }) }).catch(() => {});
 };
-const touch = (k) => { dirty.add(k); clearTimeout(timer); timer = setTimeout(push, 600); };
+const touch = (k) => { if (paused) return; dirty.add(k); clearTimeout(timer); timer = setTimeout(push, 600); };
+
+// Send any change still waiting for its 600 ms timer right now (before the
+// company is closed), so the closing company's copy is complete.
+export async function flushPrefs() {
+  clearTimeout(timer);
+  if (dirty.size) await push();
+}
+
+// Stop mirroring for good in this page: the next step reloads it for another
+// company. Anything not yet sent is dropped, never sent to the wrong company.
+export function pauseMirroring() {
+  paused = true;
+  clearTimeout(timer);
+  dirty.clear();
+}
+
+// A brand-new company: its first settings (from the setup wizard) are written
+// to the browser while no mirroring runs, so they are sent in one go here.
+export async function pushAllMirroredNow() {
+  const set = {};
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (isMirrored(k)) set[k] = localStorage.getItem(k);
+    }
+  } catch { return false; }
+  try {
+    const res = await fetch(ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ set, remove: [] }) });
+    return res.ok;
+  } catch { return false; }
+}
 
 // Every write or removal of a mirrored key, from anywhere in the app, updates
 // the copy in the data folder (one write per burst of changes). Only after a

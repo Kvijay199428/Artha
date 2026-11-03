@@ -1,3 +1,7 @@
+import { useEffect, useRef, useState } from 'react';
+import { MoreHorizontal } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
 // v1.10.80 (#100) - a "⋯" drop-down for the less-used row actions, so an
 // Actions column shows a few buttons instead of a long row of icons.
 // Requested: "Convert Actions into a drop-down menu with icon to provide a
@@ -5,10 +9,9 @@
 //
 // items: [{ label, icon: LucideIcon, onClick, title?, tone?: 'danger' | 'green', hidden? }]
 // The menu is position: fixed, so a table that scrolls sideways can't clip it.
-import { useEffect, useRef, useState } from 'react';
-import { MoreHorizontal } from 'lucide-react';
+//
+// Ported to Tailwind + tokens.
 
-// Below the button, or above it when there is no room below.
 function placeFor(r, count) {
   const below = window.innerHeight - r.bottom > count * 36 + 16;
   return { right: Math.max(8, window.innerWidth - r.right), ...(below ? { top: r.bottom + 4 } : { bottom: window.innerHeight - r.top + 4 }) };
@@ -28,8 +31,6 @@ export default function ActionsMenu({ items, label = 'More actions' }) {
       if (e.type === 'mousedown' && (menu.current?.contains(e.target) || btn.current?.contains(e.target))) return;
       setPos(null);
     };
-    // The menu follows its button while the page scrolls, and closes once the
-    // button has left the screen.
     const follow = () => {
       const r = btn.current?.getBoundingClientRect();
       if (!r || r.bottom < 0 || r.top > window.innerHeight) { setPos(null); return; }
@@ -45,7 +46,7 @@ export default function ActionsMenu({ items, label = 'More actions' }) {
       window.removeEventListener('scroll', follow, true);
       window.removeEventListener('resize', follow);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [!!pos]);
 
   if (!visible.length) return null;
@@ -53,30 +54,46 @@ export default function ActionsMenu({ items, label = 'More actions' }) {
 
   return (
     <>
-      <button ref={btn} type="button" className="icon-btn" onClick={toggle} title={label}
-        aria-label={label} aria-haspopup="menu" aria-expanded={!!pos}>
+      <button
+        ref={btn}
+        type="button"
+        className="icon-btn inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-card text-foreground/80 transition-colors hover:bg-accent hover:text-foreground"
+        onClick={toggle}
+        title={label}
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={!!pos}
+      >
         <MoreHorizontal size={15} />
       </button>
       {pos && (
-        <div ref={menu} role="menu" className="actions-menu" style={{
-          position: 'fixed', zIndex: 1000, ...pos, minWidth: 190,
-          background: 'var(--card, #fff)', border: '1px solid var(--border)', borderRadius: 8,
-          boxShadow: '0 10px 30px rgba(0,0,0,0.18)', padding: 4,
-        }}>
+        <div
+          ref={menu}
+          role="menu"
+          className="fixed z-[1000] min-w-[190px] overflow-hidden rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-xl"
+          style={{ ...pos }}
+        >
           {visible.map((item) => {
             const Icon = item.icon;
-            const color = item.tone === 'danger' ? 'var(--danger, #dc2626)' : item.tone === 'green' ? '#059669' : 'var(--text)';
+            const tone =
+              item.tone === 'danger'
+                ? 'text-destructive hover:bg-destructive/10'
+                : item.tone === 'green'
+                  ? 'text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400'
+                  : 'text-foreground hover:bg-accent hover:text-accent-foreground';
             return (
-              <button key={item.label} type="button" role="menuitem" title={item.title || item.label}
+              <button
+                key={item.label}
+                type="button"
+                role="menuitem"
+                title={item.title || item.label}
                 onClick={() => { setPos(null); item.onClick(); }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left',
-                  padding: '0.45rem 0.6rem', border: 'none', background: 'transparent', borderRadius: 6,
-                  cursor: 'pointer', fontSize: '0.84rem', color,
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-secondary)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
-                {Icon && <Icon size={15} />} {item.label}
+                className={cn(
+                  'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors',
+                  tone,
+                )}
+              >
+                {Icon && <Icon size={15} className="shrink-0" />} {item.label}
               </button>
             );
           })}

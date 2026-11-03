@@ -4,8 +4,13 @@
 // to someone on day one. ✕ hides it for 30 days; "Star on GitHub" or
 // "Already starred" hides it for good. Per browser (localStorage), which is
 // fine for a reminder: losing it only means one more polite line.
+//
+// Ported to Tailwind: the callout read --info-bg / --info-border / --info-text,
+// which have dark values, but the ✕ and "Already starred" used `color:
+// inherit`, so they only worked because of that. They are explicit now.
 import { useState } from 'react';
 import { Star, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const KEY = 'freegstbill_starBanner';
 const REPO = 'https://github.com/Kvijay199428/Artha';
@@ -36,25 +41,33 @@ export default function StarBanner() {
     setState(next);
   };
   return (
-    <div role="status" style={{
-      display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap',
-      padding: '0.6rem 0.9rem', marginBottom: '1rem', borderRadius: 10,
-      background: 'var(--info-bg)', border: '1px solid var(--info-border)', color: 'var(--info-text)', fontSize: '0.85rem',
-    }}>
-      <Star size={18} style={{ color: '#f59e0b', fill: '#f59e0b', flexShrink: 0 }} />
-      <span style={{ flex: '1 1 240px' }}>
+    <div
+      role="status"
+      className="mb-4 flex flex-wrap items-center gap-3 rounded-[10px] border border-info-border bg-info px-3.5 py-2.5 text-[0.85rem] text-info-foreground"
+    >
+      <Star size={18} className="shrink-0 fill-amber-500 text-amber-500" />
+      <span className="flex-[1_1_240px]">
         Finding Free GST Billing useful? A star on GitHub helps other businesses find it. It takes one click.
       </span>
-      <a className="btn btn-primary" href={REPO} target="_blank" rel="noopener noreferrer"
-        onClick={() => save({ done: true })} style={{ padding: '0.3rem 0.8rem', fontSize: '0.8rem', textDecoration: 'none' }}>
-        <Star size={14} /> Star on GitHub
-      </a>
-      <button type="button" onClick={() => save({ done: true })}
-        style={{ background: 'none', border: 0, color: 'inherit', cursor: 'pointer', fontSize: '0.78rem', textDecoration: 'underline', padding: '0.25rem' }}>
+      <Button asChild size="sm" className="h-auto px-3 py-1.5 text-[0.8rem]">
+        <a href={REPO} target="_blank" rel="noopener noreferrer" onClick={() => save({ done: true })}>
+          <Star size={14} /> Star on GitHub
+        </a>
+      </Button>
+      <button
+        type="button"
+        onClick={() => save({ done: true })}
+        className="cursor-pointer border-0 bg-transparent p-1 text-[0.78rem] text-info-foreground underline underline-offset-2 opacity-90 hover:opacity-100"
+      >
         Already starred
       </button>
-      <button type="button" onClick={() => save({ closedAt: Date.now() })} title="Close (asks again in a month)" aria-label="Close"
-        style={{ background: 'none', border: 0, color: 'inherit', cursor: 'pointer', padding: '0.25rem', lineHeight: 0 }}>
+      <button
+        type="button"
+        onClick={() => save({ closedAt: Date.now() })}
+        title="Close (asks again in a month)"
+        aria-label="Close"
+        className="cursor-pointer border-0 bg-transparent p-1 leading-none opacity-80 hover:opacity-100"
+      >
         <X size={16} />
       </button>
     </div>

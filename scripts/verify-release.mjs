@@ -118,6 +118,35 @@ function startServer(systemDir) {
   });
 }
 
+/**
+ * Multi-company: every /api route except health/version/update-check runs
+ * inside ONE company's folder and needs the `artha_sid` session cookie. The
+ * packaged install starts with no company at all, so create one (which also
+ * logs us in) and reuse its cookie for the checks below.
+ */
+async function openCompany(url) {
+  const listed = await fetch(`${url}/api/companies`)
+    .then((r) => (r.ok ? r.json() : { companies: [] }))
+    .catch(() => ({ companies: [] }));
+  const companies = listed.companies || [];
+  const opened = companies.length
+    ? await fetch(`${url}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ companyId: (companies.find((c) => !c.locked) || companies[0]).id }),
+      })
+    : await fetch(`${url}/api/companies`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Release Check Company' }),
+      });
+  if (!opened.ok) fail(`could not open a company for the HTTP checks (${opened.status}).`);
+  const raw = (opened.headers.getSetCookie?.() || [])[0] || opened.headers.get('set-cookie') || '';
+  const pair = raw.split(';')[0];
+  if (!pair) fail('the server did not return a session cookie when a company was opened.');
+  return pair;
+}
+
 const zipName = findZip();
 const zipPath = join(OUT_DIR, zipName);
 const work = join(tmpdir(), `fgsb-verify-${Date.now()}`);
@@ -155,9 +184,18 @@ try {
   log(`       bound at ${server.url}`);
 
   log('  4/5  exercising the HTTP surface…');
+  // The picker is public; a company's books are not. Prove both, then use the
+  // session cookie for the authenticated endpoints.
+  const anon = await fetch(`${server.url}/api/profile`).catch((e) => {
+    fail(`GET /api/profile threw: ${e.message}`);
+  });
+  if (anon.status !== 401) {
+    fail(`GET /api/profile without a session returned ${anon.status}, expected 401.`);
+  }
+  const cookie = await openCompany(server.url);
   const endpoints = ['/', '/api/bills', '/api/clients', '/api/products', '/api/profile'];
   for (const ep of endpoints) {
-    const res = await fetch(`${server.url}${ep}`).catch((e) => {
+    const res = await fetch(`${server.url}${ep}`, { headers: { Cookie: cookie } }).catch((e) => {
       fail(`GET ${ep} threw: ${e.message}`);
     });
     if (!res.ok) fail(`GET ${ep} returned ${res.status} from the packaged server.`);

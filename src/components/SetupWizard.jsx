@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, ChevronRight, Check } from 'lucide-react';
 import { getPrintSettings, savePrintSettings, BUSINESS_PRESETS, applyBusinessPreset } from '../utils/printSettings';
 import { toast } from './Toast';
@@ -20,6 +20,22 @@ const setDefaultPaperSize = async (paperSize) => {
   } catch { /* offline: the browser copy above still applies */ }
 };
 
+// What the wizard's choices do: the same for the first run of an existing
+// company and for a brand-new company created from the Select Company page.
+export async function applyWizardChoices({ selectedBiz, paperSize, language }) {
+  const current = getPrintSettings();
+  // v1.10.33 — Clear onboardingSkipped when the user actually
+  // completes setup, so the "Finish setup" pill hides for good.
+  let next = { ...current, onboardingComplete: true, onboardingSkipped: false };
+  // Preset first, THEN the language picked on step 2: four presets set
+  // English, which used to overwrite a Hindi / Tamil / ... choice.
+  if (selectedBiz) next = applyBusinessPreset(next, selectedBiz);
+  next.labelLanguage = language;
+  if (paperSize) next.paperSize = paperSize;
+  savePrintSettings(next);
+  if (paperSize) await setDefaultPaperSize(paperSize);
+}
+
 // ============================================================================
 // v1.9.3 — First-run Setup Wizard
 // Shown when onboardingComplete = false. 3 steps:
@@ -27,13 +43,40 @@ const setDefaultPaperSize = async (paperSize) => {
 //   2. Paper size + language
 //   3. Confirm + save
 // User can Skip at any time; setting is marked complete either way.
+//
+// Multi-company: the same wizard is used to create a company. In
+// mode="new-company" (opened from the Select Company page) it gets a first
+// step for the company name, and finishing it calls onCreate(name, choices)
+// instead of changing the settings of an open company. Cancel (or the X)
+// returns to the company list without creating anything.
 // ============================================================================
 
-export default function SetupWizard({ onClose }) {
-  const [step, setStep] = useState(1);
+export default function SetupWizard({ onClose, mode = 'existing', defaultCode = '', onCreate, onCancel }) {
+  const newCompany = mode === 'new-company';
+  const firstStep = newCompany ? 0 : 1;
+  const totalSteps = newCompany ? 4 : 3;
+  const [step, setStep] = useState(firstStep);
+  const [companyName, setCompanyName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const nameOk = companyName.trim().length > 0;
   const [selectedBiz, setSelectedBiz] = useState('');
   const [paperSize, setPaperSize] = useState('a4');
   const [language, setLanguage] = useState('en');
+
+  // ---- Modal discipline for the new-company wizard ------------------------
+  // Setting up a company is a modal step: the company list behind it is inert,
+  // a click on the backdrop does nothing, and Escape must NOT close it — only
+  // Cancel or the X button do. The capture-phase listener claims Escape before
+  // anything behind can act on it (it used to reach the Select Company page's
+  // window shortcut and wipe its search box).
+  useEffect(() => {
+    if (!newCompany) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [newCompany]);
 
   // v1.10.6 — audit L9. Prior code let `finish()` with no business
   // preset selected behave identically to `skip()` — user got two
@@ -41,18 +84,15 @@ export default function SetupWizard({ onClose }) {
   // (see button below) until at least one choice is made, so hitting
   // Finish always writes something meaningful. skip() stays available
   // for users who genuinely want to dismiss and configure later.
+  const createWith = async (choices) => {
+    if (busy || !nameOk) return;
+    setBusy(true);
+    try { await onCreate(companyName.trim(), choices); } finally { setBusy(false); }
+  };
+
   const finish = () => {
-    const current = getPrintSettings();
-    // v1.10.33 — Clear onboardingSkipped when the user actually
-    // completes setup, so the "Finish setup" pill hides for good.
-    let next = { ...current, onboardingComplete: true, onboardingSkipped: false };
-    // Preset first, THEN the language picked on step 2: four presets set
-    // English, which used to overwrite a Hindi / Tamil / ... choice.
-    if (selectedBiz) next = applyBusinessPreset(next, selectedBiz);
-    next.labelLanguage = language;
-    if (paperSize) next.paperSize = paperSize;
-    savePrintSettings(next);
-    if (paperSize) setDefaultPaperSize(paperSize);
+    if (newCompany) { createWith({ selectedBiz, paperSize, language }); return; }
+    applyWizardChoices({ selectedBiz, paperSize, language });
     toast('Setup complete! Your defaults are configured.', 'success');
     onClose();
   };
@@ -73,27 +113,51 @@ export default function SetupWizard({ onClose }) {
   const canFinish = !!selectedBiz || !!paperSize || language !== 'en';
 
   return (
-    <div className="modal-overlay" style={{ zIndex: 9999 }}>
-      <div className="modal-content" style={{ maxWidth: '640px', maxHeight: '90vh', overflow: 'auto' }}>
+    <div className={newCompany ? 'modal-overlay cs-wizard-overlay' : 'modal-overlay'} style={{ zIndex: 9999 }}>
+      <div className="modal-content" role="dialog" aria-modal="true"
+        aria-label={newCompany ? 'Set up a new company' : 'Welcome to ARTHA'}
+        style={{ maxWidth: '640px', maxHeight: '90vh', overflow: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: '1.35rem' }}>👋 Welcome to ARTHA</h2>
+            <h2 style={{ margin: 0, fontSize: '1.35rem' }}>{newCompany ? '🏢 Set up a new company' : '👋 Welcome to ARTHA'}</h2>
             <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              Step {step} of 3 · Takes 90 seconds
+              Step {step - firstStep + 1} of {totalSteps} · Takes 90 seconds
             </p>
           </div>
-          <button type="button" className="icon-btn" onClick={skip} title="Skip setup — I'll configure later"><X size={18} /></button>
+          {newCompany
+            ? <button type="button" className="icon-btn" onClick={onCancel} title="Cancel — back to the company list"><X size={18} /></button>
+            : <button type="button" className="icon-btn" onClick={skip} title="Skip setup — I'll configure later"><X size={18} /></button>}
         </div>
 
         {/* Progress bar */}
         <div style={{ display: 'flex', gap: '0.35rem', marginBottom: '1.5rem' }}>
-          {[1, 2, 3].map(n => (
+          {Array.from({ length: totalSteps }, (_, i) => i + firstStep).map(n => (
             <div key={n} style={{
               flex: 1, height: 4, borderRadius: 2,
               background: n <= step ? 'var(--primary)' : 'var(--border)',
             }} />
           ))}
         </div>
+
+        {step === 0 && (
+          <>
+            <h3 style={{ marginTop: 0 }}>What is the company called?</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+              This name is shown on the company list. GSTIN, address and bank details are added later in Settings.
+              Every company keeps its own invoices, clients, products and settings in its own folder.
+            </p>
+            <label htmlFor="new-company-name" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 6 }}>Company name</label>
+            <input id="new-company-name" className="form-input" type="text" autoFocus maxLength={100} value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)} placeholder="e.g. HPS Furniture & Decoration"
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (nameOk) setStep(1); } }}
+              style={{ width: '100%', boxSizing: 'border-box' }} />
+            {defaultCode && (
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 8 }}>
+                Company code: <strong>{defaultCode}</strong> (assigned automatically · data folder <code>data/{defaultCode}</code>)
+              </p>
+            )}
+          </>
+        )}
 
         {step === 1 && (
           <>
@@ -130,7 +194,9 @@ export default function SetupWizard({ onClose }) {
                   AND close. User lands on the dashboard with all defaults
                   intact, free to tweak from Settings when they want. */}
               <button type="button" className="btn btn-secondary" style={{ fontSize: '0.82rem' }}
+                disabled={busy}
                 onClick={() => {
+                  if (newCompany) { createWith(null); return; }
                   const current = getPrintSettings();
                   savePrintSettings({ ...current, onboardingComplete: true, onboardingSkipped: false });
                   toast('Setup dismissed — configure any time from Settings → Print & PDF.', 'info');
@@ -204,6 +270,7 @@ export default function SetupWizard({ onClose }) {
             </p>
 
             <div style={{ padding: '1rem', background: 'var(--bg-secondary)', borderRadius: 8, fontSize: '0.9rem' }}>
+              {newCompany && <Row label="Company" value={companyName.trim()} />}
               <Row label="Business type" value={selectedBiz ? BUSINESS_PRESETS[selectedBiz]?.label : '(none — manual config)'} />
               <Row label="Default paper size" value={PAPER_LABELS[paperSize] || paperSize} />
               <Row label="Section label language" value={
@@ -218,24 +285,32 @@ export default function SetupWizard({ onClose }) {
         )}
 
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1.5rem', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button type="button" className="btn btn-secondary" onClick={skip} style={{ fontSize: '0.82rem' }}>
-            Skip setup
-          </button>
+          {newCompany ? (
+            <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={busy} style={{ fontSize: '0.82rem' }}>
+              Cancel
+            </button>
+          ) : (
+            <button type="button" className="btn btn-secondary" onClick={skip} style={{ fontSize: '0.82rem' }}>
+              Skip setup
+            </button>
+          )}
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            {step > 1 && (
-              <button type="button" className="btn btn-secondary" onClick={() => setStep(step - 1)}>
+            {step > firstStep && (
+              <button type="button" className="btn btn-secondary" onClick={() => setStep(step - 1)} disabled={busy}>
                 Back
               </button>
             )}
             {step < 3 ? (
-              <button type="button" className="btn btn-primary" onClick={() => setStep(step + 1)}>
+              <button type="button" className="btn btn-primary" onClick={() => setStep(step + 1)}
+                disabled={step === 0 && !nameOk}
+                title={step === 0 && !nameOk ? 'Enter the company name first.' : ''}>
                 Continue <ChevronRight size={16} />
               </button>
             ) : (
               <button type="button" className="btn btn-primary" onClick={finish}
-                disabled={!canFinish}
+                disabled={!canFinish || busy || (newCompany && !nameOk)}
                 title={canFinish ? '' : 'Pick a business type, paper size, or language first — or use Skip.'}>
-                <Check size={16} /> Finish setup
+                <Check size={16} /> {newCompany ? (busy ? 'Creating…' : 'Create company') : 'Finish setup'}
               </button>
             )}
           </div>

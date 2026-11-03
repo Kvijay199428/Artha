@@ -106,7 +106,7 @@ export default function SupportView() {
             ))}
           </div>
           <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ background: '#fff', padding: 8, borderRadius: 8, lineHeight: 0, border: '1px solid var(--border-color)' }}>
+            <div style={{ background: 'var(--card)', padding: 8, borderRadius: 8, lineHeight: 0, border: '1px solid var(--border-color)' }}>
               {qr ? <img src={qr} width={180} height={180} alt={`UPI QR code to pay ${UPI_NAME}${amount ? ` ₹${amount}` : ''}`} />
                 : <div style={{ width: 180, height: 180 }} />}
             </div>

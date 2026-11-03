@@ -380,14 +380,14 @@ public class ServerManager
         {
             try
             {
-                var resp = await _httpClient.GetAsync($"http://localhost:{BackendPort}/api/profile");
+                var resp = await _httpClient.GetAsync($"http://localhost:{BackendPort}/api/health");
                 bHealthy = resp.IsSuccessStatusCode;
             }
             catch
             {
                 try
                 {
-                    var resp = await _httpClient.GetAsync($"http://127.0.0.1:{BackendPort}/api/profile");
+                    var resp = await _httpClient.GetAsync($"http://127.0.0.1:{BackendPort}/api/health");
                     bHealthy = resp.IsSuccessStatusCode;
                 }
                 catch

@@ -1,183 +1,217 @@
 # ARTHA - Project Source Code Bundle
 
-> Generated on: **2026-10-31 12:16:07**
-> Total Files: **173** | Total Lines: **94,922** | Total Size: **4.04 MB**
+> Generated on: **2026-11-03 03:15:55**
+> Total Files: **207** | Total Lines: **98,631** | Total Size: **4.18 MB**
 
 ## Table of Contents
 
 1. [.gitattributes](#gitattributes) (16 lines)
-2. [.gitignore](#gitignore) (55 lines)
+2. [.gitignore](#gitignore) (60 lines)
 3. [.stackblitzrc.json](#stackblitzrc-json) (8 lines)
 4. [backend.log](#backend-log) (5 lines)
-5. [eslint.config.js](#eslint-config-js) (35 lines)
-6. [frontend.log](#frontend-log) (7 lines)
-7. [import-busywin.bat](#import-busywin-bat) (26 lines)
-8. [index.html](#index-html) (477 lines)
-9. [install.bat](#install-bat) (5 lines)
-10. [install.ps1](#install-ps1) (120 lines)
-11. [LICENSE](#license) (22 lines)
-12. [package.json](#package-json) (134 lines)
-13. [README.md](#readme-md) (866 lines)
-14. [SECURITY.md](#security-md) (107 lines)
-15. [server.js](#server-js) (2157 lines)
-16. [setup.bat](#setup-bat) (70 lines)
-17. [supporters.json](#supporters-json) (13 lines)
-18. [Uninstall.bat](#uninstall-bat) (41 lines)
-19. [vite.config.js](#vite-config-js) (293 lines)
-20. [docs-site/assets/docs.js](#docs-site-assets-docs-js) (170 lines)
-21. [docs-site/assets/img/icon.svg](#docs-site-assets-img-icon-svg) (8 lines)
-22. [docs-site/assets/style.css](#docs-site-assets-style-css) (314 lines)
-23. [docs-site/build.mjs](#docs-site-build-mjs) (386 lines)
-24. [docs-site/pages/about.mjs](#docs-site-pages-about-mjs) (90 lines)
-25. [docs-site/pages/daily.mjs](#docs-site-pages-daily-mjs) (506 lines)
-26. [docs-site/pages/help.mjs](#docs-site-pages-help-mjs) (288 lines)
-27. [docs-site/pages/invoice.mjs](#docs-site-pages-invoice-mjs) (577 lines)
-28. [docs-site/pages/money.mjs](#docs-site-pages-money-mjs) (328 lines)
-29. [docs-site/pages/print.mjs](#docs-site-pages-print-mjs) (238 lines)
-30. [docs-site/pages/setup.mjs](#docs-site-pages-setup-mjs) (299 lines)
-31. [docs-site/pages/start.mjs](#docs-site-pages-start-mjs) (276 lines)
-32. [docs-site/site.mjs](#docs-site-site-mjs) (57 lines)
-33. [docs/ARTHA_DATABASE_SCHEMA.md](#docs-artha-database-schema-md) (121 lines)
-34. [docs/artha_schemas/01_BILLS_AND_INVOICES.md](#docs-artha-schemas-01-bills-and-invoices-md) (167 lines)
-35. [docs/artha_schemas/02_CLIENTS_AND_CUSTOMERS.md](#docs-artha-schemas-02-clients-and-customers-md) (63 lines)
-36. [docs/artha_schemas/03_PRODUCTS_AND_INVENTORY.md](#docs-artha-schemas-03-products-and-inventory-md) (63 lines)
-37. [docs/artha_schemas/04_PURCHASES_AND_SUPPLIERS.md](#docs-artha-schemas-04-purchases-and-suppliers-md) (83 lines)
-38. [docs/artha_schemas/05_EXPENSES_AND_OVERHEADS.md](#docs-artha-schemas-05-expenses-and-overheads-md) (57 lines)
-39. [docs/artha_schemas/06_RECEIPTS_AND_PAYMENTS.md](#docs-artha-schemas-06-receipts-and-payments-md) (51 lines)
-40. [docs/artha_schemas/07_PROFILES_AND_TEMPLATES.md](#docs-artha-schemas-07-profiles-and-templates-md) (95 lines)
-41. [docs/artha_schemas/08_SYSTEM_META_AND_CONFIG.md](#docs-artha-schemas-08-system-meta-and-config-md) (94 lines)
-42. [docs/AUDIT_2026-04-30.md](#docs-audit-2026-04-30-md) (272 lines)
-43. [docs/AUDIT_2026-10-22.md](#docs-audit-2026-10-22-md) (178 lines)
-44. [docs/BUSYWIN_DATABASE_SCHEMA.md](#docs-busywin-database-schema-md) (478 lines)
-45. [docs/BUSYWIN_FONTS.md](#docs-busywin-fonts-md) (93 lines)
-46. [docs/busywin_schemas/01_COMPANY_DATABASE_db_bds.md](#docs-busywin-schemas-01-company-database-db-bds-md) (1647 lines)
-47. [docs/busywin_schemas/02_FY_MASTERS_AND_ACCOUNTS.md](#docs-busywin-schemas-02-fy-masters-and-accounts-md) (830 lines)
-48. [docs/busywin_schemas/03_FY_TRANSACTIONS_AND_VOUCHERS.md](#docs-busywin-schemas-03-fy-transactions-and-vouchers-md) (1021 lines)
-49. [docs/busywin_schemas/04_FY_GST_AND_STATUTORY.md](#docs-busywin-schemas-04-fy-gst-and-statutory-md) (1102 lines)
-50. [docs/busywin_schemas/05_FY_SYSTEM_AND_CONFIGURATION.md](#docs-busywin-schemas-05-fy-system-and-configuration-md) (835 lines)
-51. [docs/COMPETITOR_GAPS.md](#docs-competitor-gaps-md) (131 lines)
-52. [docs/DEPLOY_ONLINE.md](#docs-deploy-online-md) (349 lines)
-53. [docs/KNOWN_ERRORS.md](#docs-known-errors-md) (1717 lines)
-54. [docs/README.md](#docs-readme-md) (19 lines)
-55. [docs/RELEASE_CHECKLIST.md](#docs-release-checklist-md) (137 lines)
-56. [docs/superpowers/specs/2026-04-30-multi-account-payments-design.md](#docs-superpowers-specs-2026-04-30-multi-account-payments-design-md) (214 lines)
-57. [docs/TAX_HELPER_PLAN.md](#docs-tax-helper-plan-md) (147 lines)
-58. [docs/USER_GUIDE.md](#docs-user-guide-md) (456 lines)
-59. [installer/App.xaml](#installer-app-xaml) (18 lines)
-60. [installer/App.xaml.cs](#installer-app-xaml-cs) (9 lines)
-61. [installer/ARTHA.Installer.csproj](#installer-artha-installer-csproj) (29 lines)
-62. [installer/InstallerEngine.cs](#installer-installerengine-cs) (234 lines)
-63. [installer/MainWindow.xaml](#installer-mainwindow-xaml) (120 lines)
-64. [installer/MainWindow.xaml.cs](#installer-mainwindow-xaml-cs) (120 lines)
-65. [launcher/App.xaml](#launcher-app-xaml) (22 lines)
-66. [launcher/App.xaml.cs](#launcher-app-xaml-cs) (53 lines)
-67. [launcher/ARTHA.Launcher.csproj](#launcher-artha-launcher-csproj) (30 lines)
-68. [launcher/Converters.cs](#launcher-converters-cs) (27 lines)
-69. [launcher/JobManager.cs](#launcher-jobmanager-cs) (119 lines)
-70. [launcher/LogItem.cs](#launcher-logitem-cs) (68 lines)
-71. [launcher/MainWindow.xaml](#launcher-mainwindow-xaml) (258 lines)
-72. [launcher/MainWindow.xaml.cs](#launcher-mainwindow-xaml-cs) (376 lines)
-73. [launcher/ServerManager.cs](#launcher-servermanager-cs) (448 lines)
-74. [public/favicon.svg](#public-favicon-svg) (8 lines)
-75. [public/fonts/fonts.css](#public-fonts-fonts-css) (216 lines)
-76. [public/manifest.webmanifest](#public-manifest-webmanifest) (1 lines)
-77. [release-templates/_system-scripts/backup-unix.sh](#release-templates-system-scripts-backup-unix-sh) (30 lines)
-78. [release-templates/_system-scripts/backup-windows.ps1](#release-templates-system-scripts-backup-windows-ps1) (39 lines)
-79. [release-templates/_system-scripts/install-unix.sh](#release-templates-system-scripts-install-unix-sh) (19 lines)
-80. [release-templates/_system-scripts/install-windows.ps1](#release-templates-system-scripts-install-windows-ps1) (231 lines)
-81. [release-templates/_system-scripts/move-windows.ps1](#release-templates-system-scripts-move-windows-ps1) (43 lines)
-82. [release-templates/_system-scripts/restore-windows.ps1](#release-templates-system-scripts-restore-windows-ps1) (46 lines)
-83. [release-templates/_system-scripts/start-unix.sh](#release-templates-system-scripts-start-unix-sh) (50 lines)
-84. [release-templates/_system-scripts/start-windows.ps1](#release-templates-system-scripts-start-windows-ps1) (196 lines)
-85. [release-templates/_system-scripts/stop-windows.ps1](#release-templates-system-scripts-stop-windows-ps1) (31 lines)
-86. [release-templates/_system-scripts/update-unix.sh](#release-templates-system-scripts-update-unix-sh) (273 lines)
-87. [release-templates/_system-scripts/update-windows.ps1](#release-templates-system-scripts-update-windows-ps1) (140 lines)
-88. [release-templates/Free GST Billing - LINUX.sh](#release-templates-free-gst-billing-linux-sh) (59 lines)
-89. [release-templates/Free GST Billing - MAC.command](#release-templates-free-gst-billing-mac-command) (67 lines)
-90. [release-templates/Free GST Billing - WINDOWS.hta](#release-templates-free-gst-billing-windows-hta) (600 lines)
-91. [release-templates/READ ME FIRST.txt](#release-templates-read-me-first-txt) (146 lines)
-92. [scripts/build-release-zip.mjs](#scripts-build-release-zip-mjs) (353 lines)
-93. [scripts/bundle-tesseract-assets.mjs](#scripts-bundle-tesseract-assets-mjs) (150 lines)
-94. [scripts/busywin_db_schema.json](#scripts-busywin-db-schema-json) (29720 lines)
-95. [scripts/csv-test.mjs](#scripts-csv-test-mjs) (115 lines)
-96. [scripts/discount-modes-test.mjs](#scripts-discount-modes-test-mjs) (69 lines)
-97. [scripts/extract_busywin_schema.py](#scripts-extract-busywin-schema-py) (161 lines)
-98. [scripts/generate_busywin_docs.py](#scripts-generate-busywin-docs-py) (351 lines)
-99. [scripts/generate_master_doc.py](#scripts-generate-master-doc-py) (503 lines)
-100. [scripts/generate-artha-md.mjs](#scripts-generate-artha-md-mjs) (186 lines)
-101. [scripts/generate-icons.mjs](#scripts-generate-icons-mjs) (176 lines)
-102. [scripts/import-busywin.py](#scripts-import-busywin-py) (505 lines)
-103. [scripts/inspect_artha_schema.py](#scripts-inspect-artha-schema-py) (60 lines)
-104. [scripts/inspect_fonts.py](#scripts-inspect-fonts-py) (57 lines)
-105. [scripts/inspect_fy_tables.py](#scripts-inspect-fy-tables-py) (12 lines)
-106. [scripts/inspect_key_tables.py](#scripts-inspect-key-tables-py) (24 lines)
-107. [scripts/inspect_tables.py](#scripts-inspect-tables-py) (55 lines)
-108. [scripts/inspect_vchtypes.py](#scripts-inspect-vchtypes-py) (16 lines)
-109. [scripts/tax-test.mjs](#scripts-tax-test-mjs) (1038 lines)
-110. [scripts/test-update-unix.mjs](#scripts-test-update-unix-mjs) (239 lines)
-111. [scripts/verify-release.mjs](#scripts-verify-release-mjs) (190 lines)
-112. [src/App.jsx](#src-app-jsx) (1290 lines)
-113. [src/components/ActionsMenu.jsx](#src-components-actionsmenu-jsx) (88 lines)
-114. [src/components/AppFooter.jsx](#src-components-appfooter-jsx) (40 lines)
-115. [src/components/AppLock.jsx](#src-components-applock-jsx) (104 lines)
-116. [src/components/AppLockSettings.jsx](#src-components-applocksettings-jsx) (96 lines)
-117. [src/components/BillOCR.jsx](#src-components-billocr-jsx) (655 lines)
-118. [src/components/BulkCsvImport.jsx](#src-components-bulkcsvimport-jsx) (199 lines)
-119. [src/components/ClientModal.jsx](#src-components-clientmodal-jsx) (203 lines)
-120. [src/components/ClientsView.jsx](#src-components-clientsview-jsx) (1014 lines)
-121. [src/components/ConfirmModal.jsx](#src-components-confirmmodal-jsx) (210 lines)
-122. [src/components/ControlPanel.jsx](#src-components-controlpanel-jsx) (259 lines)
-123. [src/components/Dashboard.jsx](#src-components-dashboard-jsx) (1916 lines)
-124. [src/components/ExpenseTracker.jsx](#src-components-expensetracker-jsx) (466 lines)
-125. [src/components/GSTReturns.jsx](#src-components-gstreturns-jsx) (2466 lines)
-126. [src/components/HelpButton.jsx](#src-components-helpbutton-jsx) (62 lines)
-127. [src/components/IncomeTax.jsx](#src-components-incometax-jsx) (1177 lines)
-128. [src/components/InventoryView.jsx](#src-components-inventoryview-jsx) (398 lines)
-129. [src/components/InvoiceGenerator.jsx](#src-components-invoicegenerator-jsx) (4712 lines)
-130. [src/components/InvoiceGridLayout.jsx](#src-components-invoicegridlayout-jsx) (543 lines)
-131. [src/components/InvoiceNumberSettings.jsx](#src-components-invoicenumbersettings-jsx) (325 lines)
-132. [src/components/InvoicePreview.jsx](#src-components-invoicepreview-jsx) (1562 lines)
-133. [src/components/LockButton.jsx](#src-components-lockbutton-jsx) (25 lines)
-134. [src/components/PageHeader.jsx](#src-components-pageheader-jsx) (73 lines)
-135. [src/components/PartyOutstandingReport.jsx](#src-components-partyoutstandingreport-jsx) (97 lines)
-136. [src/components/PrintPreviewModal.jsx](#src-components-printpreviewmodal-jsx) (215 lines)
-137. [src/components/PrintSettings.jsx](#src-components-printsettings-jsx) (1615 lines)
-138. [src/components/ProductBulkEdit.jsx](#src-components-productbulkedit-jsx) (102 lines)
-139. [src/components/PurchaseBills.jsx](#src-components-purchasebills-jsx) (1280 lines)
-140. [src/components/ReceiptVoucher.jsx](#src-components-receiptvoucher-jsx) (500 lines)
-141. [src/components/RecurringInvoices.jsx](#src-components-recurringinvoices-jsx) (443 lines)
-142. [src/components/ReportsView.jsx](#src-components-reportsview-jsx) (726 lines)
-143. [src/components/SettingsView.jsx](#src-components-settingsview-jsx) (2142 lines)
-144. [src/components/SetupWizard.jsx](#src-components-setupwizard-jsx) (256 lines)
-145. [src/components/StarBanner.jsx](#src-components-starbanner-jsx) (63 lines)
-146. [src/components/StockReport.jsx](#src-components-stockreport-jsx) (106 lines)
-147. [src/components/SupportNudge.jsx](#src-components-supportnudge-jsx) (69 lines)
-148. [src/components/SupportView.jsx](#src-components-supportview-jsx) (207 lines)
-149. [src/components/TableExport.jsx](#src-components-tableexport-jsx) (63 lines)
-150. [src/components/Toast.jsx](#src-components-toast-jsx) (77 lines)
-151. [src/components/UnassignedBanner.jsx](#src-components-unassignedbanner-jsx) (76 lines)
-152. [src/components/useSupporters.js](#src-components-usesupporters-js) (29 lines)
-153. [src/components/WelcomeGuide.jsx](#src-components-welcomeguide-jsx) (509 lines)
-154. [src/config/brand.js](#src-config-brand-js) (17 lines)
-155. [src/index.css](#src-index-css) (3516 lines)
-156. [src/index.html](#src-index-html) (155 lines)
-157. [src/main.jsx](#src-main-jsx) (146 lines)
-158. [src/services/googleDrive.js](#src-services-googledrive-js) (219 lines)
-159. [src/store.js](#src-store-js) (550 lines)
-160. [src/utils.js](#src-utils-js) (2483 lines)
-161. [src/utils/appLock.js](#src-utils-applock-js) (15 lines)
-162. [src/utils/bulkCsv.js](#src-utils-bulkcsv-js) (409 lines)
-163. [src/utils/clientCredit.js](#src-utils-clientcredit-js) (135 lines)
-164. [src/utils/hsnRates.js](#src-utils-hsnrates-js) (168 lines)
-165. [src/utils/itr.js](#src-utils-itr-js) (1342 lines)
-166. [src/utils/partyOutstanding.js](#src-utils-partyoutstanding-js) (54 lines)
-167. [src/utils/prefsMirror.js](#src-utils-prefsmirror-js) (78 lines)
-168. [src/utils/printSettings.js](#src-utils-printsettings-js) (571 lines)
-169. [src/utils/products.js](#src-utils-products-js) (67 lines)
-170. [src/utils/share.js](#src-utils-share-js) (43 lines)
-171. [src/utils/supporters.js](#src-utils-supporters-js) (56 lines)
-172. [src/utils/xlsx.js](#src-utils-xlsx-js) (76 lines)
-173. [tests/smoke.mjs](#tests-smoke-mjs) (1844 lines)
+5. [companies.js](#companies-js) (302 lines)
+6. [eslint.config.js](#eslint-config-js) (35 lines)
+7. [frontend.log](#frontend-log) (7 lines)
+8. [import-busywin.bat](#import-busywin-bat) (26 lines)
+9. [index.html](#index-html) (477 lines)
+10. [install.bat](#install-bat) (5 lines)
+11. [install.ps1](#install-ps1) (120 lines)
+12. [jsconfig.json](#jsconfig-json) (10 lines)
+13. [LICENSE](#license) (22 lines)
+14. [package.json](#package-json) (156 lines)
+15. [README-MULTI-COMPANY.md](#readme-multi-company-md) (123 lines)
+16. [README.md](#readme-md) (866 lines)
+17. [SECURITY.md](#security-md) (107 lines)
+18. [server.js](#server-js) (2286 lines)
+19. [setup.bat](#setup-bat) (70 lines)
+20. [supporters.json](#supporters-json) (13 lines)
+21. [Uninstall.bat](#uninstall-bat) (41 lines)
+22. [vite.config.js](#vite-config-js) (306 lines)
+23. [docs-site/assets/docs.js](#docs-site-assets-docs-js) (170 lines)
+24. [docs-site/assets/img/icon.svg](#docs-site-assets-img-icon-svg) (8 lines)
+25. [docs-site/assets/style.css](#docs-site-assets-style-css) (314 lines)
+26. [docs-site/build.mjs](#docs-site-build-mjs) (386 lines)
+27. [docs-site/pages/about.mjs](#docs-site-pages-about-mjs) (90 lines)
+28. [docs-site/pages/daily.mjs](#docs-site-pages-daily-mjs) (506 lines)
+29. [docs-site/pages/help.mjs](#docs-site-pages-help-mjs) (288 lines)
+30. [docs-site/pages/invoice.mjs](#docs-site-pages-invoice-mjs) (577 lines)
+31. [docs-site/pages/money.mjs](#docs-site-pages-money-mjs) (328 lines)
+32. [docs-site/pages/print.mjs](#docs-site-pages-print-mjs) (238 lines)
+33. [docs-site/pages/setup.mjs](#docs-site-pages-setup-mjs) (299 lines)
+34. [docs-site/pages/start.mjs](#docs-site-pages-start-mjs) (276 lines)
+35. [docs-site/site.mjs](#docs-site-site-mjs) (57 lines)
+36. [docs/ARTHA_DATABASE_SCHEMA.md](#docs-artha-database-schema-md) (121 lines)
+37. [docs/artha_schemas/01_BILLS_AND_INVOICES.md](#docs-artha-schemas-01-bills-and-invoices-md) (167 lines)
+38. [docs/artha_schemas/02_CLIENTS_AND_CUSTOMERS.md](#docs-artha-schemas-02-clients-and-customers-md) (63 lines)
+39. [docs/artha_schemas/03_PRODUCTS_AND_INVENTORY.md](#docs-artha-schemas-03-products-and-inventory-md) (63 lines)
+40. [docs/artha_schemas/04_PURCHASES_AND_SUPPLIERS.md](#docs-artha-schemas-04-purchases-and-suppliers-md) (83 lines)
+41. [docs/artha_schemas/05_EXPENSES_AND_OVERHEADS.md](#docs-artha-schemas-05-expenses-and-overheads-md) (57 lines)
+42. [docs/artha_schemas/06_RECEIPTS_AND_PAYMENTS.md](#docs-artha-schemas-06-receipts-and-payments-md) (51 lines)
+43. [docs/artha_schemas/07_PROFILES_AND_TEMPLATES.md](#docs-artha-schemas-07-profiles-and-templates-md) (95 lines)
+44. [docs/artha_schemas/08_SYSTEM_META_AND_CONFIG.md](#docs-artha-schemas-08-system-meta-and-config-md) (94 lines)
+45. [docs/AUDIT_2026-04-30.md](#docs-audit-2026-04-30-md) (272 lines)
+46. [docs/AUDIT_2026-10-22.md](#docs-audit-2026-10-22-md) (178 lines)
+47. [docs/BUSYWIN_DATABASE_SCHEMA.md](#docs-busywin-database-schema-md) (478 lines)
+48. [docs/BUSYWIN_FONTS.md](#docs-busywin-fonts-md) (93 lines)
+49. [docs/busywin_schemas/01_COMPANY_DATABASE_db_bds.md](#docs-busywin-schemas-01-company-database-db-bds-md) (1647 lines)
+50. [docs/busywin_schemas/02_FY_MASTERS_AND_ACCOUNTS.md](#docs-busywin-schemas-02-fy-masters-and-accounts-md) (830 lines)
+51. [docs/busywin_schemas/03_FY_TRANSACTIONS_AND_VOUCHERS.md](#docs-busywin-schemas-03-fy-transactions-and-vouchers-md) (1021 lines)
+52. [docs/busywin_schemas/04_FY_GST_AND_STATUTORY.md](#docs-busywin-schemas-04-fy-gst-and-statutory-md) (1102 lines)
+53. [docs/busywin_schemas/05_FY_SYSTEM_AND_CONFIGURATION.md](#docs-busywin-schemas-05-fy-system-and-configuration-md) (835 lines)
+54. [docs/COMPETITOR_GAPS.md](#docs-competitor-gaps-md) (131 lines)
+55. [docs/DEPLOY_ONLINE.md](#docs-deploy-online-md) (349 lines)
+56. [docs/KNOWN_ERRORS.md](#docs-known-errors-md) (1717 lines)
+57. [docs/README.md](#docs-readme-md) (19 lines)
+58. [docs/RELEASE_CHECKLIST.md](#docs-release-checklist-md) (137 lines)
+59. [docs/superpowers/specs/2026-04-30-multi-account-payments-design.md](#docs-superpowers-specs-2026-04-30-multi-account-payments-design-md) (214 lines)
+60. [docs/TAX_HELPER_PLAN.md](#docs-tax-helper-plan-md) (147 lines)
+61. [docs/USER_GUIDE.md](#docs-user-guide-md) (456 lines)
+62. [installer/App.xaml](#installer-app-xaml) (18 lines)
+63. [installer/App.xaml.cs](#installer-app-xaml-cs) (9 lines)
+64. [installer/ARTHA.Installer.csproj](#installer-artha-installer-csproj) (29 lines)
+65. [installer/InstallerEngine.cs](#installer-installerengine-cs) (234 lines)
+66. [installer/MainWindow.xaml](#installer-mainwindow-xaml) (120 lines)
+67. [installer/MainWindow.xaml.cs](#installer-mainwindow-xaml-cs) (120 lines)
+68. [launcher/App.xaml](#launcher-app-xaml) (22 lines)
+69. [launcher/App.xaml.cs](#launcher-app-xaml-cs) (53 lines)
+70. [launcher/ARTHA.Launcher.csproj](#launcher-artha-launcher-csproj) (30 lines)
+71. [launcher/Converters.cs](#launcher-converters-cs) (27 lines)
+72. [launcher/JobManager.cs](#launcher-jobmanager-cs) (119 lines)
+73. [launcher/LogItem.cs](#launcher-logitem-cs) (68 lines)
+74. [launcher/MainWindow.xaml](#launcher-mainwindow-xaml) (258 lines)
+75. [launcher/MainWindow.xaml.cs](#launcher-mainwindow-xaml-cs) (376 lines)
+76. [launcher/ServerManager.cs](#launcher-servermanager-cs) (448 lines)
+77. [public/favicon.svg](#public-favicon-svg) (8 lines)
+78. [public/fonts/fonts.css](#public-fonts-fonts-css) (216 lines)
+79. [public/manifest.webmanifest](#public-manifest-webmanifest) (1 lines)
+80. [release-templates/_system-scripts/backup-unix.sh](#release-templates-system-scripts-backup-unix-sh) (30 lines)
+81. [release-templates/_system-scripts/backup-windows.ps1](#release-templates-system-scripts-backup-windows-ps1) (39 lines)
+82. [release-templates/_system-scripts/install-unix.sh](#release-templates-system-scripts-install-unix-sh) (19 lines)
+83. [release-templates/_system-scripts/install-windows.ps1](#release-templates-system-scripts-install-windows-ps1) (231 lines)
+84. [release-templates/_system-scripts/move-windows.ps1](#release-templates-system-scripts-move-windows-ps1) (43 lines)
+85. [release-templates/_system-scripts/restore-windows.ps1](#release-templates-system-scripts-restore-windows-ps1) (46 lines)
+86. [release-templates/_system-scripts/start-unix.sh](#release-templates-system-scripts-start-unix-sh) (50 lines)
+87. [release-templates/_system-scripts/start-windows.ps1](#release-templates-system-scripts-start-windows-ps1) (196 lines)
+88. [release-templates/_system-scripts/stop-windows.ps1](#release-templates-system-scripts-stop-windows-ps1) (31 lines)
+89. [release-templates/_system-scripts/update-unix.sh](#release-templates-system-scripts-update-unix-sh) (273 lines)
+90. [release-templates/_system-scripts/update-windows.ps1](#release-templates-system-scripts-update-windows-ps1) (140 lines)
+91. [release-templates/Free GST Billing - LINUX.sh](#release-templates-free-gst-billing-linux-sh) (59 lines)
+92. [release-templates/Free GST Billing - MAC.command](#release-templates-free-gst-billing-mac-command) (67 lines)
+93. [release-templates/Free GST Billing - WINDOWS.hta](#release-templates-free-gst-billing-windows-hta) (600 lines)
+94. [release-templates/READ ME FIRST.txt](#release-templates-read-me-first-txt) (146 lines)
+95. [scripts/build-release-zip.mjs](#scripts-build-release-zip-mjs) (353 lines)
+96. [scripts/bundle-tesseract-assets.mjs](#scripts-bundle-tesseract-assets-mjs) (150 lines)
+97. [scripts/busywin_db_schema.json](#scripts-busywin-db-schema-json) (29720 lines)
+98. [scripts/csv-test.mjs](#scripts-csv-test-mjs) (115 lines)
+99. [scripts/discount-modes-test.mjs](#scripts-discount-modes-test-mjs) (69 lines)
+100. [scripts/extract_busywin_schema.py](#scripts-extract-busywin-schema-py) (161 lines)
+101. [scripts/generate_busywin_docs.py](#scripts-generate-busywin-docs-py) (351 lines)
+102. [scripts/generate_master_doc.py](#scripts-generate-master-doc-py) (503 lines)
+103. [scripts/generate-artha-md.mjs](#scripts-generate-artha-md-mjs) (189 lines)
+104. [scripts/generate-icons.mjs](#scripts-generate-icons-mjs) (176 lines)
+105. [scripts/import-busywin.py](#scripts-import-busywin-py) (514 lines)
+106. [scripts/inspect_artha_schema.py](#scripts-inspect-artha-schema-py) (60 lines)
+107. [scripts/inspect_fonts.py](#scripts-inspect-fonts-py) (57 lines)
+108. [scripts/inspect_fy_tables.py](#scripts-inspect-fy-tables-py) (12 lines)
+109. [scripts/inspect_key_tables.py](#scripts-inspect-key-tables-py) (24 lines)
+110. [scripts/inspect_tables.py](#scripts-inspect-tables-py) (55 lines)
+111. [scripts/inspect_vchtypes.py](#scripts-inspect-vchtypes-py) (16 lines)
+112. [scripts/tax-test.mjs](#scripts-tax-test-mjs) (1038 lines)
+113. [scripts/test-update-unix.mjs](#scripts-test-update-unix-mjs) (239 lines)
+114. [scripts/theme-audit.mjs](#scripts-theme-audit-mjs) (327 lines)
+115. [scripts/verify-release.mjs](#scripts-verify-release-mjs) (228 lines)
+116. [src/App.jsx](#src-app-jsx) (1290 lines)
+117. [src/components/ActionsMenu.jsx](#src-components-actionsmenu-jsx) (105 lines)
+118. [src/components/AppFooter.jsx](#src-components-appfooter-jsx) (46 lines)
+119. [src/components/AppLock.jsx](#src-components-applock-jsx) (104 lines)
+120. [src/components/AppLockSettings.jsx](#src-components-applocksettings-jsx) (96 lines)
+121. [src/components/BillOCR.jsx](#src-components-billocr-jsx) (655 lines)
+122. [src/components/BulkCsvImport.jsx](#src-components-bulkcsvimport-jsx) (199 lines)
+123. [src/components/ClientModal.jsx](#src-components-clientmodal-jsx) (203 lines)
+124. [src/components/ClientsView.jsx](#src-components-clientsview-jsx) (1014 lines)
+125. [src/components/CompanyGate.jsx](#src-components-companygate-jsx) (100 lines)
+126. [src/components/CompanySelect.css](#src-components-companyselect-css) (124 lines)
+127. [src/components/CompanySelect.jsx](#src-components-companyselect-jsx) (207 lines)
+128. [src/components/CompanySwitcher.jsx](#src-components-companyswitcher-jsx) (52 lines)
+129. [src/components/ConfirmModal.jsx](#src-components-confirmmodal-jsx) (207 lines)
+130. [src/components/ControlPanel.jsx](#src-components-controlpanel-jsx) (259 lines)
+131. [src/components/Dashboard.jsx](#src-components-dashboard-jsx) (1916 lines)
+132. [src/components/ExpenseTracker.jsx](#src-components-expensetracker-jsx) (466 lines)
+133. [src/components/GSTReturns.jsx](#src-components-gstreturns-jsx) (2466 lines)
+134. [src/components/HelpButton.jsx](#src-components-helpbutton-jsx) (62 lines)
+135. [src/components/IncomeTax.jsx](#src-components-incometax-jsx) (1177 lines)
+136. [src/components/InventoryView.jsx](#src-components-inventoryview-jsx) (398 lines)
+137. [src/components/InvoiceGenerator.jsx](#src-components-invoicegenerator-jsx) (4712 lines)
+138. [src/components/InvoiceGridLayout.jsx](#src-components-invoicegridlayout-jsx) (543 lines)
+139. [src/components/InvoiceNumberSettings.jsx](#src-components-invoicenumbersettings-jsx) (325 lines)
+140. [src/components/InvoicePreview.jsx](#src-components-invoicepreview-jsx) (1562 lines)
+141. [src/components/LockButton.jsx](#src-components-lockbutton-jsx) (25 lines)
+142. [src/components/navStyles.js](#src-components-navstyles-js) (32 lines)
+143. [src/components/PageHeader.jsx](#src-components-pageheader-jsx) (67 lines)
+144. [src/components/PartyOutstandingReport.jsx](#src-components-partyoutstandingreport-jsx) (97 lines)
+145. [src/components/PrintPreviewModal.jsx](#src-components-printpreviewmodal-jsx) (215 lines)
+146. [src/components/PrintSettings.jsx](#src-components-printsettings-jsx) (1615 lines)
+147. [src/components/ProductBulkEdit.jsx](#src-components-productbulkedit-jsx) (102 lines)
+148. [src/components/PurchaseBills.jsx](#src-components-purchasebills-jsx) (1280 lines)
+149. [src/components/ReceiptVoucher.jsx](#src-components-receiptvoucher-jsx) (500 lines)
+150. [src/components/RecurringInvoices.jsx](#src-components-recurringinvoices-jsx) (443 lines)
+151. [src/components/ReportsView.jsx](#src-components-reportsview-jsx) (726 lines)
+152. [src/components/SettingsView.jsx](#src-components-settingsview-jsx) (2142 lines)
+153. [src/components/SetupWizard.jsx](#src-components-setupwizard-jsx) (331 lines)
+154. [src/components/StarBanner.jsx](#src-components-starbanner-jsx) (76 lines)
+155. [src/components/StockReport.jsx](#src-components-stockreport-jsx) (106 lines)
+156. [src/components/SupportNudge.jsx](#src-components-supportnudge-jsx) (90 lines)
+157. [src/components/SupportView.jsx](#src-components-supportview-jsx) (207 lines)
+158. [src/components/TableExport.jsx](#src-components-tableexport-jsx) (63 lines)
+159. [src/components/Toast.jsx](#src-components-toast-jsx) (113 lines)
+160. [src/components/ui/alert-dialog.jsx](#src-components-ui-alert-dialog-jsx) (121 lines)
+161. [src/components/ui/badge.jsx](#src-components-ui-badge-jsx) (29 lines)
+162. [src/components/ui/button.jsx](#src-components-ui-button-jsx) (61 lines)
+163. [src/components/ui/card.jsx](#src-components-ui-card-jsx) (57 lines)
+164. [src/components/ui/checkbox.jsx](#src-components-ui-checkbox-jsx) (28 lines)
+165. [src/components/ui/dialog.jsx](#src-components-ui-dialog-jsx) (127 lines)
+166. [src/components/ui/dropdown-menu.jsx](#src-components-ui-dropdown-menu-jsx) (185 lines)
+167. [src/components/ui/input.jsx](#src-components-ui-input-jsx) (30 lines)
+168. [src/components/ui/label.jsx](#src-components-ui-label-jsx) (20 lines)
+169. [src/components/ui/popover.jsx](#src-components-ui-popover-jsx) (37 lines)
+170. [src/components/ui/progress.jsx](#src-components-ui-progress-jsx) (22 lines)
+171. [src/components/ui/radio-group.jsx](#src-components-ui-radio-group-jsx) (34 lines)
+172. [src/components/ui/select.jsx](#src-components-ui-select-jsx) (154 lines)
+173. [src/components/ui/separator.jsx](#src-components-ui-separator-jsx) (22 lines)
+174. [src/components/ui/sheet.jsx](#src-components-ui-sheet-jsx) (60 lines)
+175. [src/components/ui/sonner.jsx](#src-components-ui-sonner-jsx) (31 lines)
+176. [src/components/ui/switch.jsx](#src-components-ui-switch-jsx) (30 lines)
+177. [src/components/ui/table.jsx](#src-components-ui-table-jsx) (82 lines)
+178. [src/components/ui/tabs.jsx](#src-components-ui-tabs-jsx) (50 lines)
+179. [src/components/ui/textarea.jsx](#src-components-ui-textarea-jsx) (22 lines)
+180. [src/components/ui/tooltip.jsx](#src-components-ui-tooltip-jsx) (38 lines)
+181. [src/components/UnassignedBanner.jsx](#src-components-unassignedbanner-jsx) (70 lines)
+182. [src/components/useSupporters.js](#src-components-usesupporters-js) (29 lines)
+183. [src/components/WelcomeGuide.jsx](#src-components-welcomeguide-jsx) (509 lines)
+184. [src/config/brand.js](#src-config-brand-js) (17 lines)
+185. [src/dev/StyleGuide.jsx](#src-dev-styleguide-jsx) (262 lines)
+186. [src/index.css](#src-index-css) (3540 lines)
+187. [src/index.html](#src-index-html) (155 lines)
+188. [src/lib/utils.js](#src-lib-utils-js) (19 lines)
+189. [src/main.jsx](#src-main-jsx) (168 lines)
+190. [src/services/companies.js](#src-services-companies-js) (114 lines)
+191. [src/services/googleDrive.js](#src-services-googledrive-js) (219 lines)
+192. [src/store.js](#src-store-js) (550 lines)
+193. [src/styles/tokens.css](#src-styles-tokens-css) (210 lines)
+194. [src/utils.js](#src-utils-js) (2483 lines)
+195. [src/utils/appLock.js](#src-utils-applock-js) (15 lines)
+196. [src/utils/bulkCsv.js](#src-utils-bulkcsv-js) (409 lines)
+197. [src/utils/clientCredit.js](#src-utils-clientcredit-js) (135 lines)
+198. [src/utils/hsnRates.js](#src-utils-hsnrates-js) (168 lines)
+199. [src/utils/itr.js](#src-utils-itr-js) (1342 lines)
+200. [src/utils/partyOutstanding.js](#src-utils-partyoutstanding-js) (54 lines)
+201. [src/utils/prefsMirror.js](#src-utils-prefsmirror-js) (113 lines)
+202. [src/utils/printSettings.js](#src-utils-printsettings-js) (571 lines)
+203. [src/utils/products.js](#src-utils-products-js) (67 lines)
+204. [src/utils/share.js](#src-utils-share-js) (43 lines)
+205. [src/utils/supporters.js](#src-utils-supporters-js) (56 lines)
+206. [src/utils/xlsx.js](#src-utils-xlsx-js) (76 lines)
+207. [tests/smoke.mjs](#tests-smoke-mjs) (1978 lines)
 
 ---
 
@@ -212,7 +246,7 @@
 ## `.gitignore`
 
 - Path: `.gitignore`
-- Lines: 55 | Size: 1.0 KB
+- Lines: 60 | Size: 1.2 KB
 
 ```
 # Logs
@@ -270,6 +304,11 @@ installer/bin/
 installer/obj/
 *.exe
 
+# Feature workspace snapshots. `feature/` holds a copy of the multi-company
+# patch plus a backup of real invoices, clients and a packaged ZIP. It is
+# personal financial data, not source, and must never be committed.
+/feature/
+
 ```
 
 ---
@@ -304,6 +343,319 @@ installer/obj/
   Free GST Billing Software running at http://localhost:11001
   Data stored in: D:\VEGA\ARTHA\data
 
+
+```
+
+---
+
+<a id="companies-js"></a>
+## `companies.js`
+
+- Path: `companies.js`
+- Lines: 302 | Size: 12.5 KB
+
+```javascript
+// ============================================================================
+// ARTHA - multi-company core
+// ----------------------------------------------------------------------------
+// Every company owns one folder:   data/COMP0001/   data/COMP0002/   ...
+// Everything that used to live straight under data/ (bills, clients, meta.json,
+// profile.json, backups, Saved Invoices ...) now lives inside that folder.
+//
+// The server never touches a company folder directly. Each request runs inside
+// an AsyncLocalStorage "company context" that is set from the login session, and
+// server.js asks dataDir() for the folder. A request without a session has no
+// context, so it cannot read or write any company's files.
+// ============================================================================
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
+import { AsyncLocalStorage } from 'async_hooks';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Global (not per company): the registry, the port file, the error log.
+export const DATA_ROOT = path.join(__dirname, 'data');
+export const REGISTRY_FILE = path.join(DATA_ROOT, 'companies.json');
+export const COMPANY_FILE = 'company.json'; // describes one company, lives inside its folder
+
+// Sub-folders every company gets (JSON documents, one file per record).
+export const COMPANY_DIRS = ['bills', 'clients', 'templates', 'products', 'expenses', 'recurring', 'receipts', 'profiles', 'purchases'];
+
+// "COMP0001", "COMP0002" ... (4 digits minimum, grows past COMP9999 if ever needed)
+export const ID_RE = /^COMP\d{4,}$/;
+export const formatCompanyId = (n) => `COMP${String(n).padStart(4, '0')}`;
+const seqOf = (id) => parseInt(String(id).slice(4), 10) || 0;
+
+// ---------------------------------------------------------------------------
+// Company context (which company is this request for?)
+// ---------------------------------------------------------------------------
+const als = new AsyncLocalStorage();
+
+export class NoCompanyError extends Error {
+  constructor() { super('No company is open'); this.code = 'no-company'; }
+}
+
+export const companyDirOf = (id) => path.join(DATA_ROOT, id);
+export const currentCompanyId = () => als.getStore()?.companyId || null;
+export const currentSessionId = () => als.getStore()?.sessionId || null;
+export function dataDir() {
+  const s = als.getStore();
+  if (!s) throw new NoCompanyError();
+  return s.companyDir;
+}
+export const runInCompany = (companyId, fn, extra = {}) =>
+  als.run({ companyId, companyDir: companyDirOf(companyId), ...extra }, fn);
+
+export function ensureCompanyDirs(companyId) {
+  const base = companyDirOf(companyId);
+  fs.mkdirSync(base, { recursive: true });
+  for (const d of COMPANY_DIRS) fs.mkdirSync(path.join(base, d), { recursive: true });
+}
+
+// ---------------------------------------------------------------------------
+// Small file helpers (kept local so this module has no dependency on server.js)
+// ---------------------------------------------------------------------------
+function readJson(file, fallback) {
+  try { if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, 'utf-8')); } catch { /* corrupt: use fallback */ }
+  return fallback;
+}
+function writeJsonAtomic(file, data) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const tmp = `${file}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf-8');
+  fs.renameSync(tmp, file);
+}
+
+// ---------------------------------------------------------------------------
+// Registry: data/companies.json  ->  { companies: [{ id, name, createdAt, lastOpenedAt }] }
+// The company folders are the truth. syncRegistry() re-adds a folder that is
+// missing from the file (hand-copied company, lost companies.json) and drops
+// entries whose folder is gone.
+// ---------------------------------------------------------------------------
+const readRegistry = () => {
+  const reg = readJson(REGISTRY_FILE, { companies: [] });
+  return Array.isArray(reg?.companies) ? reg : { companies: [] };
+};
+const writeRegistry = (reg) => writeJsonAtomic(REGISTRY_FILE, reg);
+
+function companyFolders() {
+  try {
+    return fs.readdirSync(DATA_ROOT, { withFileTypes: true })
+      .filter((e) => e.isDirectory() && ID_RE.test(e.name))
+      .map((e) => e.name)
+      .sort((a, b) => seqOf(a) - seqOf(b));
+  } catch { return []; }
+}
+
+function nameFromFolder(id) {
+  const dir = companyDirOf(id);
+  const own = readJson(path.join(dir, COMPANY_FILE), null);
+  if (own?.name) return String(own.name);
+  const profile = readJson(path.join(dir, 'profile.json'), null);
+  if (profile?.businessName) return String(profile.businessName);
+  return id;
+}
+
+export function syncRegistry() {
+  const reg = readRegistry();
+  const folders = companyFolders();
+  const byId = new Map(reg.companies.filter((c) => c && ID_RE.test(c.id)).map((c) => [c.id, c]));
+  let changed = reg.companies.length !== byId.size;
+  const next = [];
+  for (const id of folders) {
+    let entry = byId.get(id);
+    if (!entry) {
+      const own = readJson(path.join(companyDirOf(id), COMPANY_FILE), {});
+      entry = { id, name: nameFromFolder(id), createdAt: own.createdAt || new Date().toISOString(), lastOpenedAt: null };
+      changed = true;
+    }
+    next.push(entry);
+  }
+  if (next.length !== byId.size) changed = true;
+  if (changed || !fs.existsSync(REGISTRY_FILE)) writeRegistry({ companies: next });
+  return next;
+}
+
+export const listRegistry = () => syncRegistry();
+export const getCompany = (id) => (ID_RE.test(String(id)) ? listRegistry().find((c) => c.id === id) || null : null);
+
+export function nextCompanyId() {
+  const used = new Set([...companyFolders(), ...readRegistry().companies.map((c) => c?.id)]);
+  let n = 1;
+  for (const id of used) n = Math.max(n, seqOf(id) + 1);
+  return formatCompanyId(n);
+}
+
+export function createCompany(rawName) {
+  const name = String(rawName ?? '').replace(/\s+/g, ' ').trim().slice(0, 100);
+  if (!name) { const e = new Error('Company name is required'); e.code = 'name-required'; throw e; }
+  const id = nextCompanyId();
+  ensureCompanyDirs(id);
+  const createdAt = new Date().toISOString();
+  writeJsonAtomic(path.join(companyDirOf(id), COMPANY_FILE), { id, name, createdAt });
+  const reg = readRegistry();
+  reg.companies.push({ id, name, createdAt, lastOpenedAt: null });
+  writeRegistry(reg);
+  return { id, name, createdAt, lastOpenedAt: null };
+}
+
+export function touchCompany(id) {
+  const reg = readRegistry();
+  const c = reg.companies.find((x) => x.id === id);
+  if (c) { c.lastOpenedAt = new Date().toISOString(); writeRegistry(reg); }
+}
+
+// Size of one company in MB (backups excluded: they only repeat the same data).
+// Cached for a few seconds so the company list stays quick.
+const sizeCache = new Map();
+export function companySizeMB(id) {
+  const hit = sizeCache.get(id);
+  if (hit && Date.now() - hit.at < 10_000) return hit.value;
+  let total = 0;
+  const walk = (dir, top) => {
+    let entries = [];
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const e of entries) {
+      if (top && e.name === 'backups') continue;
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) walk(p, false);
+      else { try { total += fs.statSync(p).size; } catch { /* vanished */ } }
+    }
+  };
+  walk(companyDirOf(id), true);
+  const value = Math.round((total / (1024 * 1024)) * 10) / 10;
+  sizeCache.set(id, { at: Date.now(), value });
+  return value;
+}
+
+// Run fn once for every company, each inside its own company context. Used by
+// the background jobs (daily backup, trash purge, recurring invoices).
+export async function forEachCompany(fn) {
+  for (const c of listRegistry()) {
+    try {
+      ensureCompanyDirs(c.id);
+      await runInCompany(c.id, async () => fn(c));
+    } catch (err) {
+      console.warn(`[${c.id}] background job failed:`, err?.message || err);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Login sessions (in memory: a server restart asks for the company again)
+// ---------------------------------------------------------------------------
+export const SESSION_COOKIE = 'artha_sid';
+const sessions = new Map(); // token -> { companyId, createdAt }
+
+export function createSession(companyId) {
+  const token = crypto.randomBytes(32).toString('hex');
+  sessions.set(token, { companyId, createdAt: Date.now() });
+  return token;
+}
+export const getSession = (token) => (token ? sessions.get(token) || null : null);
+export const destroySession = (token) => { if (token) sessions.delete(token); };
+
+export function parseCookies(header) {
+  const out = {};
+  for (const part of String(header || '').split(';')) {
+    const i = part.indexOf('=');
+    if (i < 0) continue;
+    const k = part.slice(0, i).trim();
+    if (k) { try { out[k] = decodeURIComponent(part.slice(i + 1).trim()); } catch { out[k] = part.slice(i + 1).trim(); } }
+  }
+  return out;
+}
+export const sessionCookie = (token) => `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Strict`;
+export const clearedSessionCookie = () => `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`;
+
+// ---------------------------------------------------------------------------
+// One-time move of a pre-multi-company install into data/COMP0001
+// ---------------------------------------------------------------------------
+// Pre-multi-company layout -> where it goes inside the company folder.
+const LEGACY_IN_DATA = [
+  ...COMPANY_DIRS, 'trash', 'backups', 'cancelled-pdf-originals',
+  'profile.json', 'meta.json', 'local-prefs.json',
+].map((n) => ({ from: path.join(DATA_ROOT, n), to: n }));
+const LEGACY_AT_APP_ROOT = [
+  { from: path.join(__dirname, 'Saved Invoices'), to: 'Saved Invoices' },
+  // Renamed: "Trash" and the bill-trash folder "trash" would be the same
+  // folder on Windows and macOS (case-insensitive file systems).
+  { from: path.join(__dirname, 'Trash'), to: 'pdf-trash' },
+];
+const LEGACY_ALL = [...LEGACY_IN_DATA, ...LEGACY_AT_APP_ROOT];
+const MIGRATION_MARKER = path.join(DATA_ROOT, '.legacy-migration');
+
+const hasContent = (p) => {
+  try {
+    const st = fs.statSync(p);
+    if (!st.isDirectory()) return true;
+    return fs.readdirSync(p).length > 0;
+  } catch { return false; }
+};
+
+function moveEntry(src, dst) {
+  if (!fs.existsSync(src)) return;
+  if (fs.existsSync(dst)) {
+    // The company folder was just created with empty sub-folders: those make way.
+    // Anything that already has content is never overwritten.
+    if (fs.statSync(dst).isDirectory() && fs.readdirSync(dst).length === 0) fs.rmdirSync(dst);
+    else { console.warn(`[migrate] ${dst} already has content, left ${src} where it is`); return; }
+  }
+  fs.mkdirSync(path.dirname(dst), { recursive: true });
+  try {
+    fs.renameSync(src, dst);
+  } catch (err) {
+    if (err.code !== 'EXDEV') throw err;
+    fs.cpSync(src, dst, { recursive: true });
+    fs.rmSync(src, { recursive: true, force: true });
+  }
+}
+
+export function migrateLegacyData() {
+  fs.mkdirSync(DATA_ROOT, { recursive: true });
+  let target = null;
+  if (fs.existsSync(MIGRATION_MARKER)) {
+    // A previous run was interrupted: carry on into the same company.
+    const t = fs.readFileSync(MIGRATION_MARKER, 'utf-8').trim();
+    if (ID_RE.test(t)) target = t;
+  } else if (companyFolders().length === 0 && LEGACY_ALL.some((e) => hasContent(e.from))) {
+    target = formatCompanyId(1);
+    fs.writeFileSync(MIGRATION_MARKER, target, 'utf-8');
+  }
+  if (!target) {
+    // Nothing to migrate. Sweep the empty folders old versions created at start-up.
+    for (const e of LEGACY_IN_DATA) {
+      try { if (fs.statSync(e.from).isDirectory() && fs.readdirSync(e.from).length === 0) fs.rmdirSync(e.from); } catch { /* not there */ }
+    }
+    return { migrated: false };
+  }
+
+  console.log(`[migrate] Moving your existing data into data/${target} ...`);
+  ensureCompanyDirs(target);
+  const dir = companyDirOf(target);
+  for (const e of LEGACY_ALL) {
+    if (fs.existsSync(e.from)) {
+      if (hasContent(e.from)) moveEntry(e.from, path.join(dir, e.to));
+      else { try { fs.rmSync(e.from, { recursive: true, force: true }); } catch { /* ignore */ } }
+    }
+  }
+  const profile = readJson(path.join(dir, 'profile.json'), {});
+  const file = path.join(dir, COMPANY_FILE);
+  if (!fs.existsSync(file)) {
+    writeJsonAtomic(file, {
+      id: target,
+      name: (profile.businessName && String(profile.businessName).trim()) || 'My Company',
+      createdAt: new Date().toISOString(),
+      migratedFromSingleCompany: true,
+    });
+  }
+  fs.rmSync(MIGRATION_MARKER, { force: true });
+  syncRegistry();
+  console.log(`[migrate] Done. Your previous data is now company ${target}.`);
+  return { migrated: true, companyId: target };
+}
 
 ```
 
@@ -377,7 +729,7 @@ export default defineConfig([
 ## `import-busywin.bat`
 
 - Path: `import-busywin.bat`
-- Lines: 26 | Size: 0.5 KB
+- Lines: 26 | Size: 0.6 KB
 
 ```batch
 @echo off
@@ -390,7 +742,7 @@ echo   ARTHA Accounting Software - BusyWin Data Importer
 echo ========================================================
 echo.
 echo Source: C:\BusyWin\DATA\COMP0001
-echo Target: %~dp0data
+echo Target: %~dp0data\COMP0001  (use --artha-company COMP0002 for another company)
 echo.
 
 where python >nul 2>&1
@@ -1045,6 +1397,27 @@ Write-Host ''
 
 ---
 
+<a id="jsconfig-json"></a>
+## `jsconfig.json`
+
+- Path: `jsconfig.json`
+- Lines: 10 | Size: 0.1 KB
+
+```json
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src"]
+}
+
+```
+
+---
+
 <a id="license"></a>
 ## `LICENSE`
 
@@ -1082,12 +1455,12 @@ SOFTWARE.
 ## `package.json`
 
 - Path: `package.json`
-- Lines: 134 | Size: 4.7 KB
+- Lines: 156 | Size: 5.4 KB
 
 ```json
 {
   "name": "artha-accounting-software",
-  "version": "1.10.80",
+  "version": "1.11.0",
   "description": "ARTHA Accounting Software & billing software for India. Tax Invoice, Proforma, Credit Note, Bill of Supply, Delivery Challan, GSTR-1 / GSTR-3B JSON exports, GSTR-2B reconciliation, e-Way Bill, TDS / TCS reports (Form 26Q / 27EQ), multi-currency for 22 countries, per-line custom units, rich-text Terms with 13 India presets, granular backup with optional Google Drive sync. Offline-first PWA. By VIJAYKRSHA.ONLINE.",
   "author": "VIJAYKRSHA.ONLINE <contact@vijaykrsha.online>",
   "license": "MIT",
@@ -1185,9 +1558,26 @@ SOFTWARE.
     "verify:release": "node scripts/verify-release.mjs",
     "launcher:build": "dotnet build launcher/ARTHA.Launcher.csproj -c Release",
     "launcher:publish": "dotnet publish launcher/ARTHA.Launcher.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true /p:EnableCompressionInSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true -o publish-launcher",
-    "installer:publish": "dotnet publish installer/ARTHA.Installer.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true /p:EnableCompressionInSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true -o publish-installer"
+    "installer:publish": "dotnet publish installer/ARTHA.Installer.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true /p:EnableCompressionInSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true -o publish-installer",
+    "theme:audit": "node scripts/theme-audit.mjs"
   },
   "dependencies": {
+    "@radix-ui/react-alert-dialog": "^1.2.1",
+    "@radix-ui/react-checkbox": "^1.4.1",
+    "@radix-ui/react-dialog": "^1.3.1",
+    "@radix-ui/react-dropdown-menu": "^2.2.1",
+    "@radix-ui/react-label": "^2.1.17",
+    "@radix-ui/react-popover": "^1.3.1",
+    "@radix-ui/react-progress": "^1.2.1",
+    "@radix-ui/react-radio-group": "^1.5.1",
+    "@radix-ui/react-select": "^2.4.1",
+    "@radix-ui/react-separator": "^1.2.0",
+    "@radix-ui/react-slot": "^1.5.0",
+    "@radix-ui/react-switch": "^1.4.1",
+    "@radix-ui/react-tabs": "^1.2.1",
+    "@radix-ui/react-tooltip": "^1.4.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "cors": "^2.8.6",
     "dompurify": "^3.4.17",
     "express": "^5.2.1",
@@ -1201,10 +1591,14 @@ SOFTWARE.
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-phone-number-input": "^3.4.10",
-    "tesseract.js": "^7.0.0"
+    "sonner": "^2.0.8",
+    "tailwind-merge": "^3.7.0",
+    "tesseract.js": "^7.0.0",
+    "tw-animate-css": "^1.4.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
+    "@tailwindcss/vite": "^4.3.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^5.2.0",
@@ -1214,12 +1608,147 @@ SOFTWARE.
     "globals": "^16.5.0",
     "playwright": "^1.63.0",
     "sharp": "^0.35.5",
+    "tailwindcss": "^4.3.3",
     "vite": "^7.3.7",
     "vite-plugin-pwa": "^2.0.0"
   }
 }
 
 ```
+
+---
+
+<a id="readme-multi-company-md"></a>
+## `README-MULTI-COMPANY.md`
+
+- Path: `README-MULTI-COMPANY.md`
+- Lines: 123 | Size: 6.1 KB
+
+````markdown
+# ARTHA — Multiple Companies
+
+ARTHA now opens on a **Select Company for Operation** page (like BusyWin). Every company has its
+own login, its own settings and its own folder: `data/COMP0001`, `data/COMP0002`, `data/COMP0003` …
+Nothing is shared between companies.
+
+---
+
+## 1. Install the update
+
+1. **Close ARTHA** and **copy your whole `data` folder somewhere safe** (one-time precaution).
+2. Copy the files from this package into your ARTHA folder, keeping the same paths
+   (replace when asked). New files: `companies.js`, `src/services/companies.js`,
+   `src/components/CompanyGate.jsx`, `CompanySelect.jsx`, `CompanySelect.css`, `CompanySwitcher.jsx`.
+3. Rebuild and start as you always do:
+   ```
+   npm run build
+   npm run server        (or your normal launcher / "npm start")
+   ```
+   If you use the Windows launcher (`launcher/ServerManager.cs`), rebuild it with `npm run launcher:build`.
+4. Open ARTHA in the browser.
+
+### Your existing data
+On the first start the server moves everything you already had into **`data/COMP0001`** automatically
+(bills, clients, products, settings, backups, `Saved Invoices`, `Trash`). The company is named after your
+business name. Nothing is deleted. If the move is interrupted, start ARTHA again and it carries on.
+
+---
+
+## 2. Daily use
+
+| You want to… | Do this |
+|---|---|
+| Open a company | Click it (or use ↑ ↓) then press **Enter**, double-click it, or press **Open Company** |
+| Find a company | Type in **Search Company** (name or code) |
+| Add a company | Press **Setup New Company** → the setup wizard opens |
+| Switch company / leave | In the app: left menu → **Switch / Logout**. You return to the list |
+
+### Setup New Company (the wizard)
+1. **Company name** (the code `COMP000N` is assigned automatically)
+2. Business type
+3. Paper size and language
+4. **Create company** — the company is created, opened, and its first settings saved in its own folder.
+
+*Cancel* returns to the list without creating anything. Add GSTIN, address and bank details afterwards in
+**Settings**, as usual.
+
+### PIN
+If a company has an app-lock PIN (**Settings → App lock**), the list shows a 🔒 and asks for the PIN when you
+open it. Wrong PINs are counted per company (5 wrong → 30 s wait). Forgot PIN: create a file named
+`RESET-PIN` in the ARTHA folder, then open the company.
+
+---
+
+## 3. Where things are stored
+
+```
+data/
+  companies.json          list of companies (rebuilt automatically from the folders if lost)
+  port.txt, errors.log    shared by the app
+  COMP0001/
+    company.json          id, name, created date
+    bills/ clients/ products/ purchases/ expenses/ receipts/ recurring/ templates/ profiles/
+    profile.json  meta.json  local-prefs.json
+    Saved Invoices/       PDF archive of this company
+    pdf-trash/            deleted PDFs (was "Trash")
+    trash/                deleted invoices (30 days)
+    backups/              daily backups of THIS company (30 days)
+  COMP0002/ …
+```
+* Every request is served from the folder of the company that is logged in. A browser with no login cannot read any data.
+* Daily backup, trash clean-up and recurring invoices run for **every** company.
+* Daily backups no longer copy `Saved Invoices` / `pdf-trash` (they are large and re-creatable).
+* Extra backup folder (Control Panel): copies go to `<your folder>/FreeGSTBill Backups/COMPxxxx/<date>`.
+  Copies made before this update stay in `<your folder>/FreeGSTBill Backups/<date>`.
+* To move or back up a company: copy its `data/COMPxxxx` folder. To bring one in, paste a `COMPxxxx`
+  folder into `data/` and restart (it appears in the list).
+
+---
+
+## 4. Login / logout API
+
+All under the same address as the app. The login is a cookie (`artha_sid`, HttpOnly, SameSite=Strict) kept
+in memory on the server — **restarting ARTHA logs everyone out** and the list shows again.
+
+| Method & path | Purpose |
+|---|---|
+| `GET  /api/companies` | List companies (id, name, created, last opened, size, locked) |
+| `POST /api/companies` `{ "name": "…" }` | Create `COMP000N` + its folder, and log in to it |
+| `POST /api/auth/login` `{ "companyId": "COMP0001", "pin": "123456" }` | Log in (`pin` only if locked; answers `401 pin-required` first) |
+| `POST /api/auth/logout` | Log out |
+| `GET  /api/auth/session` | `{ authenticated, company }` |
+| everything else under `/api` | needs a login, otherwise `401` (`X-Artha-Auth: required`). `/api/health`, `/api/version`, `/api/check-update` stay open |
+
+Example (command line):
+```
+curl -c jar -H "Content-Type: application/json" -d '{"companyId":"COMP0001"}' http://localhost:11001/api/auth/login
+curl -b jar http://localhost:11001/api/bills
+```
+
+---
+
+## 5. Good to know
+* One company is open per browser at a time. Two tabs in the same browser share the login.
+* Browser-side settings (print style, region, theme, GST filing marks …) are per company; they are
+  cleared and restored from the company's folder whenever you switch.
+* `import-busywin.py` now imports **into one company**: `python scripts/import-busywin.py --artha-company COMP0002`
+  (create that company in ARTHA first). `--company` is still the BusyWin folder.
+* The "Fin. Year(s)" column of BusyWin is shown here as **Created / Last Opened**.
+* Start-up checks (launcher, `start-*.ps1/.sh`) now call `/api/health`, because `/api/profile` needs a login.
+* **Tests:** `tests/smoke.mjs` and `scripts/verify-release.mjs` call company APIs without logging in; add a
+  login (`POST /api/auth/login`) first, or they will get `401`.
+* Deleting or renaming a company is not in this version: to remove one, close ARTHA and delete its
+  `data/COMPxxxx` folder; to rename, edit `name` in its `company.json` and in `data/companies.json`.
+
+## 6. Troubleshooting
+| Problem | Fix |
+|---|---|
+| List is empty after the update | Normal on a brand-new install: press **Setup New Company**. If you expected data, check that `data/COMP0001` exists and restart |
+| "Cannot reach the ARTHA server" | ARTHA is not running — start it and press *Try again* |
+| "Your session ended" notice | ARTHA was restarted; open the company again |
+| Old data still in `data/bills` | Both old and new folders existed; ARTHA never overwrites — move the files into `data/COMP0001/bills` yourself |
+
+````
 
 ---
 
@@ -2222,7 +2751,7 @@ advisory, unless you would rather stay anonymous.
 ## `server.js`
 
 - Path: `server.js`
-- Lines: 2157 | Size: 97.4 KB
+- Lines: 2286 | Size: 103.8 KB
 
 ```javascript
 import express from 'express';
@@ -2241,8 +2770,19 @@ import { fileURLToPath } from 'url';
 // v1.10.1 extraction fixed. Same source of truth now.
 import { templateTotals, clientYearToDate, nextCounterValue, startFor, numberSeriesFor, counterKeyFor, formatDocNumber, businessKeyOf, getFinancialYearLabel, INVOICE_TYPES, decodeGstin, getStatesForCountry } from './src/utils.js';
 
+import {
+  DATA_ROOT, COMPANY_DIRS, dataDir, currentCompanyId, currentSessionId, runInCompany, ensureCompanyDirs,
+  listRegistry, getCompany, createCompany, touchCompany, companySizeMB, forEachCompany, migrateLegacyData,
+  createSession, getSession, destroySession, parseCookies, sessionCookie, clearedSessionCookie, SESSION_COOKIE, ID_RE,
+} from './companies.js';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.join(__dirname, 'data');
+// Multi-company: there is no single data folder any more. DATA_ROOT (data/) holds
+// the company registry, the port file and the error log; every company's own
+// files are under data/COMPxxxx/, reached through dataDir() (see companies.js).
+fs.mkdirSync(DATA_ROOT, { recursive: true });
+// An install from before multi-company support is moved into data/COMP0001 once.
+migrateLegacyData();
 
 // Port choice — we deliberately default to a high, unusual number rather than
 // the conventional 3001. The 3000-range is heavily used by every other Node /
@@ -2254,7 +2794,7 @@ const DATA_DIR = path.join(__dirname, 'data');
 // wins over this default — so a single user who genuinely needs 47371 for
 // something else can edit that file and we'll respect it forever.
 const DEFAULT_PORT = parseInt(process.env.PORT, 10) || 11001;
-const PORT_FILE = path.join(__dirname, 'data', 'port.txt');
+const PORT_FILE = path.join(DATA_ROOT, 'port.txt');
 
 // Read the persisted port (if any) — written once on first successful start
 // and every time we get bumped off our preferred port by EADDRINUSE.
@@ -2317,11 +2857,123 @@ app.use((req, res, next) => {
 });
 
 // Ensure data directory and sub-directories exist
-const DIRS = ['bills', 'clients', 'templates', 'products', 'expenses', 'recurring', 'receipts', 'profiles', 'purchases'];
-for (const dir of DIRS) {
-  const dirPath = path.join(DATA_DIR, dir);
-  if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true });
-}
+// ========================
+// COMPANIES + LOGIN (multi-company)
+// ========================
+// The browser first picks a company on the "Select Company" page. Logging in
+// to one gives it a session cookie; every other /api route then runs inside
+// that company's folder (data/COMPxxxx), so one company can never see or
+// change another company's files. Registered BEFORE the session check below,
+// so these few routes work without a session.
+const noStore = (res) => res.setHeader('Cache-Control', 'no-store');
+const sessionIdOf = (req) => parseCookies(req.headers.cookie)[SESSION_COOKIE];
+const ensuredCompanies = new Set();
+const ensureOnce = (id) => { if (!ensuredCompanies.has(id)) { ensureCompanyDirs(id); ensuredCompanies.add(id); } };
+
+// The PIN lock of a company, read without applying a RESET-PIN file (list only).
+const storedLockOf = (companyId) => runInCompany(companyId, () => {
+  const meta = readJSON(META_PATH(), {});
+  return meta[LOCK_KEY] || null;
+});
+
+// GET /api/companies -> every company, for the Select Company page.
+app.get('/api/companies', (req, res) => {
+  noStore(res);
+  const companies = listRegistry().map((c) => {
+    const lock = storedLockOf(c.id);
+    return {
+      id: c.id, name: c.name, createdAt: c.createdAt, lastOpenedAt: c.lastOpenedAt,
+      sizeMB: companySizeMB(c.id), locked: !!lock, pinLength: lock?.length || 0,
+    };
+  });
+  res.json({ dataDirectory: DATA_ROOT, companies });
+});
+
+// POST /api/companies { name } -> new company COMP000N with its own folder.
+// The new company is opened straight away (the setup wizard then fills in its
+// first settings).
+app.post('/api/companies', (req, res) => {
+  noStore(res);
+  try {
+    const company = createCompany(req.body?.name);
+    ensuredCompanies.add(company.id);
+    destroySession(sessionIdOf(req));
+    const token = createSession(company.id);
+    touchCompany(company.id);
+    res.setHeader('Set-Cookie', sessionCookie(token));
+    res.status(201).json({ ok: true, company: { id: company.id, name: company.name } });
+  } catch (err) {
+    if (err.code === 'name-required') return res.status(400).json({ error: 'Company name is required', code: 'name-required' });
+    return errRes(res, 500, 'server-error', err);
+  }
+});
+
+// POST /api/auth/login { companyId, pin? } -> opens that company for this browser.
+// A company with a PIN lock (Settings > App lock) asks for the PIN here:
+// 401 { error: 'pin-required', length } first, then the PIN decides.
+app.post('/api/auth/login', (req, res) => {
+  noStore(res);
+  const { companyId, pin } = req.body || {};
+  const company = getCompany(companyId);
+  if (!company) return errRes(res, 404, 'not-found');
+  let denied = null;
+  const allowed = runInCompany(company.id, () => {
+    ensureOnce(company.id);
+    const lock = currentLock();
+    if (!lock) return true;
+    if (pin === undefined || pin === null || pin === '') {
+      denied = { status: 401, body: { ok: false, error: 'pin-required', length: lock.length || 6 } };
+      return false;
+    }
+    return checkPin(res, lock, pin, company.id); // answers res itself when wrong
+  });
+  if (denied) return res.status(denied.status).json(denied.body);
+  if (!allowed) return undefined;
+  destroySession(sessionIdOf(req)); // one company per browser at a time
+  const token = createSession(company.id);
+  touchCompany(company.id);
+  res.setHeader('Set-Cookie', sessionCookie(token));
+  return res.json({ ok: true, company: { id: company.id, name: company.name } });
+});
+
+// POST /api/auth/logout -> closes the company; the browser goes back to the list.
+app.post('/api/auth/logout', (req, res) => {
+  noStore(res);
+  destroySession(sessionIdOf(req));
+  res.setHeader('Set-Cookie', clearedSessionCookie());
+  res.json({ ok: true });
+});
+
+// GET /api/auth/session -> who is logged in (the page asks this when it opens).
+app.get('/api/auth/session', (req, res) => {
+  noStore(res);
+  const session = getSession(sessionIdOf(req));
+  const company = session ? getCompany(session.companyId) : null;
+  if (!company) return res.json({ authenticated: false });
+  return res.json({ authenticated: true, company: { id: company.id, name: company.name } });
+});
+
+// Everything else under /api needs a company. Routes that are about the app
+// itself (not a company's books) stay open: health, version, update check.
+const OPEN_API = new Set(['/api/health', '/api/version', '/api/check-update']);
+app.use('/api', (req, res, next) => {
+  const full = `/api${req.path}`;
+  if (OPEN_API.has(full)) return next();
+  const sid = sessionIdOf(req);
+  const session = getSession(sid);
+  const company = session ? getCompany(session.companyId) : null;
+  if (!company) {
+    // The page watches for this header and shows the Select Company screen.
+    res.setHeader('X-Artha-Auth', 'required');
+    return res.status(401).json({ error: 'Select a company to continue', code: 'no-session' });
+  }
+  ensureOnce(company.id);
+  return runInCompany(company.id, () => next(), { sessionId: sid });
+});
+
+const DIRS = COMPANY_DIRS;
+// Each company's folders are created when the company is created / opened
+// (ensureCompanyDirs), not here.
 
 // Helper: safe filename from ID (replace slashes, etc.)
 function safeFileName(id) {
@@ -2394,7 +3046,7 @@ function writeFileAtomic(filePath, contents) {
 
 // Errors log path — declared here so errRes() can find it. The actual
 // file is created lazily; ERRORS_LOG constant below still points here.
-const ERRORS_LOG = path.join(DATA_DIR, 'errors.log');
+const ERRORS_LOG = path.join(DATA_ROOT, 'errors.log');
 
 // In-memory cache for directory reads — invalidated on write/delete.
 // v1.10.6 — audit L12: added a 5s TTL. Users are documented as being
@@ -2403,13 +3055,14 @@ const ERRORS_LOG = path.join(DATA_DIR, 'errors.log');
 // cached entry older than 5 seconds is treated as stale and re-read.
 const dirCache = {};
 const DIR_CACHE_TTL_MS = 5000;
-function invalidateCache(dir) { delete dirCache[dir]; }
+// Keyed by absolute folder, so two companies never share a cached listing.
+function invalidateCache(dir) { delete dirCache[path.join(dataDir(), dir)]; }
 
 // Helper: read all JSON files from a directory (cached, 5s TTL)
 function readAllFromDir(dir) {
-  const entry = dirCache[dir];
+  const dirPath = path.join(dataDir(), dir);
+  const entry = dirCache[dirPath];
   if (entry && (Date.now() - entry.at) < DIR_CACHE_TTL_MS) return entry.value;
-  const dirPath = path.join(DATA_DIR, dir);
   if (!fs.existsSync(dirPath)) return [];
   const results = fs.readdirSync(dirPath)
     .filter(f => f.endsWith('.json'))
@@ -2418,7 +3071,7 @@ function readAllFromDir(dir) {
       catch { return null; }
     })
     .filter(Boolean);
-  dirCache[dir] = { at: Date.now(), value: results };
+  dirCache[dirPath] = { at: Date.now(), value: results };
   return results;
 }
 
@@ -2436,15 +3089,13 @@ function readJSON(filePath, fallback = null) {
 function writeJSON(filePath, data) {
   writeFileAtomic(filePath, JSON.stringify(data, null, 2));
   // Invalidate cache for the parent directory
-  const parentDir = path.basename(path.dirname(filePath));
-  if (DIRS.includes(parentDir)) invalidateCache(parentDir);
+  delete dirCache[path.dirname(filePath)];
 }
 
 // Helper: delete file (with cache invalidation)
 function deleteFile(filePath) {
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-  const parentDir = path.basename(path.dirname(filePath));
-  if (DIRS.includes(parentDir)) invalidateCache(parentDir);
+  delete dirCache[path.dirname(filePath)];
 }
 
 // ========================
@@ -2459,7 +3110,7 @@ app.get('/api/bills', (req, res) => {
 app.post('/api/bills', (req, res) => {
   const bill = req.body;
   if (!bill || !bill.id) return res.status(400).json({ error: 'Bill must have an id' });
-  const filePath = path.join(DATA_DIR, 'bills', safeFileName(bill.id) + '.json');
+  const filePath = path.join(dataDir(), 'bills', safeFileName(bill.id) + '.json');
 
   // Dupe-check: the invoice-number field is free-text on the client, so a
   // typo (INV/2026/0007 typed again for a fresh bill) would silently
@@ -2484,7 +3135,7 @@ app.post('/api/bills', (req, res) => {
 // by passing `?force=1` (they accept the ledger inconsistency).
 function findCreditDependents(billId) {
   try {
-    const billsDir = path.join(DATA_DIR, 'bills');
+    const billsDir = path.join(dataDir(), 'bills');
     const dependents = [];
     for (const f of fs.readdirSync(billsDir).filter(n => n.endsWith('.json'))) {
       let other;
@@ -2511,7 +3162,7 @@ app.delete('/api/bills/:id', (req, res) => {
   // users can restore within 30 days. Query ?permanent=1 skips trash and
   // deletes forever (used by the Trash bin UI's "Delete forever" action).
   const fname = safeFileName(req.params.id) + '.json';
-  const filePath = path.join(DATA_DIR, 'bills', fname);
+  const filePath = path.join(dataDir(), 'bills', fname);
   if (!fs.existsSync(filePath)) return res.json({ success: true });
 
   // v1.10.31 — Data-F9.1: client-credit dependency check. Blocks silent
@@ -2534,7 +3185,7 @@ app.delete('/api/bills/:id', (req, res) => {
     return res.json({ success: true, permanent: true });
   }
   try {
-    const trashDir = path.join(DATA_DIR, 'trash');
+    const trashDir = path.join(dataDir(), 'trash');
     if (!fs.existsSync(trashDir)) fs.mkdirSync(trashDir, { recursive: true });
     fs.renameSync(filePath, path.join(trashDir, fname));
     // The list must not serve the moved bill from cache for 5 more seconds.
@@ -2548,7 +3199,7 @@ app.delete('/api/bills/:id', (req, res) => {
 // ========================
 // PROFILE
 // ========================
-const PROFILE_PATH = path.join(DATA_DIR, 'profile.json');
+const PROFILE_PATH = () => path.join(dataDir(), 'profile.json');
 const DEFAULT_PROFILE = {
   businessName: '', address: '', state: '', gstin: '', pan: '',
   email: '', phone: '', bankName: '', accountNumber: '', ifsc: '',
@@ -2556,7 +3207,7 @@ const DEFAULT_PROFILE = {
 };
 
 app.get('/api/profile', (req, res) => {
-  res.json(readJSON(PROFILE_PATH, DEFAULT_PROFILE));
+  res.json(readJSON(PROFILE_PATH(), DEFAULT_PROFILE));
 });
 
 function validateProfileOnServer(profile) {
@@ -2642,7 +3293,7 @@ app.post('/api/profile', (req, res) => {
     if (!result.ok) {
       return res.status(400).json({ error: 'Validation failed', errors: result.errors });
     }
-    writeJSON(PROFILE_PATH, result.profile);
+    writeJSON(PROFILE_PATH(), result.profile);
     res.json({ success: true });
   } catch (err) {
     errRes(res, 500, 'server-error', err);
@@ -2661,13 +3312,13 @@ app.get('/api/clients', (req, res) => {
 app.post('/api/clients', (req, res) => {
   const client = req.body;
   if (!client.id) client.id = 'cli_' + Date.now();
-  const filePath = path.join(DATA_DIR, 'clients', safeFileName(client.id) + '.json');
+  const filePath = path.join(dataDir(), 'clients', safeFileName(client.id) + '.json');
   writeJSON(filePath, client);
   res.json({ success: true, id: client.id });
 });
 
 app.delete('/api/clients/:id', (req, res) => {
-  const filePath = path.join(DATA_DIR, 'clients', safeFileName(req.params.id) + '.json');
+  const filePath = path.join(dataDir(), 'clients', safeFileName(req.params.id) + '.json');
   deleteFile(filePath);
   res.json({ success: true });
 });
@@ -2684,7 +3335,7 @@ app.get('/api/templates', (req, res) => {
       name: 'Standard Terms',
       content: '1. Payment is due within 15 days of invoice date unless otherwise agreed in writing.\n2. Interest @ 18% p.a. will be charged on overdue payments beyond the due date.\n3. The scope of work is limited to what is explicitly mentioned in the project proposal/agreement. Any additional requirements will be quoted and billed separately.\n4. All intellectual property and source code will be transferred to the client only upon receipt of full payment.\n5. We shall not be liable for any delays caused by incomplete or late submission of content, credentials, or approvals from the client\'s end.\n6. Any change requests after project approval may attract additional charges and revised timelines.\n7. This invoice is subject to the jurisdiction of courts at the service provider\'s registered location.\n8. E. & O.E.'
     };
-    writeJSON(path.join(DATA_DIR, 'templates', 'default.json'), defaultTpl);
+    writeJSON(path.join(dataDir(), 'templates', 'default.json'), defaultTpl);
     templates = [defaultTpl];
   }
   templates.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
@@ -2694,13 +3345,13 @@ app.get('/api/templates', (req, res) => {
 app.post('/api/templates', (req, res) => {
   const tpl = req.body;
   if (!tpl.id) tpl.id = 'tpl_' + Date.now();
-  const filePath = path.join(DATA_DIR, 'templates', safeFileName(tpl.id) + '.json');
+  const filePath = path.join(dataDir(), 'templates', safeFileName(tpl.id) + '.json');
   writeJSON(filePath, tpl);
   res.json({ success: true, id: tpl.id });
 });
 
 app.delete('/api/templates/:id', (req, res) => {
-  const filePath = path.join(DATA_DIR, 'templates', safeFileName(req.params.id) + '.json');
+  const filePath = path.join(dataDir(), 'templates', safeFileName(req.params.id) + '.json');
   deleteFile(filePath);
   res.json({ success: true });
 });
@@ -2717,13 +3368,13 @@ app.get('/api/products', (req, res) => {
 app.post('/api/products', (req, res) => {
   const product = req.body;
   if (!product.id) product.id = 'prod_' + Date.now();
-  const filePath = path.join(DATA_DIR, 'products', safeFileName(product.id) + '.json');
+  const filePath = path.join(dataDir(), 'products', safeFileName(product.id) + '.json');
   writeJSON(filePath, product);
   res.json({ success: true, id: product.id });
 });
 
 app.delete('/api/products/:id', (req, res) => {
-  const filePath = path.join(DATA_DIR, 'products', safeFileName(req.params.id) + '.json');
+  const filePath = path.join(dataDir(), 'products', safeFileName(req.params.id) + '.json');
   deleteFile(filePath);
   res.json({ success: true });
 });
@@ -2740,13 +3391,13 @@ app.get('/api/expenses', (req, res) => {
 app.post('/api/expenses', (req, res) => {
   const expense = req.body;
   if (!expense.id) expense.id = 'exp_' + Date.now();
-  const filePath = path.join(DATA_DIR, 'expenses', safeFileName(expense.id) + '.json');
+  const filePath = path.join(dataDir(), 'expenses', safeFileName(expense.id) + '.json');
   writeJSON(filePath, expense);
   res.json({ success: true, id: expense.id });
 });
 
 app.delete('/api/expenses/:id', (req, res) => {
-  const filePath = path.join(DATA_DIR, 'expenses', safeFileName(req.params.id) + '.json');
+  const filePath = path.join(dataDir(), 'expenses', safeFileName(req.params.id) + '.json');
   deleteFile(filePath);
   res.json({ success: true });
 });
@@ -2763,13 +3414,13 @@ app.get('/api/recurring', (req, res) => {
 app.post('/api/recurring', (req, res) => {
   const item = req.body;
   if (!item.id) item.id = 'rec_' + Date.now();
-  const filePath = path.join(DATA_DIR, 'recurring', safeFileName(item.id) + '.json');
+  const filePath = path.join(dataDir(), 'recurring', safeFileName(item.id) + '.json');
   writeJSON(filePath, item);
   res.json({ success: true, id: item.id });
 });
 
 app.delete('/api/recurring/:id', (req, res) => {
-  const filePath = path.join(DATA_DIR, 'recurring', safeFileName(req.params.id) + '.json');
+  const filePath = path.join(dataDir(), 'recurring', safeFileName(req.params.id) + '.json');
   deleteFile(filePath);
   res.json({ success: true });
 });
@@ -2786,13 +3437,13 @@ app.get('/api/receipts', (req, res) => {
 app.post('/api/receipts', (req, res) => {
   const receipt = req.body;
   if (!receipt.id) receipt.id = 'rcp_' + Date.now();
-  const filePath = path.join(DATA_DIR, 'receipts', safeFileName(receipt.id) + '.json');
+  const filePath = path.join(dataDir(), 'receipts', safeFileName(receipt.id) + '.json');
   writeJSON(filePath, receipt);
   res.json({ success: true, id: receipt.id });
 });
 
 app.delete('/api/receipts/:id', (req, res) => {
-  const filePath = path.join(DATA_DIR, 'receipts', safeFileName(req.params.id) + '.json');
+  const filePath = path.join(dataDir(), 'receipts', safeFileName(req.params.id) + '.json');
   deleteFile(filePath);
   res.json({ success: true });
 });
@@ -2809,13 +3460,13 @@ app.get('/api/purchases', (req, res) => {
 app.post('/api/purchases', (req, res) => {
   const purchase = req.body;
   if (!purchase.id) purchase.id = 'pur_' + Date.now();
-  const filePath = path.join(DATA_DIR, 'purchases', safeFileName(purchase.id) + '.json');
+  const filePath = path.join(dataDir(), 'purchases', safeFileName(purchase.id) + '.json');
   writeJSON(filePath, purchase);
   res.json({ success: true, id: purchase.id });
 });
 
 app.delete('/api/purchases/:id', (req, res) => {
-  const filePath = path.join(DATA_DIR, 'purchases', safeFileName(req.params.id) + '.json');
+  const filePath = path.join(dataDir(), 'purchases', safeFileName(req.params.id) + '.json');
   deleteFile(filePath);
   res.json({ success: true });
 });
@@ -2832,13 +3483,13 @@ app.get('/api/profiles', (req, res) => {
 app.post('/api/profiles', (req, res) => {
   const prof = req.body;
   if (!prof.id) prof.id = 'biz_' + Date.now();
-  const filePath = path.join(DATA_DIR, 'profiles', safeFileName(prof.id) + '.json');
+  const filePath = path.join(dataDir(), 'profiles', safeFileName(prof.id) + '.json');
   writeJSON(filePath, prof);
   res.json({ success: true, id: prof.id });
 });
 
 app.delete('/api/profiles/:id', (req, res) => {
-  const filePath = path.join(DATA_DIR, 'profiles', safeFileName(req.params.id) + '.json');
+  const filePath = path.join(dataDir(), 'profiles', safeFileName(req.params.id) + '.json');
   deleteFile(filePath);
   res.json({ success: true });
 });
@@ -2846,7 +3497,7 @@ app.delete('/api/profiles/:id', (req, res) => {
 // ========================
 // META (counters, etc.)
 // ========================
-const META_PATH = path.join(DATA_DIR, 'meta.json');
+const META_PATH = () => path.join(dataDir(), 'meta.json');
 
 // v1.10.77 (#84) - the PIN lock lives in meta.json too, but only the
 // /api/lock routes below may read or change it.
@@ -2856,16 +3507,16 @@ const withLock = (meta, lock) => (lock ? { ...withoutLock(meta), [LOCK_KEY]: loc
 
 app.get('/api/meta/:key', (req, res) => {
   if (req.params.key === LOCK_KEY) return errRes(res, 403, 'forbidden');
-  const meta = readJSON(META_PATH, {});
+  const meta = readJSON(META_PATH(), {});
   res.json({ value: meta[req.params.key] ?? null });
 });
 
 app.post('/api/meta/:key', (req, res) => {
   if (req.params.key === LOCK_KEY) return errRes(res, 403, 'forbidden');
   if (!req.body || !('value' in req.body)) return errRes(res, 400, 'bad-request');
-  const meta = readJSON(META_PATH, {});
+  const meta = readJSON(META_PATH(), {});
   meta[req.params.key] = req.body.value;
-  writeJSON(META_PATH, meta);
+  writeJSON(META_PATH(), meta);
   res.json({ success: true });
 });
 
@@ -2876,12 +3527,12 @@ app.post('/api/meta/:key', (req, res) => {
 // "two saves both reading 5, both writing 6" duplicate-invoice-number bug.
 app.post('/api/meta/:key/increment', (req, res) => {
   if (req.params.key === LOCK_KEY) return errRes(res, 403, 'forbidden');
-  const meta = readJSON(META_PATH, {});
+  const meta = readJSON(META_PATH(), {});
   // v1.10.78 (#93) - a tax invoice sends its start ("Start numbering from");
   // see nextCounterValue. Nothing else jumps.
   const next = nextCounterValue(meta[req.params.key], req.body?.start);
   meta[req.params.key] = next;
-  writeJSON(META_PATH, meta);
+  writeJSON(META_PATH(), meta);
   res.json({ value: next });
 });
 
@@ -2893,18 +3544,18 @@ app.post('/api/meta/:key/increment', (req, res) => {
 // prefsMirror.js). Own file, not meta.json: Print settings can carry a
 // letterhead and signature image, and meta.json is rewritten on every new
 // invoice number. 25mb for those images; the server answers this PC only.
-const LOCAL_PREFS_PATH = path.join(DATA_DIR, 'local-prefs.json');
+const LOCAL_PREFS_PATH = () => path.join(dataDir(), 'local-prefs.json');
 app.get(LOCAL_PREFS_ROUTE, (req, res) => {
-  res.json({ value: readJSON(LOCAL_PREFS_PATH, {}) });
+  res.json({ value: readJSON(LOCAL_PREFS_PATH(), {}) });
 });
 // { set: { key: string }, remove: [key] } - merged, never replaced wholesale.
 app.post(LOCAL_PREFS_ROUTE, express.json({ limit: '25mb' }), (req, res) => {
   const { set = {}, remove = [] } = req.body || {};
   if (!set || typeof set !== 'object' || Array.isArray(set) || !Array.isArray(remove)) return errRes(res, 400, 'bad-request');
-  const prefs = readJSON(LOCAL_PREFS_PATH, {});
+  const prefs = readJSON(LOCAL_PREFS_PATH(), {});
   for (const [k, v] of Object.entries(set)) if (typeof v === 'string') prefs[k] = v;
   for (const k of remove) delete prefs[String(k)];
-  writeJSON(LOCAL_PREFS_PATH, prefs);
+  writeJSON(LOCAL_PREFS_PATH(), prefs);
   return res.json({ success: true });
 });
 
@@ -2927,12 +3578,17 @@ const pinMatches = (lock, pin) => {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 };
 // Five wrong PINs in a row -> wait 30 seconds before the next try.
-const pinTries = { wrong: 0, until: 0 };
+// Counted per company, so a wrong PIN on one company never locks another.
+const pinTriesByCompany = new Map();
+const triesFor = (companyId) => {
+  if (!pinTriesByCompany.has(companyId)) pinTriesByCompany.set(companyId, { wrong: 0, until: 0 });
+  return pinTriesByCompany.get(companyId);
+};
 const currentLock = () => {
-  const meta = readJSON(META_PATH, {});
+  const meta = readJSON(META_PATH(), {});
   const reset = RESET_PIN_FILES.filter((f) => fs.existsSync(f));
   if (reset.length) {
-    if (meta[LOCK_KEY]) { delete meta[LOCK_KEY]; writeJSON(META_PATH, meta); }
+    if (meta[LOCK_KEY]) { delete meta[LOCK_KEY]; writeJSON(META_PATH(), meta); }
     for (const f of reset) { try { fs.unlinkSync(f); } catch { /* removed already */ } }
     console.log('[lock] RESET-PIN file found: PIN lock removed');
     return null;
@@ -2941,7 +3597,8 @@ const currentLock = () => {
 };
 // Checks a PIN; answers the response itself (and returns false) when it is
 // wrong or the user must wait.
-const checkPin = (res, lock, pin) => {
+const checkPin = (res, lock, pin, companyId = currentCompanyId()) => {
+  const pinTries = triesFor(companyId);
   const wait = Math.ceil((pinTries.until - Date.now()) / 1000);
   if (wait > 0) { res.status(429).json({ ok: false, wait }); return false; }
   if (pinMatches(lock, pin)) { pinTries.wrong = 0; return true; }
@@ -2969,13 +3626,13 @@ app.post('/api/lock/set', (req, res) => {
   if (pin !== null && !PIN_RE.test(String(pin ?? ''))) return errRes(res, 400, 'bad-request');
   const lock = currentLock();
   if (lock && !checkPin(res, lock, currentPin)) return undefined;
-  const meta = readJSON(META_PATH, {});
+  const meta = readJSON(META_PATH(), {});
   if (pin === null) delete meta[LOCK_KEY];
   else {
     const salt = crypto.randomBytes(16).toString('hex');
     meta[LOCK_KEY] = { salt, hash: pinHash(pin, salt), length: String(pin).length };
   }
-  writeJSON(META_PATH, meta);
+  writeJSON(META_PATH(), meta);
   return res.json({ ok: true, enabled: pin !== null });
 });
 
@@ -2985,7 +3642,7 @@ app.post('/api/lock/set', (req, res) => {
 app.get('/api/export', (req, res) => {
   const data = {
     bills: readAllFromDir('bills'),
-    profile: readJSON(PROFILE_PATH, DEFAULT_PROFILE),
+    profile: readJSON(PROFILE_PATH(), DEFAULT_PROFILE),
     clients: readAllFromDir('clients'),
     termsTemplates: readAllFromDir('templates'),
     products: readAllFromDir('products'),
@@ -2995,7 +3652,7 @@ app.get('/api/export', (req, res) => {
     profiles: readAllFromDir('profiles'),
     purchases: readAllFromDir('purchases'),
     // v1.10.77 - never the PIN hash: a backup file can travel (email, Drive).
-    meta: withoutLock(readJSON(META_PATH, {})),
+    meta: withoutLock(readJSON(META_PATH(), {})),
     exportedAt: new Date().toISOString(),
   };
   res.json(data);
@@ -3030,7 +3687,7 @@ app.post('/api/import', (req, res) => {
   // Helper: upsert one entity to a directory, honouring the overwrite flag.
   const upsertOne = (dirName, entity, countKey, skipKey) => {
     if (!entity?.id) return;
-    const p = path.join(DATA_DIR, dirName, safeFileName(entity.id) + '.json');
+    const p = path.join(dataDir(), dirName, safeFileName(entity.id) + '.json');
     if (!overwrite && fs.existsSync(p)) { counts[skipKey]++; return; }
     writeJSON(p, entity);
     counts[countKey]++;
@@ -3038,8 +3695,8 @@ app.post('/api/import', (req, res) => {
 
   // Profile is a singleton (single file); overwrite-gated same way.
   if (data.profile) {
-    if (overwrite || !fs.existsSync(PROFILE_PATH)) {
-      writeJSON(PROFILE_PATH, data.profile);
+    if (overwrite || !fs.existsSync(PROFILE_PATH())) {
+      writeJSON(PROFILE_PATH(), data.profile);
     }
   }
   (data.bills || []).forEach(b => upsertOne('bills', b, 'billCount', 'billSkipped'));
@@ -3055,20 +3712,20 @@ app.post('/api/import', (req, res) => {
   // meta.json — same gating. Previously always overwrote → counters could
   // regress below existing bill numbers → collision loop on next save.
   if (data.meta) {
-    if (overwrite || !fs.existsSync(META_PATH)) {
+    if (overwrite || !fs.existsSync(META_PATH())) {
       // The PIN on this PC stays as it is: a backup never sets, removes or
       // brings back an old PIN.
-      writeJSON(META_PATH, withLock(withoutLock(data.meta), readJSON(META_PATH, {})[LOCK_KEY]));
+      writeJSON(META_PATH(), withLock(withoutLock(data.meta), readJSON(META_PATH(), {})[LOCK_KEY]));
     } else {
       // v1.10.79 (#95) - a merge keeps what is here and adds the backup's own
       // number series and the higher of each counter, so no number is reused.
-      const meta = readJSON(META_PATH, {});
+      const meta = readJSON(META_PATH(), {});
       const series = { ...(data.meta.invoiceNumberSeries || {}), ...(meta.invoiceNumberSeries || {}) };
       if (Object.keys(series).length) meta.invoiceNumberSeries = series;
       for (const [k, v] of Object.entries(data.meta)) {
         if (k.startsWith('counter_') && Number(v) > (Number(meta[k]) || 0)) meta[k] = Number(v);
       }
-      writeJSON(META_PATH, meta);
+      writeJSON(META_PATH(), meta);
     }
   }
 
@@ -3077,13 +3734,13 @@ app.post('/api/import', (req, res) => {
   // suffix from its invoice number. Bump each `counter_<PREFIX>` in meta
   // to at least max(existing) so the next reservation doesn't collide.
   try {
-    const meta = readJSON(META_PATH, {});
-    const billFiles = fs.readdirSync(path.join(DATA_DIR, 'bills')).filter(f => f.endsWith('.json'));
+    const meta = readJSON(META_PATH(), {});
+    const billFiles = fs.readdirSync(path.join(dataDir(), 'bills')).filter(f => f.endsWith('.json'));
     const maxByPrefix = {};
     const maxByKey = {};
     for (const f of billFiles) {
       let bill;
-      try { bill = readJSON(path.join(DATA_DIR, 'bills', f), null); } catch { continue; }
+      try { bill = readJSON(path.join(dataDir(), 'bills', f), null); } catch { continue; }
       const num = String(bill?.invoiceNumber || bill?.id || '');
       // Extract prefix + last numeric suffix (e.g. INV/2026-27/0007 → prefix INV, suffix 7)
       const m = num.match(/^([A-Z]+)[\W_].*?(\d+)\s*$/i);
@@ -3117,7 +3774,7 @@ app.post('/api/import', (req, res) => {
         metaChanged = true;
       }
     }
-    if (metaChanged) writeJSON(META_PATH, meta);
+    if (metaChanged) writeJSON(META_PATH(), meta);
   } catch (err) {
     console.error('Post-import counter reconciliation failed:', err);
   }
@@ -3128,8 +3785,8 @@ app.post('/api/import', (req, res) => {
 // ========================
 // Save PDF to local folder
 // ========================
-const INVOICES_DIR = path.join(__dirname, 'Saved Invoices');
-if (!fs.existsSync(INVOICES_DIR)) fs.mkdirSync(INVOICES_DIR, { recursive: true });
+// Per company: data/COMPxxxx/Saved Invoices (created on first save).
+const INVOICES_DIR = () => path.join(dataDir(), 'Saved Invoices');
 
 app.post('/api/save-pdf', express.raw({ type: 'application/pdf', limit: '20mb' }), (req, res) => {
   try {
@@ -3145,16 +3802,16 @@ app.post('/api/save-pdf', express.raw({ type: 'application/pdf', limit: '20mb' }
     let safeName = safePathSegment(rawName, `invoice-${Date.now()}.pdf`);
     if (!safeName.toLowerCase().endsWith('.pdf')) safeName += '.pdf';
 
-    const folderPath = path.join(INVOICES_DIR, safeClient, safeMonth);
+    const folderPath = path.join(INVOICES_DIR(), safeClient, safeMonth);
     const filePath = path.join(folderPath, safeName);
-    if (!isPathInside(filePath, INVOICES_DIR)) return errRes(res, 400, 'invalid-path');
+    if (!isPathInside(filePath, INVOICES_DIR())) return errRes(res, 400, 'invalid-path');
 
     if (!fs.existsSync(folderPath)) fs.mkdirSync(folderPath, { recursive: true });
     fs.writeFileSync(filePath, req.body);
     // v1.10.79 (#94) - a PDF saved now replaces any original kept for Undo of
     // a CANCELLED stamp, so an old copy can never come back over a new one.
-    const keptOriginal = path.join(DATA_DIR, 'cancelled-pdf-originals', path.relative(INVOICES_DIR, filePath));
-    if (isPathInside(keptOriginal, path.join(DATA_DIR, 'cancelled-pdf-originals')) && fs.existsSync(keptOriginal)) {
+    const keptOriginal = path.join(dataDir(), 'cancelled-pdf-originals', path.relative(INVOICES_DIR(), filePath));
+    if (isPathInside(keptOriginal, path.join(dataDir(), 'cancelled-pdf-originals')) && fs.existsSync(keptOriginal)) {
       try { fs.unlinkSync(keptOriginal); } catch { /* leave it */ }
     }
     // Don't leak absolute FS path — client only needs to know it saved
@@ -3175,7 +3832,7 @@ app.post('/api/save-pdf', express.raw({ type: 'application/pdf', limit: '20mb' }
 app.post('/api/number-series/rename', (req, res) => {
   const { from, to } = req.body || {};
   if (!from || !to || typeof from !== 'string' || typeof to !== 'string' || from === to) return errRes(res, 400, 'bad-request');
-  const meta = readJSON(META_PATH, {});
+  const meta = readJSON(META_PATH(), {});
   const series = meta.invoiceNumberSeries || {};
   if (!series[from] || series[to]) return res.json({ moved: false });
   series[to] = series[from];
@@ -3188,7 +3845,7 @@ app.post('/api/number-series/rename', (req, res) => {
       delete meta[key];
     }
   }
-  writeJSON(META_PATH, meta);
+  writeJSON(META_PATH(), meta);
   return res.json({ moved: true });
 });
 
@@ -3198,7 +3855,7 @@ app.post('/api/number-series/rename', (req, res) => {
 // Cancelling an invoice stamps "CANCELLED" across every page of its PDF in
 // Saved Invoices; Undo puts the original back, byte for byte. The original is
 // kept under data/ (so backups carry it), never in the folder people browse.
-const PDF_ORIGINALS_DIR = path.join(DATA_DIR, 'cancelled-pdf-originals');
+const PDF_ORIGINALS_DIR = () => path.join(dataDir(), 'cancelled-pdf-originals');
 
 // The copies of one invoice's PDF in Saved Invoices: <client>/<month>/<name>,
 // or loose in the folder. Same lookup as Move saved PDF to Trash below.
@@ -3206,15 +3863,15 @@ function findSavedPdfs(fileName, clientName) {
   const safeClient = safePathSegment(clientName, 'General');
   const safeName = safePathSegment(fileName, 'Untitled.pdf');
   const out = [];
-  const clientDir = path.join(INVOICES_DIR, safeClient);
-  if (isPathInside(clientDir, INVOICES_DIR) && fs.existsSync(clientDir)) {
+  const clientDir = path.join(INVOICES_DIR(), safeClient);
+  if (isPathInside(clientDir, INVOICES_DIR()) && fs.existsSync(clientDir)) {
     for (const month of fs.readdirSync(clientDir)) {
       const file = path.join(clientDir, month, safeName);
-      if (isPathInside(file, INVOICES_DIR) && fs.existsSync(file)) out.push(file);
+      if (isPathInside(file, INVOICES_DIR()) && fs.existsSync(file)) out.push(file);
     }
   }
-  const flat = path.join(INVOICES_DIR, safeName);
-  if (isPathInside(flat, INVOICES_DIR) && fs.existsSync(flat)) out.push(flat);
+  const flat = path.join(INVOICES_DIR(), safeName);
+  if (isPathInside(flat, INVOICES_DIR()) && fs.existsSync(flat)) out.push(flat);
   return out;
 }
 
@@ -3247,8 +3904,8 @@ app.post('/api/saved-pdf/cancel-mark', express.json(), async (req, res) => {
     let updated = 0;
     let failed = 0;
     for (const file of findSavedPdfs(fileName, clientName)) {
-      const original = path.join(PDF_ORIGINALS_DIR, path.relative(INVOICES_DIR, file));
-      if (!isPathInside(original, PDF_ORIGINALS_DIR)) continue;
+      const original = path.join(PDF_ORIGINALS_DIR(), path.relative(INVOICES_DIR(), file));
+      if (!isPathInside(original, PDF_ORIGINALS_DIR())) continue;
       // One copy that cannot be written (open in a PDF reader) never stops the rest.
       try {
         if (cancelled) {
@@ -3275,9 +3932,9 @@ app.post('/api/saved-pdf/cancel-mark', express.json(), async (req, res) => {
 // ========================
 // Move saved PDF to Trash
 // ========================
-const TRASH_DIR = path.join(__dirname, 'Trash');
-
-if (!fs.existsSync(TRASH_DIR)) fs.mkdirSync(TRASH_DIR, { recursive: true });
+// "pdf-trash", not "Trash": next to the bill trash folder "trash" it would be
+// the same folder on Windows and macOS.
+const TRASH_DIR = () => path.join(dataDir(), 'pdf-trash');
 
 app.post('/api/trash-pdf', express.json(), (req, res) => {
   try {
@@ -3290,9 +3947,9 @@ app.post('/api/trash-pdf', express.json(), (req, res) => {
     const safeClient = safePathSegment(clientName, 'General');
     const safeName = safePathSegment(fileName, 'Untitled.pdf');
 
-    const clientDir = path.join(INVOICES_DIR, safeClient);
+    const clientDir = path.join(INVOICES_DIR(), safeClient);
     // Extra guard — reject if the constructed client dir somehow escaped.
-    if (!isPathInside(clientDir, INVOICES_DIR)) return errRes(res, 400, 'invalid-path');
+    if (!isPathInside(clientDir, INVOICES_DIR())) return errRes(res, 400, 'invalid-path');
     let found = false;
 
     if (fs.existsSync(clientDir)) {
@@ -3301,11 +3958,11 @@ app.post('/api/trash-pdf', express.json(), (req, res) => {
       });
       for (const month of months) {
         const filePath = path.join(clientDir, month, safeName);
-        if (!isPathInside(filePath, INVOICES_DIR)) continue;
+        if (!isPathInside(filePath, INVOICES_DIR())) continue;
         if (fs.existsSync(filePath)) {
-          const trashPath = path.join(TRASH_DIR, safeClient, month);
+          const trashPath = path.join(TRASH_DIR(), safeClient, month);
           const trashFile = path.join(trashPath, safeName);
-          if (!isPathInside(trashFile, TRASH_DIR)) return errRes(res, 400, 'invalid-path');
+          if (!isPathInside(trashFile, TRASH_DIR())) return errRes(res, 400, 'invalid-path');
           if (!fs.existsSync(trashPath)) fs.mkdirSync(trashPath, { recursive: true });
           try {
             fs.renameSync(filePath, trashFile);
@@ -3320,11 +3977,11 @@ app.post('/api/trash-pdf', express.json(), (req, res) => {
     }
 
     if (!found) {
-      const flatPath = path.join(INVOICES_DIR, safeName);
-      if (isPathInside(flatPath, INVOICES_DIR) && fs.existsSync(flatPath)) {
-        const trashPath = path.join(TRASH_DIR, safeClient);
+      const flatPath = path.join(INVOICES_DIR(), safeName);
+      if (isPathInside(flatPath, INVOICES_DIR()) && fs.existsSync(flatPath)) {
+        const trashPath = path.join(TRASH_DIR(), safeClient);
         const trashFile = path.join(trashPath, safeName);
-        if (isPathInside(trashFile, TRASH_DIR)) {
+        if (isPathInside(trashFile, TRASH_DIR())) {
           if (!fs.existsSync(trashPath)) fs.mkdirSync(trashPath, { recursive: true });
           try {
             fs.renameSync(flatPath, trashFile);
@@ -3500,7 +4157,7 @@ app.get('/api/control-panel/status', (req, res) => {
           else { try { total += fs.statSync(p).size; } catch { /* ignore */ } }
         }
       };
-      if (fs.existsSync(DATA_DIR)) walk(DATA_DIR);
+      if (fs.existsSync(dataDir())) walk(dataDir());
       return total;
     } catch { return 0; }
   })();
@@ -3518,7 +4175,7 @@ app.get('/api/control-panel/status', (req, res) => {
     node: process.version,
     controlScriptsAvailable: !!controlScriptDir,
     actions: controlActions(),
-    dataFolder: DATA_DIR,
+    dataFolder: dataDir(),
     dataSizeBytes: dataSize,
     port: activePort,
     launcherType: controlScriptDir ? (isWindows ? 'hta' : (isMac ? 'command' : 'sh')) : 'none',
@@ -3533,9 +4190,9 @@ app.post('/api/control-panel/backup', async (req, res) => {
 
 app.post('/api/control-panel/open-data-folder', (req, res) => {
   try {
-    if (isWindows) spawn('explorer.exe', [DATA_DIR], { detached: true }).unref();
-    else if (isMac) spawn('open', [DATA_DIR], { detached: true }).unref();
-    else spawn('xdg-open', [DATA_DIR], { detached: true }).unref();
+    if (isWindows) spawn('explorer.exe', [dataDir()], { detached: true }).unref();
+    else if (isMac) spawn('open', [dataDir()], { detached: true }).unref();
+    else spawn('xdg-open', [dataDir()], { detached: true }).unref();
     res.json({ ok: true });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
@@ -3589,8 +4246,8 @@ app.use(express.static(distPath, { fallthrough: true })); // fallthrough = ok if
 // GET /api/backups and GET /api/trash get swallowed by the catch-all
 // and return 404. Bug discovered by smoke test after v1.9.5 shipped.
 // ============================================================
-const BACKUPS_DIR = path.join(DATA_DIR, 'backups');
-const BILL_TRASH_DIR = path.join(DATA_DIR, 'trash');
+const BACKUPS_DIR = () => path.join(dataDir(), 'backups');
+const BILL_TRASH_DIR = () => path.join(dataDir(), 'trash');
 function ensureDir(p) { if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true }); }
 
 function copyDirRecursive(src, dst) {
@@ -3618,19 +4275,22 @@ function todayLocalIso() {
 // copies go in "<folder>/FreeGSTBill Backups/<date>", 30 days kept, and are
 // listed and restorable like the ones in data/backups.
 const BACKUP_FOLDER_KEY = 'backupFolder';
+// Not part of a company's daily snapshot: the snapshots themselves, and the PDF
+// archives (big, and re-creatable from the invoices).
+const BACKUP_SKIP = new Set(['backups', 'errors.log', 'port.txt', 'Saved Invoices', 'pdf-trash']);
 const EXTRA_BACKUP_SUBDIR = 'FreeGSTBill Backups';
 const DATE_DIR = /^\d{4}-\d{2}-\d{2}$/;
 const extraBackupsDir = () => {
-  const folder = readJSON(META_PATH, {})[BACKUP_FOLDER_KEY];
+  const folder = readJSON(META_PATH(), {})[BACKUP_FOLDER_KEY];
   return typeof folder === 'string' && folder.trim() && path.isAbsolute(folder.trim())
-    ? path.join(folder.trim(), EXTRA_BACKUP_SUBDIR) : null;
+    ? path.join(folder.trim(), EXTRA_BACKUP_SUBDIR, currentCompanyId()) : null;
 };
 let lastExtraBackupError = '';
 function copyBackupToExtraFolder(date) {
   const dir = extraBackupsDir();
   if (!dir) return;
   try {
-    const src = path.join(BACKUPS_DIR, date);
+    const src = path.join(BACKUPS_DIR(), date);
     const dst = path.join(dir, date);
     if (!fs.existsSync(src) || fs.existsSync(dst)) { lastExtraBackupError = ''; return; }
     ensureDir(dir);
@@ -3652,7 +4312,7 @@ function copyBackupToExtraFolder(date) {
 // Where a dated backup is: data/backups, else the extra folder (e.g. after a
 // reinstall, when only the copy on D: is left).
 function backupSourceDir(date) {
-  const local = path.join(BACKUPS_DIR, date);
+  const local = path.join(BACKUPS_DIR(), date);
   if (fs.existsSync(local)) return local;
   const dir = extraBackupsDir();
   const extra = dir ? path.join(dir, date) : null;
@@ -3661,29 +4321,29 @@ function backupSourceDir(date) {
 
 function runDailyBackup() {
   try {
-    ensureDir(BACKUPS_DIR);
+    ensureDir(BACKUPS_DIR());
     const today = todayLocalIso();
-    const target = path.join(BACKUPS_DIR, today);
+    const target = path.join(BACKUPS_DIR(), today);
     if (fs.existsSync(target)) { copyBackupToExtraFolder(today); return; }
     ensureDir(target);
-    const entries = fs.readdirSync(DATA_DIR, { withFileTypes: true });
+    const entries = fs.readdirSync(dataDir(), { withFileTypes: true });
     for (const entry of entries) {
       // v1.10.31 — Data-F7.1: `trash` is now INCLUDED in daily backups.
       // Previously excluded → users restoring last week's backup lost every
       // bill they'd trashed since, breaking the 30-day soft-delete promise.
       // We still skip `backups` (no recursion) and log files.
-      if (entry.name === 'backups' || entry.name === 'errors.log' || entry.name === 'port.txt') continue;
-      const src = path.join(DATA_DIR, entry.name);
+      if (BACKUP_SKIP.has(entry.name)) continue;
+      const src = path.join(dataDir(), entry.name);
       const dst = path.join(target, entry.name);
       if (entry.isDirectory()) copyDirRecursive(src, dst);
       else fs.copyFileSync(src, dst);
     }
     console.log(`[backup] Daily snapshot saved: ${target}`);
     copyBackupToExtraFolder(today);
-    const all = fs.readdirSync(BACKUPS_DIR).filter(n => /^\d{4}-\d{2}-\d{2}$/.test(n)).sort();
+    const all = fs.readdirSync(BACKUPS_DIR()).filter(n => /^\d{4}-\d{2}-\d{2}$/.test(n)).sort();
     while (all.length > 30) {
       const oldest = all.shift();
-      const oldestPath = path.join(BACKUPS_DIR, oldest);
+      const oldestPath = path.join(BACKUPS_DIR(), oldest);
       try { fs.rmSync(oldestPath, { recursive: true, force: true }); } catch { /* ignore */ }
     }
   } catch (err) {
@@ -3691,17 +4351,17 @@ function runDailyBackup() {
   }
 }
 
-setTimeout(runDailyBackup, 5000);
+setTimeout(() => forEachCompany(() => runDailyBackup()), 5000);
 // Checked every hour (it does nothing once today's backup exists), so a PC
 // left on overnight gets the new day's backup soon after midnight rather
 // than up to 24 hours later.
-setInterval(runDailyBackup, 60 * 60 * 1000);
+setInterval(() => forEachCompany(() => runDailyBackup()), 60 * 60 * 1000);
 
 // Backup management endpoints
 app.get('/api/backups', (req, res) => {
   try {
-    ensureDir(BACKUPS_DIR);
-    const dates = new Set(fs.readdirSync(BACKUPS_DIR).filter(n => DATE_DIR.test(n)));
+    ensureDir(BACKUPS_DIR());
+    const dates = new Set(fs.readdirSync(BACKUPS_DIR()).filter(n => DATE_DIR.test(n)));
     // Backups that exist only in the extra folder are listed too (marked).
     const extra = extraBackupsDir();
     const extraDates = new Set();
@@ -3728,8 +4388,8 @@ app.delete('/api/backups/:date', (req, res) => {
     if (m < 1 || m > 12 || d < 1 || d > 31 || y < 2000 || y > 2100) {
       return errRes(res, 400, 'bad-request');
     }
-    const backupDir = path.join(BACKUPS_DIR, date);
-    if (!isPathInside(backupDir, BACKUPS_DIR)) return errRes(res, 400, 'invalid-path');
+    const backupDir = path.join(BACKUPS_DIR(), date);
+    if (!isPathInside(backupDir, BACKUPS_DIR())) return errRes(res, 400, 'invalid-path');
     if (!fs.existsSync(backupDir)) return errRes(res, 404, 'not-found');
     fs.rmSync(backupDir, { recursive: true, force: true });
     res.json({ success: true, date });
@@ -3751,7 +4411,7 @@ app.post('/api/backups/:date/restore', (req, res) => {
     const date = req.params.date;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return errRes(res, 400, 'bad-request');
     const backupDir = backupSourceDir(date);
-    if (!isPathInside(path.join(BACKUPS_DIR, date), BACKUPS_DIR)) return errRes(res, 400, 'invalid-path');
+    if (!isPathInside(path.join(BACKUPS_DIR(), date), BACKUPS_DIR())) return errRes(res, 400, 'invalid-path');
     if (!fs.existsSync(backupDir)) return errRes(res, 404, 'not-found');
 
     // Additional date sanity — a directory can exist with an unrealistic
@@ -3763,16 +4423,16 @@ app.post('/api/backups/:date/restore', (req, res) => {
 
     // The PIN on this PC survives the restore (see withLock), and so does the
     // backup folder setting (the backup may be older than it).
-    const lockBefore = readJSON(META_PATH, {})[LOCK_KEY];
-    const backupFolderBefore = readJSON(META_PATH, {})[BACKUP_FOLDER_KEY];
+    const lockBefore = readJSON(META_PATH(), {})[LOCK_KEY];
+    const backupFolderBefore = readJSON(META_PATH(), {})[BACKUP_FOLDER_KEY];
 
     // Make a snapshot of live data before touching anything.
-    snapshotDir = path.join(BACKUPS_DIR, `pre-restore-${Date.now()}`);
+    snapshotDir = path.join(BACKUPS_DIR(), `pre-restore-${Date.now()}`);
     ensureDir(snapshotDir);
-    const liveEntries = fs.readdirSync(DATA_DIR, { withFileTypes: true });
+    const liveEntries = fs.readdirSync(dataDir(), { withFileTypes: true });
     for (const entry of liveEntries) {
-      if (entry.name === 'backups' || entry.name === 'errors.log' || entry.name === 'port.txt') continue;
-      const src = path.join(DATA_DIR, entry.name);
+      if (BACKUP_SKIP.has(entry.name)) continue;
+      const src = path.join(dataDir(), entry.name);
       const dst = path.join(snapshotDir, entry.name);
       if (entry.isDirectory()) copyDirRecursive(src, dst);
       else fs.copyFileSync(src, dst);
@@ -3783,8 +4443,8 @@ app.post('/api/backups/:date/restore', (req, res) => {
     const backupEntries = fs.readdirSync(backupDir, { withFileTypes: true });
     for (const entry of backupEntries) {
       const src = path.join(backupDir, entry.name);
-      const dst = path.join(DATA_DIR, entry.name);
-      if (!isPathInside(dst, DATA_DIR)) continue;
+      const dst = path.join(dataDir(), entry.name);
+      if (!isPathInside(dst, dataDir())) continue;
       if (entry.isDirectory()) {
         if (fs.existsSync(dst)) fs.rmSync(dst, { recursive: true, force: true });
         copyDirRecursive(src, dst);
@@ -3794,10 +4454,10 @@ app.post('/api/backups/:date/restore', (req, res) => {
       restoredDirs.push(entry.name);
     }
     {
-      const restoredMeta = withLock(readJSON(META_PATH, {}), lockBefore);
+      const restoredMeta = withLock(readJSON(META_PATH(), {}), lockBefore);
       if (backupFolderBefore) restoredMeta[BACKUP_FOLDER_KEY] = backupFolderBefore;
       else delete restoredMeta[BACKUP_FOLDER_KEY];
-      writeJSON(META_PATH, restoredMeta);
+      writeJSON(META_PATH(), restoredMeta);
     }
     for (const dir of DIRS) invalidateCache(dir);
 
@@ -3806,8 +4466,8 @@ app.post('/api/backups/:date/restore', (req, res) => {
     // start-up, before today's work), and the app promises it can be rolled
     // back. Only the 5 newest snapshots are kept.
     try {
-      const snaps = fs.readdirSync(BACKUPS_DIR).filter(n => /^pre-restore-\d+$/.test(n)).sort((x, y) => Number(x.slice(12)) - Number(y.slice(12)));
-      while (snaps.length > 5) fs.rmSync(path.join(BACKUPS_DIR, snaps.shift()), { recursive: true, force: true });
+      const snaps = fs.readdirSync(BACKUPS_DIR()).filter(n => /^pre-restore-\d+$/.test(n)).sort((x, y) => Number(x.slice(12)) - Number(y.slice(12)));
+      while (snaps.length > 5) fs.rmSync(path.join(BACKUPS_DIR(), snaps.shift()), { recursive: true, force: true });
     } catch { /* pruning is best-effort */ }
     res.json({ success: true, restored: date, snapshot: path.basename(snapshotDir) });
   } catch (err) {
@@ -3817,8 +4477,8 @@ app.post('/api/backups/:date/restore', (req, res) => {
     if (snapshotDir && fs.existsSync(snapshotDir)) {
       try {
         for (const name of restoredDirs) {
-          const dst = path.join(DATA_DIR, name);
-          if (!isPathInside(dst, DATA_DIR)) continue;
+          const dst = path.join(dataDir(), name);
+          if (!isPathInside(dst, dataDir())) continue;
           if (fs.existsSync(dst)) fs.rmSync(dst, { recursive: true, force: true });
           const snap = path.join(snapshotDir, name);
           if (fs.existsSync(snap)) {
@@ -3842,21 +4502,21 @@ app.post('/api/backups/:date/restore', (req, res) => {
 // the last copy worked; POST { path } sets it ('' turns it off). The folder
 // is created and test-written before it is accepted.
 app.get('/api/backup-folder', (req, res) => {
-  const folder = readJSON(META_PATH, {})[BACKUP_FOLDER_KEY] || '';
+  const folder = readJSON(META_PATH(), {})[BACKUP_FOLDER_KEY] || '';
   res.json({ path: folder, copiesIn: extraBackupsDir(), error: lastExtraBackupError });
 });
 app.post('/api/backup-folder', (req, res) => {
   const raw = String(req.body?.path ?? '').trim();
-  const meta = readJSON(META_PATH, {});
+  const meta = readJSON(META_PATH(), {});
   if (!raw) {
     delete meta[BACKUP_FOLDER_KEY];
-    writeJSON(META_PATH, meta);
+    writeJSON(META_PATH(), meta);
     lastExtraBackupError = '';
     return res.json({ ok: true, path: '' });
   }
   if (!path.isAbsolute(raw)) return res.status(400).json({ ok: false, error: 'Give the full folder path, for example D:\\Backups' });
-  const dir = path.join(raw, EXTRA_BACKUP_SUBDIR);
-  if (isPathInside(dir, DATA_DIR)) return res.status(400).json({ ok: false, error: 'Choose a folder outside the app\'s data folder.' });
+  const dir = path.join(raw, EXTRA_BACKUP_SUBDIR, currentCompanyId());
+  if (isPathInside(dir, DATA_ROOT)) return res.status(400).json({ ok: false, error: 'Choose a folder outside the app\'s data folder.' });
   try {
     ensureDir(dir);
     const probe = path.join(dir, `.write-test-${Date.now()}`);
@@ -3866,7 +4526,7 @@ app.post('/api/backup-folder', (req, res) => {
     return res.status(400).json({ ok: false, error: `Cannot write to that folder: ${err.code || err.message}` });
   }
   meta[BACKUP_FOLDER_KEY] = raw;
-  writeJSON(META_PATH, meta);
+  writeJSON(META_PATH(), meta);
   runDailyBackup(); // copies today's backup there now
   return res.json({ ok: !lastExtraBackupError, path: raw, copiesIn: dir, error: lastExtraBackupError });
 });
@@ -3883,16 +4543,14 @@ app.post('/api/backups/now', (req, res) => {
 });
 
 // ---- Trash bin (soft delete for invoices) ---------------------------------
-ensureDir(BILL_TRASH_DIR);
-
 app.get('/api/trash', (req, res) => {
   try {
-    ensureDir(BILL_TRASH_DIR);
-    const files = fs.readdirSync(BILL_TRASH_DIR)
+    ensureDir(BILL_TRASH_DIR());
+    const files = fs.readdirSync(BILL_TRASH_DIR())
       .filter(n => n.endsWith('.json'))
       .map(name => {
         try {
-          const p = path.join(BILL_TRASH_DIR, name);
+          const p = path.join(BILL_TRASH_DIR(), name);
           const bill = readJSON(p, null);
           const stat = fs.statSync(p);
           return bill ? { ...bill, _trashedAt: stat.mtime.toISOString() } : null;
@@ -3906,8 +4564,8 @@ app.get('/api/trash', (req, res) => {
 app.post('/api/trash/:id/restore', (req, res) => {
   try {
     const fname = safeFileName(req.params.id) + '.json';
-    const trashPath = path.join(BILL_TRASH_DIR, fname);
-    const billsPath = path.join(DATA_DIR, 'bills', fname);
+    const trashPath = path.join(BILL_TRASH_DIR(), fname);
+    const billsPath = path.join(dataDir(), 'bills', fname);
     if (!fs.existsSync(trashPath)) return res.status(404).json({ error: 'Not in trash' });
     // A new bill may have taken this number since: never replace it.
     if (fs.existsSync(billsPath)) return res.status(409).json({ error: 'An invoice with this number exists again. Rename or delete it first.' });
@@ -3920,7 +4578,7 @@ app.post('/api/trash/:id/restore', (req, res) => {
 app.delete('/api/trash/:id', (req, res) => {
   try {
     const fname = safeFileName(req.params.id) + '.json';
-    const trashPath = path.join(BILL_TRASH_DIR, fname);
+    const trashPath = path.join(BILL_TRASH_DIR(), fname);
     if (fs.existsSync(trashPath)) fs.unlinkSync(trashPath);
     res.json({ success: true });
   } catch (err) { errRes(res, 500, 'server-error', err); }
@@ -3928,11 +4586,11 @@ app.delete('/api/trash/:id', (req, res) => {
 
 function purgeOldTrash() {
   try {
-    ensureDir(BILL_TRASH_DIR);
+    ensureDir(BILL_TRASH_DIR());
     const now = Date.now();
     const thirtyDays = 30 * 24 * 60 * 60 * 1000;
-    for (const name of fs.readdirSync(BILL_TRASH_DIR)) {
-      const p = path.join(BILL_TRASH_DIR, name);
+    for (const name of fs.readdirSync(BILL_TRASH_DIR())) {
+      const p = path.join(BILL_TRASH_DIR(), name);
       const stat = fs.statSync(p);
       if (now - stat.mtime.getTime() > thirtyDays) {
         try { fs.unlinkSync(p); } catch { /* ignore */ }
@@ -3942,8 +4600,8 @@ function purgeOldTrash() {
 }
 // Also once at start-up: the server usually runs only while the PC is on, so
 // a 24-hour timer alone never fired and the trash was never emptied.
-setTimeout(purgeOldTrash, 10000);
-setInterval(purgeOldTrash, 24 * 60 * 60 * 1000);
+setTimeout(() => forEachCompany(() => purgeOldTrash()), 10000);
+setInterval(() => forEachCompany(() => purgeOldTrash()), 24 * 60 * 60 * 1000);
 
 // v1.10.0 — Health-check endpoint moved here (was registered AFTER the
 // SPA catch-all → every GET /api/health returned "No such endpoint" →
@@ -4096,7 +4754,7 @@ function startServer(port) {
     // scans in half on repeated reboots of whatever was holding 47371).
     try { fs.writeFileSync(PORT_FILE, String(port), 'utf-8'); } catch { /* ignore */ }
     console.log(`\n  Free GST Billing Software running at http://localhost:${port}`);
-    console.log(`  Data stored in: ${DATA_DIR}\n`);
+    console.log(`  Data stored in: ${DATA_ROOT}  (one COMPxxxx folder per company)\n`);
   });
   server.on('error', (err) => {
     if (err.code === 'EADDRINUSE' && port < STARTING_PORT + MAX_PORT_SCAN) {
@@ -4192,12 +4850,12 @@ function nextInvoiceNumber(prefix, invoiceType = 'tax-invoice', businessKey = ''
   // The same rules as the app's getNextInvoiceNumber (src/utils.js): the
   // business's own series when it has one (v1.10.79, #95), else the shared
   // one; atomic counter in meta; brand-TYPE prefixes; India's FY label.
-  const meta = readJSON(META_PATH, {});
+  const meta = readJSON(META_PATH(), {});
   const series = numberSeriesFor(meta.invoiceNumberSettings, meta.invoiceNumberSeries, businessKey);
   const key = counterKeyFor(prefix, series, businessKey);
   const next = nextCounterValue(meta[key], startFor(invoiceType, series));
   meta[key] = next;
-  writeJSON(META_PATH, meta);
+  writeJSON(META_PATH(), meta);
   return formatDocNumber({ settings: series, typePrefix: prefix, next, fyLabel: getFinancialYearLabel() });
 }
 
@@ -4232,7 +4890,7 @@ function generateFromTemplate(tpl, today) {
       let profile = profiles.find(p => p.gstin && tpl.ownerGstin && p.gstin === tpl.ownerGstin)
                  || profiles.find(p => p.id && tpl.profileId && p.id === tpl.profileId)
                  || profiles.find(p => p.businessName && p.businessName === (tpl.profileBusinessName || tpl.ownerName))
-                 || readJSON(PROFILE_PATH, {});
+                 || readJSON(PROFILE_PATH(), {});
 
       const prefix = (tpl.invoiceType === 'proforma' ? 'EST'
                    : tpl.invoiceType === 'quotation' ? 'QUO'
@@ -4245,7 +4903,7 @@ function generateFromTemplate(tpl, today) {
       // bills on disk (restored backup, hand-typed numbers), take the next one.
       const bizKey = businessKeyOf(profile);
       let invoiceNumber = nextInvoiceNumber(prefix, tpl.invoiceType, bizKey);
-      for (let i = 0; i < 50 && fs.existsSync(path.join(DATA_DIR, 'bills', safeFileName(invoiceNumber) + '.json')); i++) {
+      for (let i = 0; i < 50 && fs.existsSync(path.join(dataDir(), 'bills', safeFileName(invoiceNumber) + '.json')); i++) {
         invoiceNumber = nextInvoiceNumber(prefix, tpl.invoiceType, bizKey);
       }
       const invoiceDate = today;
@@ -4313,7 +4971,7 @@ function generateFromTemplate(tpl, today) {
         },
       };
 
-      writeJSON(path.join(DATA_DIR, 'bills', safeFileName(invoiceNumber) + '.json'), bill);
+      writeJSON(path.join(dataDir(), 'bills', safeFileName(invoiceNumber) + '.json'), bill);
 
       // Advance the template. The day of month it started on is remembered,
       // so a schedule on the 31st comes back to the 31st after February.
@@ -4322,7 +4980,7 @@ function generateFromTemplate(tpl, today) {
       tpl.nextDate = advanceDate(from, tpl.frequency, tpl.interval, tpl.anchorDay);
       tpl.lastGenerated = today;
       tpl.occurrencesCreated = (tpl.occurrencesCreated || 0) + 1;
-      writeJSON(path.join(DATA_DIR, 'recurring', safeFileName(tpl.id) + '.json'), tpl);
+      writeJSON(path.join(dataDir(), 'recurring', safeFileName(tpl.id) + '.json'), tpl);
       return invoiceNumber;
 }
 
@@ -4346,9 +5004,9 @@ async function processDueRecurring() {
   if (fired > 0) {
     console.log(`  Auto-generated ${fired} recurring invoice${fired !== 1 ? 's' : ''}.`);
     // Surface the count so the frontend notification centre can pick it up.
-    const meta = readJSON(META_PATH, {});
+    const meta = readJSON(META_PATH(), {});
     meta.lastRecurringAutoFire = { date: today, count: fired, at: new Date().toISOString() };
-    writeJSON(META_PATH, meta);
+    writeJSON(META_PATH(), meta);
   }
 }
 
@@ -4376,11 +5034,11 @@ startServer(STARTING_PORT);
 // for users whose server stays up >24h.
 // v1.10.6 — audit L19: async caller. Uncaught rejections logged via
 // the top-level unhandledRejection handler installed above.
-setTimeout(() => { processDueRecurring().catch(err => logFatal(err, 'recurring')); }, 3000);
+setTimeout(() => { forEachCompany(() => processDueRecurring()).catch(err => logFatal(err, 'recurring')); }, 3000);
 // Hourly: a template only fires once its nextDate has come, so checking more
 // often never makes extra invoices - it just stops a template due today from
 // waiting until the same time tomorrow on a PC that stays on.
-setInterval(() => { processDueRecurring().catch(err => logFatal(err, 'recurring')); }, 60 * 60 * 1000);
+setInterval(() => { forEachCompany(() => processDueRecurring()).catch(err => logFatal(err, 'recurring')); }, 60 * 60 * 1000);
 
 ```
 
@@ -4547,7 +5205,7 @@ pause
 ## `vite.config.js`
 
 - Path: `vite.config.js`
-- Lines: 293 | Size: 13.9 KB
+- Lines: 306 | Size: 14.5 KB
 
 ```javascript
 ﻿import { defineConfig } from 'vite'
@@ -4555,6 +5213,7 @@ import path from 'path'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // __dirname equivalent for ES modules. Used to resolve absolute paths
@@ -4586,6 +5245,10 @@ export default defineConfig({
   root: path.resolve(__dirname, 'src'),
   publicDir: path.resolve(__dirname, 'public'),
   plugins: [
+    // Tailwind v4. Emits the utility layer referenced by src/index.css.
+    // Preflight is intentionally NOT imported yet — see the comment at the
+    // top of src/index.css.
+    tailwindcss(),
     react(),
     VitePWA({
       // v1.10.2 â€” Prior 'autoUpdate' triggered an immediate location.reload()
@@ -4734,7 +5397,9 @@ export default defineConfig({
           // POST/DELETE would need a background-sync queue (future).
           {
             urlPattern: ({ url, request }) =>
-              request.method === 'GET' && url.pathname.startsWith('/api/'),
+              request.method === 'GET' && url.pathname.startsWith('/api/')
+              // Multi-company: who is logged in and the company list must always be live.
+              && !url.pathname.startsWith('/api/auth/') && url.pathname !== '/api/companies',
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
@@ -4801,6 +5466,12 @@ export default defineConfig({
       },
     }),
   ],
+  resolve: {
+    alias: {
+      // shadcn convention: components import each other as `@/components/ui/…`
+      '@': path.resolve(__dirname, 'src'),
+    },
+  },
   build: {
     // outDir + publicDir point at project-root paths because Vite's
     // `root` is src/ â€” without absolute resolution the output would
@@ -21259,14 +21930,14 @@ public class ServerManager
         {
             try
             {
-                var resp = await _httpClient.GetAsync($"http://localhost:{BackendPort}/api/profile");
+                var resp = await _httpClient.GetAsync($"http://localhost:{BackendPort}/api/health");
                 bHealthy = resp.IsSuccessStatusCode;
             }
             catch
             {
                 try
                 {
-                    var resp = await _httpClient.GetAsync($"http://127.0.0.1:{BackendPort}/api/profile");
+                    var resp = await _httpClient.GetAsync($"http://127.0.0.1:{BackendPort}/api/health");
                     bHealthy = resp.IsSuccessStatusCode;
                 }
                 catch
@@ -22093,7 +22764,7 @@ if [ -f "$SYSTEM_DIR/data/port.txt" ]; then
 fi
 
 # Is our server already up?
-if curl -fsS --max-time 1 "http://localhost:$PORT/api/profile" >/dev/null 2>&1; then
+if curl -fsS --max-time 1 "http://localhost:$PORT/api/health" >/dev/null 2>&1; then
   echo "  Server already running on port $PORT — opening browser…"
 else
   echo "  Starting server on port $PORT…"
@@ -22104,7 +22775,7 @@ else
   deadline=$(($(date +%s) + 15))
   while [ $(date +%s) -lt $deadline ]; do
     sleep 0.4
-    if curl -fsS --max-time 1 "http://localhost:$PORT/api/profile" >/dev/null 2>&1; then
+    if curl -fsS --max-time 1 "http://localhost:$PORT/api/health" >/dev/null 2>&1; then
       break
     fi
   done
@@ -22268,7 +22939,7 @@ if (Test-Path $portFile) {
 function TestServerUp {
   param([int]$p)
   try {
-    Invoke-WebRequest -Uri "http://127.0.0.1:$p/api/profile" -TimeoutSec 5 -UseBasicParsing -ErrorAction Stop | Out-Null
+    Invoke-WebRequest -Uri "http://127.0.0.1:$p/api/health" -TimeoutSec 5 -UseBasicParsing -ErrorAction Stop | Out-Null
     return $true
   } catch { return $false }
 }
@@ -55236,7 +55907,7 @@ print(f"Master document generated at: {OUTPUT_FILE} ({len(content)} bytes)")
 ## `scripts/generate-artha-md.mjs`
 
 - Path: `scripts/generate-artha-md.mjs`
-- Lines: 186 | Size: 5.3 KB
+- Lines: 189 | Size: 5.4 KB
 
 ````javascript
 import fs from 'fs';
@@ -55263,7 +55934,10 @@ const IGNORED_DIRS = new Set([
   'obj',
   'publish-launcher',
   'publish-installer',
-  'release-build'
+  'release-build',
+  // Local feature snapshots hold a copy of the multi-company patch and a
+  // backup of real invoices and clients. Never bundle personal data.
+  'feature'
 ]);
 
 // Specific files to ignore
@@ -55620,7 +56294,7 @@ console.log(`Wrote ${path.relative(ROOT, ICO_OUT)} (${images.map((i) => i.size).
 ## `scripts/import-busywin.py`
 
 - Path: `scripts/import-busywin.py`
-- Lines: 505 | Size: 21.6 KB
+- Lines: 514 | Size: 22.3 KB
 
 ```python
 #!/usr/bin/env python3
@@ -55635,6 +56309,7 @@ import os
 import sys
 import json
 import argparse
+import re
 from datetime import datetime
 
 try:
@@ -56122,11 +56797,19 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Import BusyWin data to ARTHA")
     parser.add_argument('--busy-path', default=r'C:\BusyWin\DATA', help="Path to BusyWin DATA directory")
     parser.add_argument('--artha-data', default=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data'), help="Path to ARTHA data directory")
-    parser.add_argument('--company', default='COMP0001', help="Company folder name (e.g. COMP0001)")
+    parser.add_argument('--company', default='COMP0001', help="BusyWin company folder name (e.g. COMP0001)")
+    parser.add_argument('--artha-company', default='COMP0001', help="ARTHA company to import INTO (its folder is data/<id>, e.g. COMP0002). Create the company in ARTHA first.")
     parser.add_argument('--dry-run', action='store_true', help="Preview without writing files")
 
     args = parser.parse_args()
-    import_busywin(args.busy_path, args.artha_data, args.company, args.dry_run)
+    # Multi-company ARTHA: every company has its own folder inside data/.
+    target = args.artha_data
+    if not re.match(r'^COMP\d{4,}$', os.path.basename(os.path.normpath(target))):
+        target = os.path.join(target, args.artha_company)
+        if not os.path.isdir(target) and not args.dry_run:
+            print(f"Error: ARTHA company folder not found: {target}\n  Create the company in ARTHA first (Setup New Company), then run the import again.")
+            raise SystemExit(1)
+    import_busywin(args.busy_path, target, args.company, args.dry_run)
 
 ```
 
@@ -57721,11 +58404,349 @@ if (failed.length) process.exit(1);
 
 ---
 
+<a id="scripts-theme-audit-mjs"></a>
+## `scripts/theme-audit.mjs`
+
+- Path: `scripts/theme-audit.mjs`
+- Lines: 327 | Size: 11.9 KB
+
+```javascript
+/**
+ * theme-audit — finds places that cannot follow the theme.
+ *
+ * WHY
+ * ---
+ * The "some parts stay light in dark mode" bug came from two habits:
+ *   1. a CSS rule that paints a light colour and has no
+ *      `[data-theme="dark"]` counterpart, and
+ *   2. a JSX inline style that hardcodes a colour, which no theme can reach.
+ *
+ * This script lists both. It is a guard, not a formatter: it never edits code.
+ * Run it before and after a screen is ported to Tailwind; the counts should
+ * only go down.
+ *
+ * USAGE
+ *   node scripts/theme-audit.mjs            # summary + top offenders
+ *   node scripts/theme-audit.mjs --list     # every offending selector/line
+ *   node scripts/theme-audit.mjs --json     # machine-readable
+ */
+
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join, relative, sep } from 'node:path';
+
+const ROOT = process.cwd();
+const SRC = join(ROOT, 'src');
+const CSS_FILE = join(SRC, 'index.css');
+const ARGS = new Set(process.argv.slice(2));
+
+/* ---------------------------------------------------------------- helpers */
+
+const rel = (p) => relative(ROOT, p).split(sep).join('/');
+
+function walk(dir, out = []) {
+  for (const entry of readdirSync(dir)) {
+    const p = join(dir, entry);
+    if (statSync(p).isDirectory()) {
+      if (entry === 'node_modules' || entry === '.git') continue;
+      walk(p, out);
+    } else {
+      out.push(p);
+    }
+  }
+  return out;
+}
+
+/** Colours that only look right on a white surface. */
+const LIGHT_LITERALS = [
+  /\bwhite\b/i,
+  /#fff(?:fff)?\b/i,
+  /#f8fafc\b/i, /#f9fafb\b/i, /#fafafa\b/i, /#f1f5f9\b/i,
+  /#f0f2f5\b/i, /#e5e7eb\b/i, /#e2e8f0\b/i, /#f3f4f6\b/i,
+  /#fefce8\b/i, /#fef2f2\b/i, /#fef3c7\b/i, /#ecfdf5\b/i,
+  /#eff6ff\b/i, /#fffbeb\b/i, /#f5f3ff\b/i, /#f0fdf4\b/i,
+  /rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*0\.[0-9]+\s*\)/i,
+];
+
+const isLightLiteral = (value) => LIGHT_LITERALS.some((re) => re.test(value));
+
+/**
+ * Selectors that are dark ON PURPOSE in both modes — the "server is down"
+ * takeover and the install banner both sit outside the page palette.
+ *
+ * The navigation rail, profile switcher, nav buttons and server-status dot are
+ * deliberately NOT listed: they follow the theme now (white rail in Light Mode,
+ * navy in Dark Mode), so the audit must keep watching them.
+ *
+ * The invoice/print subtree is listed because it is rasterised by html2canvas,
+ * which cannot parse oklch()/color-mix(); it keeps its own fixed hex palette.
+ */
+const INTENTIONAL_DARK = [
+  /^\.server-down/,
+  /^\.server-start-btn/,
+  /^\.pwa-install/,
+  /^\.pwa-dismiss/,
+  /^\.inv-/,
+  /^\.invoice-preview/,
+  /^\.paper-/,
+  /^body:has\(#invoice-preview\)/,
+  /^\.template-(corporate|minimalist|modern|classic)\b/,
+];
+
+/**
+ * `html:not([data-theme="dark"]) .x { … }` is the legacy way of saying "this
+ * rule is the Light Mode override". It is not an unpatched light colour — it is
+ * the patch itself — so the worklist skips it instead of asking for a dark
+ * twin it must never have.
+ */
+const isLightCompanion = (selector) => /html:not\(\[data-theme=["']?dark["']?\]\)/.test(selector);
+
+const isIntentionalDark = (selector) =>
+  INTENTIONAL_DARK.some((re) => re.test(normaliseSelector(selector).replace(/^\[data-theme=["']?dark["']?\]\s*/, '')));
+
+
+/** Only the declarations that actually paint something. */
+const PAINT_PROP = /^(background|background-color|background-image|color|border|border-color|border-top|border-right|border-bottom|border-left|border-.*-color|fill|stroke|box-shadow)$/i;
+
+/* ------------------------------------------------------------- CSS parser */
+
+function stripComments(css) {
+  return css.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '));
+}
+
+/**
+ * Walk the stylesheet and produce one record per declaration that paints a
+ * light literal, tagged with the at-rule context it sits in (so `@media`
+ * copies are not confused with the base rule) and the line number.
+ */
+function analyseCss() {
+  const raw = readFileSync(CSS_FILE, 'utf8');
+  const css = stripComments(raw);
+  const lines = raw.split(/\r?\n/);
+
+  const records = [];
+  const ruleIndex = [];       // every selector seen, dark or not
+  const stack = [];           // { selector, kind: 'rule' | 'at' }
+  let buf = '';
+  let line = 1;
+
+  for (let i = 0; i < css.length; i += 1) {
+    const ch = css[i];
+    if (ch === '\n') line += 1;
+
+    if (ch === '{') {
+      const header = buf.trim().replace(/\s+/g, ' ');
+      buf = '';
+      if (header.startsWith('@')) {
+        stack.push({ kind: 'at', selector: header });
+      } else {
+        stack.push({ kind: 'rule', selector: header, line });
+        ruleIndex.push({
+          selector: header,
+          isDark: /\[data-theme=["']?dark["']?\]/.test(header) || /(^|[\s,])\.dark[\s,:]/.test(header),
+        });
+      }
+      continue;
+    }
+
+    if (ch === '}') {
+      const top = stack[stack.length - 1];
+      // A rule body was being collected right before this closing brace.
+      if (top && top.kind === 'rule' && buf.trim()) {
+        emitDeclarations(buf, top, stack);
+      }
+      buf = '';
+      stack.pop();
+      continue;
+    }
+
+    if (ch === ';') {
+      const top = stack[stack.length - 1];
+      if (top && top.kind === 'rule') emitDeclarations(buf + ';', top, stack);
+      buf = '';
+      continue;
+    }
+
+    buf += ch;
+  }
+
+  function emitDeclarations(body, rule, stackNow) {
+    const atRules = stackNow.filter((s) => s.kind === 'at').map((s) => s.selector);
+    const isDark = /\[data-theme=["']?dark["']?\]/.test(rule.selector);
+    for (const decl of body.split(';')) {
+      const idx = decl.indexOf(':');
+      if (idx === -1) continue;
+      const prop = decl.slice(0, idx).trim().toLowerCase();
+      const value = decl.slice(idx + 1).trim();
+      if (!prop || !value) continue;
+      if (!PAINT_PROP.test(prop)) continue;
+      // Pure white text is only wrong when the surface behind it is light, and
+      // that surface is reported by its own `background` declaration. Skipping
+      // it here keeps `.btn-primary { color: white }` out of the worklist.
+      if (prop === 'color' && /^(white|#fff(?:fff)?)$/i.test(value)) continue;
+      if (!isLightLiteral(value)) continue;
+      records.push({
+        selector: rule.selector,
+        prop,
+        value,
+        isDark,
+        atRules,
+        line: rule.line,
+        text: lines[rule.line - 1]?.trim() ?? '',
+      });
+    }
+  }
+
+  return { records, ruleIndex };
+}
+
+/* --------------------------------------------- does a dark patch exist? */
+
+const normaliseSelector = (s) => s.replace(/\s+/g, ' ').trim();
+
+function buildDarkSubjectSet(ruleIndex) {
+  // Every selector that appears under a dark rule, e.g.
+  //   [data-theme="dark"] .card  ->  ".card"
+  //   [data-theme="dark"] .card, .dark .card -> ".card"
+  // Built from ALL dark rules, not just the ones that happen to contain a
+  // light literal — a dark override sets a dark colour, which the light-literal
+  // scan never sees.
+  const subjects = new Set();
+  for (const r of ruleIndex) {
+    if (!r.isDark) continue;
+    for (const part of r.selector.split(',')) {
+      const stripped = normaliseSelector(part)
+        .replace(/^\[data-theme=["']?dark["']?\]\s*/, '')
+        .replace(/^\.dark\s*/, '');
+      if (stripped) subjects.add(stripped);
+    }
+  }
+  return subjects;
+}
+
+/**
+ * The same idea, but for the legacy Light Mode overrides:
+ *   html:not([data-theme="dark"]) .sidebar  ->  ".sidebar"
+ * A base rule whose light colour is corrected by one of these is already safe
+ * in both modes, so it is not a bug.
+ */
+function buildLightCompanionSet(ruleIndex) {
+  const subjects = new Set();
+  for (const r of ruleIndex) {
+    if (!isLightCompanion(r.selector)) continue;
+    for (const part of r.selector.split(',')) {
+      const stripped = normaliseSelector(part)
+        .replace(/^html:not\(\[data-theme=["']?dark["']?\]\)\s*/, '');
+      if (stripped) subjects.add(stripped);
+    }
+  }
+  return subjects;
+}
+
+/* ------------------------------------------------------------- JSX scan */
+
+const COLOUR_PROP = /\b(background|backgroundColor|backgroundImage|color|border|borderColor|borderTop|borderRight|borderBottom|borderLeft|boxShadow|fill|stroke|outline|outlineColor)\s*:/;
+
+function analyseJsx(files) {
+  const out = [];
+  for (const file of files) {
+    const text = readFileSync(file, 'utf8');
+    const lines = text.split(/\r?\n/);
+    lines.forEach((ln, i) => {
+      if (!/style=\{\{/.test(ln) && !/style=\{\{/.test(lines[i - 1] || '')) return;
+      // Look at this line and the next one: style objects are often multi-line.
+      const window = [ln, lines[i + 1] || ''].join(' ');
+      const m = window.match(COLOUR_PROP);
+      if (!m) return;
+      // Only complain about literals, not var(...) / token references.
+      const valuePart = window.slice(window.indexOf(m[0]) + m[0].length);
+      if (/var\(|props\.|\.length|theme|#[0-9a-f]{3,8}/i.test(valuePart) === false) return;
+      if (!isLightLiteral(valuePart) && !/#[0-9a-f]{3,8}/i.test(valuePart)) return;
+      if (/var\(/.test(valuePart.split(',')[0])) return;
+      out.push({ file: rel(file), line: i + 1, text: ln.trim().slice(0, 160) });
+    });
+  }
+  return out;
+}
+
+/* ---------------------------------------------------------------- report */
+
+const { records: cssRecords, ruleIndex } = analyseCss();
+const darkSubjects = buildDarkSubjectSet(ruleIndex);
+const lightCompanions = buildLightCompanionSet(ruleIndex);
+
+const hasSubject = (set, subject) =>
+  subject.split(',').some((part) => set.has(normaliseSelector(part)));
+
+const lightRules = cssRecords.filter((r) => !r.isDark);
+const unpatchedMap = new Map();
+for (const r of lightRules) {
+  const subject = normaliseSelector(r.selector);
+  if (isIntentionalDark(subject)) continue;
+  if (isLightCompanion(subject)) continue;
+  const patched = hasSubject(darkSubjects, subject) || hasSubject(lightCompanions, subject);
+  if (patched) continue;
+  const key = subject;
+  if (!unpatchedMap.has(key)) unpatchedMap.set(key, { selector: subject, line: r.line, props: new Set(), values: new Set() });
+  const e = unpatchedMap.get(key);
+  e.props.add(r.prop);
+  e.values.add(r.value);
+}
+
+const unpatched = [...unpatchedMap.values()].sort((a, b) => a.line - b.line);
+
+const jsxFiles = walk(SRC).filter((f) => f.endsWith('.jsx'));
+const jsx = analyseJsx(jsxFiles);
+const jsxByFile = new Map();
+for (const j of jsx) jsxByFile.set(j.file, (jsxByFile.get(j.file) ?? 0) + 1);
+
+if (ARGS.has('--json')) {
+  console.log(JSON.stringify({
+    css: { unpatched: unpatched.map((u) => ({ selector: u.selector, line: u.line, props: [...u.props], values: [...u.values] })) },
+    jsx: jsx,
+  }, null, 2));
+} else {
+  const totalCssRules = new Set(cssRecords.map((r) => normaliseSelector(r.selector))).size;
+  console.log('');
+  console.log('Theme audit — places that cannot follow dark mode');
+  console.log('=================================================');
+  console.log('');
+  console.log(`CSS   : ${unpatched.length} rule(s) paint a light colour with no [data-theme="dark"] patch`);
+  console.log(`        (${cssRecords.length} painting declarations scanned across ${totalCssRules} selectors)`);
+  console.log(`JSX   : ${jsx.length} inline colour literal(s) in ${jsxByFile.size} file(s)`);
+  console.log('');
+
+  if (ARGS.has('--list')) {
+    console.log('--- CSS rules ---');
+    for (const u of unpatched) {
+      console.log(`index.css:${u.line}  ${u.selector}`);
+      console.log(`    ${[...u.props].join(', ')}: ${[...u.values].join(' | ')}`);
+    }
+    console.log('');
+    console.log('--- JSX literals ---');
+    for (const j of jsx) console.log(`${j.file}:${j.line}  ${j.text}`);
+    console.log('');
+  } else {
+    console.log('Top files by inline colour literal:');
+    [...jsxByFile.entries()].sort((a, b) => b[1] - a[1]).slice(0, 15)
+      .forEach(([f, n]) => console.log(`  ${String(n).padStart(3)}  ${f}`));
+    console.log('');
+    console.log('First 15 unpatched CSS rules:');
+    unpatched.slice(0, 15).forEach((u) => console.log(`  index.css:${u.line}  ${u.selector}`));
+    console.log('');
+    console.log('Add --list for the full list.');
+  }
+  console.log('');
+}
+
+```
+
+---
+
 <a id="scripts-verify-release-mjs"></a>
 ## `scripts/verify-release.mjs`
 
 - Path: `scripts/verify-release.mjs`
-- Lines: 190 | Size: 7.9 KB
+- Lines: 228 | Size: 9.7 KB
 
 ```javascript
 #!/usr/bin/env node
@@ -57848,6 +58869,35 @@ function startServer(systemDir) {
   });
 }
 
+/**
+ * Multi-company: every /api route except health/version/update-check runs
+ * inside ONE company's folder and needs the `artha_sid` session cookie. The
+ * packaged install starts with no company at all, so create one (which also
+ * logs us in) and reuse its cookie for the checks below.
+ */
+async function openCompany(url) {
+  const listed = await fetch(`${url}/api/companies`)
+    .then((r) => (r.ok ? r.json() : { companies: [] }))
+    .catch(() => ({ companies: [] }));
+  const companies = listed.companies || [];
+  const opened = companies.length
+    ? await fetch(`${url}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ companyId: (companies.find((c) => !c.locked) || companies[0]).id }),
+      })
+    : await fetch(`${url}/api/companies`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Release Check Company' }),
+      });
+  if (!opened.ok) fail(`could not open a company for the HTTP checks (${opened.status}).`);
+  const raw = (opened.headers.getSetCookie?.() || [])[0] || opened.headers.get('set-cookie') || '';
+  const pair = raw.split(';')[0];
+  if (!pair) fail('the server did not return a session cookie when a company was opened.');
+  return pair;
+}
+
 const zipName = findZip();
 const zipPath = join(OUT_DIR, zipName);
 const work = join(tmpdir(), `fgsb-verify-${Date.now()}`);
@@ -57885,9 +58935,18 @@ try {
   log(`       bound at ${server.url}`);
 
   log('  4/5  exercising the HTTP surface…');
+  // The picker is public; a company's books are not. Prove both, then use the
+  // session cookie for the authenticated endpoints.
+  const anon = await fetch(`${server.url}/api/profile`).catch((e) => {
+    fail(`GET /api/profile threw: ${e.message}`);
+  });
+  if (anon.status !== 401) {
+    fail(`GET /api/profile without a session returned ${anon.status}, expected 401.`);
+  }
+  const cookie = await openCompany(server.url);
   const endpoints = ['/', '/api/bills', '/api/clients', '/api/products', '/api/profile'];
   for (const ep of endpoints) {
-    const res = await fetch(`${server.url}${ep}`).catch((e) => {
+    const res = await fetch(`${server.url}${ep}`, { headers: { Cookie: cookie } }).catch((e) => {
       fail(`GET ${ep} threw: ${e.message}`);
     });
     if (!res.ok) fail(`GET ${ep} returned ${res.status} from the packaged server.`);
@@ -57926,7 +58985,7 @@ try {
 ## `src/App.jsx`
 
 - Path: `src/App.jsx`
-- Lines: 1290 | Size: 65.0 KB
+- Lines: 1290 | Size: 65.7 KB
 
 ```jsx
 import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
@@ -57968,6 +59027,9 @@ const SupportView = lazy(() => import('./components/SupportView'));
 import StarBanner from './components/StarBanner';
 import AppFooter from './components/AppFooter';
 import LockButton from './components/LockButton';
+import CompanySwitcher from './components/CompanySwitcher';
+import { NAV_BTN, NAV_BTN_ACTIVE, NAV_BADGE, NAV_BTN_SUPPORT, NAV_BTN_SUPPORT_ACTIVE } from './components/navStyles';
+import { cn } from './lib/utils';
 import { lockNow } from './utils/appLock';
 import { getPrintSettings } from './utils/printSettings';
 
@@ -58320,6 +59382,9 @@ function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+    // Tailwind / shadcn read `.dark`, the legacy stylesheet reads
+    // `data-theme`. Keep both in step so either one can theme the app.
+    document.documentElement.classList.toggle('dark', darkMode);
     localStorage.setItem('freegstbill_theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
 
@@ -58723,22 +59788,18 @@ function App() {
         <button type="button"
           onClick={() => setShowWizard(true)}
           title="Come back to the setup wizard — pick a business type, paper size, and language."
+          className="fixed right-5 z-[9998] flex cursor-pointer items-center gap-[0.4rem] rounded-full border-0 bg-primary px-4 py-[0.6rem] text-[0.85rem] font-semibold text-primary-foreground shadow-[0_6px_20px_rgba(30,64,175,0.35),0_2px_4px_rgba(0,0,0,0.15)]"
           style={{
             // Above the docked Save bar on Settings, so it never covers Save.
-            position: 'fixed', bottom: currentView === 'settings' ? '5.5rem' : '1.25rem', right: '1.25rem', zIndex: 9998,
-            padding: '0.6rem 1rem', borderRadius: 999,
-            background: 'var(--primary)', color: '#fff', border: 'none',
-            fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer',
-            boxShadow: '0 6px 20px rgba(30,64,175,0.35), 0 2px 4px rgba(0,0,0,0.15)',
-            display: 'flex', alignItems: 'center', gap: '0.4rem',
+            bottom: currentView === 'settings' ? '5.5rem' : '1.25rem',
           }}>
           ✨ Finish setup
         </button>
       )}
       {/* v1.10.66 (#59) — phone-only top bar with the menu button. CSS hides it
           on wider screens, where the sidebar is always shown. */}
-      <div className="mobile-topbar">
-        <button type="button" className="mobile-topbar-btn" onClick={() => setNavOpen(true)}
+      <div className="mobile-topbar bg-sidebar text-sidebar-foreground-strong">
+        <button type="button" className="mobile-topbar-btn bg-sidebar-accent text-sidebar-foreground-strong hover:bg-sidebar-accent-hover" onClick={() => setNavOpen(true)}
           aria-label="Open menu" aria-expanded={navOpen}>
           <Menu size={22} />
         </button>
@@ -58746,18 +59807,28 @@ function App() {
         <span className="mobile-topbar-business">{profile?.businessName || ''}</span>
       </div>
       {navOpen && <div className="sidebar-backdrop" onClick={() => setNavOpen(false)} aria-hidden="true" />}
-      <div className={`sidebar${navOpen ? ' sidebar-open' : ''}`} onClick={closeNavAfterPick}>
+      <div
+        className={cn(
+          'sidebar bg-sidebar text-sidebar-foreground border-r border-sidebar-border',
+          navOpen && 'sidebar-open',
+        )}
+        onClick={closeNavAfterPick}
+      >
         <div className="sidebar-brand">
-          <div className="sidebar-logo">
+          <div className="sidebar-logo text-white">
             <FileText size={22} />
           </div>
           <div>
-            <h2 className="sidebar-title">ARTHA</h2>
-            <p className="sidebar-subtitle">by VIJAYKRSHA.ONLINE</p>
+            <h2 className="sidebar-title text-sidebar-foreground-strong">ARTHA</h2>
+            <p className="sidebar-subtitle text-sidebar-muted">by VIJAYKRSHA.ONLINE</p>
           </div>
           {/* Auto-hide as a ☰ button (was a text checkbox): pressed = the menu
               shrinks to icons and opens when pointed at. */}
-          <button type="button" className={`sidebar-autohide-toggle${sidebarAutoHide ? ' on' : ''}`}
+          <button type="button"
+            className={cn(
+              'sidebar-autohide-toggle text-sidebar-muted hover:bg-sidebar-accent-hover hover:text-sidebar-foreground-strong',
+              sidebarAutoHide && 'on border-primary/45 bg-primary/15 text-primary hover:text-primary',
+            )}
             aria-pressed={sidebarAutoHide} aria-label="Auto-hide menu"
             title={sidebarAutoHide ? 'Keep this menu open' : 'Auto-hide this menu: icons only, it opens when you point at it'}
             onClick={(e) => { e.stopPropagation(); toggleSidebarAutoHide(!sidebarAutoHide); }}>
@@ -58768,7 +59839,7 @@ function App() {
         <div className="profile-switcher" ref={profileMenuRef} style={{ position: 'relative' }}>
           <div className="profile-switcher-row">
             <button
-              className="profile-switcher-btn"
+              className="profile-switcher-btn border border-sidebar-border bg-sidebar-accent text-sidebar-foreground hover:bg-sidebar-accent-hover"
               onClick={() => allProfiles.length > 1 && setShowProfileMenu(v => !v)}
               title={allProfiles.length > 1 ? 'Switch business profile' : profile?.businessName || 'My Business'}
               style={{ cursor: allProfiles.length > 1 ? 'pointer' : 'default' }}
@@ -58778,7 +59849,7 @@ function App() {
               {allProfiles.length > 1 && <ChevronDown size={13} style={{ marginLeft: 'auto', opacity: 0.6 }} />}
             </button>
             <button
-              className="profile-switcher-edit"
+              className="profile-switcher-edit border border-sidebar-border bg-sidebar-accent text-sidebar-muted hover:bg-sidebar-accent-hover hover:text-primary"
               onClick={() => { setShowProfileMenu(false); setCurrentView('settings'); }}
               title="Edit business profile"
             >
@@ -58786,18 +59857,23 @@ function App() {
             </button>
           </div>
           {showProfileMenu && (
-            <div className="profile-switcher-menu">
+            <div className="profile-switcher-menu border border-border bg-popover text-popover-foreground">
               {allProfiles.map(bp => (
                 <button
                   key={bp.id || bp.businessName}
-                  className={`profile-switcher-item${bp.businessName?.trim().toLowerCase() === profile?.businessName?.trim().toLowerCase() ? ' active' : ''}`}
+                  className={cn(
+                    'profile-switcher-item hover:bg-accent',
+                    bp.businessName?.trim().toLowerCase() === profile?.businessName?.trim().toLowerCase()
+                      ? 'active font-semibold text-primary'
+                      : 'text-popover-foreground',
+                  )}
                   onClick={() => handleSwitchProfile(bp)}
                 >
                   {bp.businessName}
                 </button>
               ))}
               <button
-                className="profile-switcher-item profile-switcher-manage"
+                className="profile-switcher-item profile-switcher-manage border-t border-border text-muted-foreground hover:bg-accent"
                 onClick={() => { setShowProfileMenu(false); setCurrentView('settings'); }}
               >
                 Manage profiles...
@@ -58810,10 +59886,10 @@ function App() {
           {navItems.map(item => (
             <button
               key={item.id}
-              className={`nav-btn ${currentView === item.id ? 'nav-btn-active' : ''}`}
+              className={cn(NAV_BTN, currentView === item.id && NAV_BTN_ACTIVE)}
               onClick={item.onClick || (() => setCurrentView(item.id))}
             >
-              <item.icon size={18} /> {item.label}
+              <item.icon size={18} /> <span>{item.label}</span>
             </button>
           ))}
           <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
@@ -58822,88 +59898,71 @@ function App() {
                 releases re-show the banner. Click to view notes + update. */}
             {updateBannerVisible && (
               <button
-                className="nav-btn"
+                className={cn(NAV_BTN, 'relative border-info-border bg-info font-semibold text-info-foreground hover:bg-info/80')}
                 onClick={() => setShowUpdateModal(true)}
                 title={`v${updateInfo.latest} is available`}
-                style={{
-                  background: 'var(--info-bg)',
-                  borderColor: 'var(--info-border)',
-                  color: 'var(--info-text)',
-                  fontWeight: 600,
-                  position: 'relative',
-                }}
               >
                 <Download size={18} />
                 <span style={{ flex: 1, textAlign: 'left' }}>
                   Update to v{updateInfo.latest}
                 </span>
-                <span style={{
-                  width: 8, height: 8, borderRadius: '50%',
-                  background: '#f59e0b', boxShadow: '0 0 0 3px rgba(245,158,11,0.25)',
-                  flexShrink: 0,
-                }} />
+                <span className="h-2 w-2 shrink-0 rounded-full bg-amber-500 shadow-[0_0_0_3px_rgba(245,158,11,0.25)]" />
               </button>
             )}
             {/* Notification bell — opens a popover listing overdue / due-soon
                 invoices, GST filing deadlines, and low-stock items. Each row
                 is a single click away from the page that fixes it. */}
             <button
-              className="nav-btn"
+              className={cn(NAV_BTN, 'relative')}
               onClick={() => setShowNotifs(s => !s)}
               title="Notifications"
-              style={{ position: 'relative' }}
             >
               <Bell size={18} />
-              Notifications
+              <span>Notifications</span>
               {notifTotal > 0 && (
-                <span className="nav-badge" style={{
-                  position: 'absolute', top: '8px', right: '12px',
-                  minWidth: 18, height: 18, padding: '0 5px', borderRadius: '9px',
-                  background: 'var(--danger)', color: '#fff',
-                  fontSize: '0.65rem', fontWeight: 700,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>{notifTotal > 99 ? '99+' : notifTotal}</span>
+                <span className={NAV_BADGE}>{notifTotal > 99 ? '99+' : notifTotal}</span>
               )}
             </button>
+            {/* Multi-company: which company is open, and Logout / Switch. */}
+            <CompanySwitcher />
             {/* v1.10.80 (#98) - only when a PIN is set. */}
-            <LockButton className="nav-btn" label="Lock app" />
+            <LockButton className={NAV_BTN} label="Lock app" />
             <button
-              className="nav-btn"
+              className={NAV_BTN}
               onClick={() => setDarkMode(!darkMode)}
               title={darkMode ? 'Light Mode' : 'Dark Mode'}
             >
               {darkMode ? <Sun size={18} /> : <Moon size={18} />}
-              {darkMode ? 'Light Mode' : 'Dark Mode'}
+              <span>{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
             </button>
             <button
-              className={`nav-btn nav-btn-support${currentView === 'support' ? ' nav-btn-support-active' : ''}`}
+              className={currentView === 'support' ? NAV_BTN_SUPPORT_ACTIVE : NAV_BTN_SUPPORT}
               onClick={() => setCurrentView('support')}
               title="Who makes this app, and how to help"
             >
-              <Heart size={18} /> Support &amp; About
+              <Heart size={18} /> <span>Support &amp; About</span>
             </button>
             <button
-              className={`nav-btn ${currentView === 'controlpanel' ? 'nav-btn-active' : ''}`}
+              className={cn(NAV_BTN, currentView === 'controlpanel' && NAV_BTN_ACTIVE)}
               onClick={() => setCurrentView('controlpanel')}
               title="Update, backup, restore, move to another PC"
             >
-              <HardDrive size={18} /> Control Panel
+              <HardDrive size={18} /> <span>Control Panel</span>
             </button>
             <button
-              className={`nav-btn ${currentView === 'settings' ? 'nav-btn-active' : ''}`}
+              className={cn(NAV_BTN, currentView === 'settings' && NAV_BTN_ACTIVE)}
               onClick={() => setCurrentView('settings')}
               style={updateBannerVisible ? { position: 'relative' } : undefined}
             >
-              <Settings size={18} /> Settings
+              <Settings size={18} /> <span>Settings</span>
               {updateBannerVisible && (
-                <span className="nav-badge" style={{
-                  position: 'absolute', top: '8px', right: '12px',
-                  width: 8, height: 8, borderRadius: '50%',
-                  background: '#f59e0b',
-                }} title="Update available" />
+                <span
+                  className="absolute right-3 top-2 h-2 w-2 rounded-full bg-amber-500"
+                  title="Update available"
+                />
               )}
             </button>
-            <div className={`server-status server-status-${serverStatus}`}>
+            <div className={cn('server-status', `server-status-${serverStatus}`, 'bg-sidebar-accent')}>
               <span className="server-status-dot" />
               {serverStatus === 'online' ? 'App Ready' : serverStatus === 'offline' ? 'App Not Running' : 'Connecting...'}
             </div>
@@ -59227,9 +60286,13 @@ export default App;
 ## `src/components/ActionsMenu.jsx`
 
 - Path: `src/components/ActionsMenu.jsx`
-- Lines: 88 | Size: 4.0 KB
+- Lines: 105 | Size: 4.0 KB
 
 ```jsx
+import { useEffect, useRef, useState } from 'react';
+import { MoreHorizontal } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
 // v1.10.80 (#100) - a "⋯" drop-down for the less-used row actions, so an
 // Actions column shows a few buttons instead of a long row of icons.
 // Requested: "Convert Actions into a drop-down menu with icon to provide a
@@ -59237,10 +60300,9 @@ export default App;
 //
 // items: [{ label, icon: LucideIcon, onClick, title?, tone?: 'danger' | 'green', hidden? }]
 // The menu is position: fixed, so a table that scrolls sideways can't clip it.
-import { useEffect, useRef, useState } from 'react';
-import { MoreHorizontal } from 'lucide-react';
+//
+// Ported to Tailwind + tokens.
 
-// Below the button, or above it when there is no room below.
 function placeFor(r, count) {
   const below = window.innerHeight - r.bottom > count * 36 + 16;
   return { right: Math.max(8, window.innerWidth - r.right), ...(below ? { top: r.bottom + 4 } : { bottom: window.innerHeight - r.top + 4 }) };
@@ -59260,8 +60322,6 @@ export default function ActionsMenu({ items, label = 'More actions' }) {
       if (e.type === 'mousedown' && (menu.current?.contains(e.target) || btn.current?.contains(e.target))) return;
       setPos(null);
     };
-    // The menu follows its button while the page scrolls, and closes once the
-    // button has left the screen.
     const follow = () => {
       const r = btn.current?.getBoundingClientRect();
       if (!r || r.bottom < 0 || r.top > window.innerHeight) { setPos(null); return; }
@@ -59277,7 +60337,7 @@ export default function ActionsMenu({ items, label = 'More actions' }) {
       window.removeEventListener('scroll', follow, true);
       window.removeEventListener('resize', follow);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [!!pos]);
 
   if (!visible.length) return null;
@@ -59285,30 +60345,46 @@ export default function ActionsMenu({ items, label = 'More actions' }) {
 
   return (
     <>
-      <button ref={btn} type="button" className="icon-btn" onClick={toggle} title={label}
-        aria-label={label} aria-haspopup="menu" aria-expanded={!!pos}>
+      <button
+        ref={btn}
+        type="button"
+        className="icon-btn inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-card text-foreground/80 transition-colors hover:bg-accent hover:text-foreground"
+        onClick={toggle}
+        title={label}
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={!!pos}
+      >
         <MoreHorizontal size={15} />
       </button>
       {pos && (
-        <div ref={menu} role="menu" className="actions-menu" style={{
-          position: 'fixed', zIndex: 1000, ...pos, minWidth: 190,
-          background: 'var(--card, #fff)', border: '1px solid var(--border)', borderRadius: 8,
-          boxShadow: '0 10px 30px rgba(0,0,0,0.18)', padding: 4,
-        }}>
+        <div
+          ref={menu}
+          role="menu"
+          className="fixed z-[1000] min-w-[190px] overflow-hidden rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-xl"
+          style={{ ...pos }}
+        >
           {visible.map((item) => {
             const Icon = item.icon;
-            const color = item.tone === 'danger' ? 'var(--danger, #dc2626)' : item.tone === 'green' ? '#059669' : 'var(--text)';
+            const tone =
+              item.tone === 'danger'
+                ? 'text-destructive hover:bg-destructive/10'
+                : item.tone === 'green'
+                  ? 'text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400'
+                  : 'text-foreground hover:bg-accent hover:text-accent-foreground';
             return (
-              <button key={item.label} type="button" role="menuitem" title={item.title || item.label}
+              <button
+                key={item.label}
+                type="button"
+                role="menuitem"
+                title={item.title || item.label}
                 onClick={() => { setPos(null); item.onClick(); }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left',
-                  padding: '0.45rem 0.6rem', border: 'none', background: 'transparent', borderRadius: 6,
-                  cursor: 'pointer', fontSize: '0.84rem', color,
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-secondary)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
-                {Icon && <Icon size={15} />} {item.label}
+                className={cn(
+                  'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors',
+                  tone,
+                )}
+              >
+                {Icon && <Icon size={15} className="shrink-0" />} {item.label}
               </button>
             );
           })}
@@ -59326,7 +60402,7 @@ export default function ActionsMenu({ items, label = 'More actions' }) {
 ## `src/components/AppFooter.jsx`
 
 - Path: `src/components/AppFooter.jsx`
-- Lines: 40 | Size: 2.0 KB
+- Lines: 46 | Size: 1.9 KB
 
 ```jsx
 // v1.10.75 - a small line at the end of the Dashboard only (on other screens
@@ -59334,6 +60410,10 @@ export default function ActionsMenu({ items, label = 'More actions' }) {
 // name and version, who makes it, and the Support page. Only the user sees
 // it; it is never printed on an invoice. The version comes from the local
 // server, so it works offline.
+//
+// Ported to Tailwind + tokens: the pill used --card-bg / --border /
+// --text-muted, which had to be duplicated in the dark patch. Now the same
+// classes are correct in every mode.
 import { useEffect, useState } from 'react';
 import { Heart } from 'lucide-react';
 
@@ -59344,25 +60424,27 @@ export default function AppFooter({ onOpenSupport }) {
     fetch('/api/version').then((r) => r.json()).then((d) => { if (live && d?.current) setVersion(d.current); }).catch(() => {});
     return () => { live = false; };
   }, []);
-  const link = { color: 'inherit', textDecoration: 'none', fontWeight: 600 };
+
   return (
-    <footer style={{
-      // v1.10.76 (#83) - below the invoice table, not floating over it.
-      marginTop: 'auto', paddingTop: '1.5rem',
-      textAlign: 'center', fontSize: '0.72rem', color: 'var(--text-muted)',
-    }}>
-      <span style={{
-        display: 'inline-flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap', justifyContent: 'center',
-        padding: '0.3rem 0.85rem', borderRadius: 999, background: 'var(--card-bg)', border: '1px solid var(--border)',
-        backdropFilter: 'blur(12px)',
-      }}>
+    <footer className="mt-auto pt-6 text-center text-[0.72rem] text-muted-foreground">
+      <span className="inline-flex flex-wrap items-center justify-center gap-[0.45rem] rounded-full border border-border bg-card px-[0.85rem] py-[0.3rem] backdrop-blur-md">
         <span>ARTHA{version ? ` v${version}` : ''}</span>
         <span aria-hidden="true">·</span>
-        <a href="https://vijaykrsha.online" target="_blank" rel="noopener noreferrer" style={link}>by VIJAYKRSHA.ONLINE</a>
+        <a
+          href="https://vijaykrsha.online"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold text-foreground/80 underline-offset-2 hover:text-foreground hover:underline"
+        >
+          by VIJAYKRSHA.ONLINE
+        </a>
         <span aria-hidden="true">·</span>
-        <button type="button" onClick={onOpenSupport}
-          style={{ ...link, background: 'none', border: 0, padding: 0, font: 'inherit', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-          <Heart size={11} style={{ color: '#e11d48', fill: '#e11d48' }} /> Support
+        <button
+          type="button"
+          onClick={onOpenSupport}
+          className="inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 font-semibold text-foreground/80 hover:text-foreground"
+        >
+          <Heart size={11} className="fill-rose-600 text-rose-600" /> Support
         </button>
       </span>
     </footer>
@@ -60605,7 +61687,7 @@ export default function ClientModal({ show, onClose, onSave, client, isEditing, 
               onChange={e => { setForm(prev => ({ ...prev, gstin: e.target.value.toUpperCase() })); if (taxIdWarning) setTaxIdWarning(''); }}
               onBlur={handleTaxIdBlur}
               placeholder={cc.taxIdPlaceholder} maxLength={20} />
-            {taxIdWarning && <small style={{ color: '#d97706', fontSize: '0.7rem', display: 'block', marginTop: '0.2rem' }}>⚠ {taxIdWarning}</small>}
+            {taxIdWarning && <small style={{ color: 'var(--warning-foreground)', fontSize: '0.7rem', display: 'block', marginTop: '0.2rem' }}>⚠ {taxIdWarning}</small>}
           </div>
           <div className="form-group">
             <label className="form-label">Email</label>
@@ -60689,7 +61771,7 @@ export default function ClientModal({ show, onClose, onSave, client, isEditing, 
 ## `src/components/ClientsView.jsx`
 
 - Path: `src/components/ClientsView.jsx`
-- Lines: 1014 | Size: 52.4 KB
+- Lines: 1014 | Size: 52.5 KB
 
 ```jsx
 import { useState, useEffect, useRef, useMemo } from 'react';
@@ -61534,7 +62616,7 @@ export default function ClientsView({ onEdit, onDuplicate, onNew }) {
                     </div>
                     <div className="client-stat">
                       <span className="client-stat-label">Paid</span>
-                      <span className="client-stat-value" style={{ color: '#059669' }}>{formatCurrency(stats.paid)}</span>
+                      <span className="client-stat-value" style={{ color: 'var(--success)' }}>{formatCurrency(stats.paid)}</span>
                     </div>
                     <div className="client-stat">
                       {/* v1.10.23 — surface overpayment explicitly (was
@@ -61542,7 +62624,7 @@ export default function ClientsView({ onEdit, onDuplicate, onNew }) {
                       <span className="client-stat-label">
                         {stats.unpaid < -0.005 ? 'Overpaid' : 'Outstanding'}
                       </span>
-                      <span className="client-stat-value" style={{ color: stats.unpaid > 0.005 ? '#dc2626' : (stats.unpaid < -0.005 ? '#0369a1' : '#059669') }}>
+                      <span className="client-stat-value" style={{ color: stats.unpaid > 0.005 ? 'var(--destructive)' : (stats.unpaid < -0.005 ? 'var(--primary)' : 'var(--success)') }}>
                         {formatCurrency(Math.abs(stats.unpaid))}
                       </span>
                     </div>
@@ -61685,7 +62767,7 @@ export default function ClientsView({ onEdit, onDuplicate, onNew }) {
                           <button className="btn btn-secondary" style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem' }} onClick={() => openEditClient(savedClient)}>
                             <Edit3 size={13} /> Edit Client
                           </button>
-                          <button className="btn btn-secondary" style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', color: '#dc2626', borderColor: '#fecaca' }} onClick={() => handleDeleteClient(savedClient.id)}>
+                          <button className="btn btn-secondary" style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', color: 'var(--destructive)', borderColor: 'var(--destructive-surface-border)' }} onClick={() => handleDeleteClient(savedClient.id)}>
                             <Trash2 size={13} /> Delete Client
                           </button>
                         </>
@@ -61710,15 +62792,546 @@ export default function ClientsView({ onEdit, onDuplicate, onNew }) {
 
 ---
 
+<a id="src-components-companygate-jsx"></a>
+## `src/components/CompanyGate.jsx`
+
+- Path: `src/components/CompanyGate.jsx`
+- Lines: 100 | Size: 4.1 KB
+
+```jsx
+import { useCallback, useEffect, useState } from 'react';
+import CompanySelect from './CompanySelect';
+import SetupWizard, { applyWizardChoices } from './SetupWizard';
+import { getPrintSettings, savePrintSettings } from '../utils/printSettings';
+import { pushAllMirroredNow } from '../utils/prefsMirror';
+import {
+  AUTH_REQUIRED_EVENT, getSession, createCompanyOnServer, enterCompany,
+  clearCompanyScopedStorage, nextCompanyCode,
+} from '../services/companies';
+
+// ============================================================================
+// Sits in front of the whole app (main.jsx):
+//   no company open  -> "Select Company for Operation" page
+//   Setup New Company -> the setup wizard (with a company-name step)
+//   company open      -> the app, exactly as before
+// Opening or creating a company ends in a page reload, so the app always
+// starts clean for the company that was chosen.
+// ============================================================================
+export default function CompanyGate({ children }) {
+  const [view, setView] = useState('loading'); // loading | select | wizard | app | error
+  const [companies, setCompanies] = useState([]);
+  const [notice, setNotice] = useState('');
+  const [wizardError, setWizardError] = useState('');
+
+  const check = useCallback(async () => {
+    try {
+      const s = await getSession();
+      setView(s.authenticated ? 'app' : 'select');
+    } catch {
+      setView('error');
+    }
+  }, []);
+
+  useEffect(() => { check(); }, [check]);
+
+  // The server forgot this browser (ARTHA was restarted, or the company was
+  // closed in another tab): back to the list.
+  useEffect(() => {
+    const onLost = () => {
+      setNotice('Your session ended (ARTHA was restarted or the company was closed). Please open a company again.');
+      setView((v) => (v === 'app' ? 'select' : v));
+    };
+    window.addEventListener(AUTH_REQUIRED_EVENT, onLost);
+    return () => window.removeEventListener(AUTH_REQUIRED_EVENT, onLost);
+  }, []);
+
+  // Wizard finished: create the company (this also opens it), give it its first
+  // settings, send them to its folder, then start the app on it.
+  const createCompany = useCallback(async (name, choices) => {
+    setWizardError('');
+    try {
+      // Nothing of a previously opened company may carry over into the new one.
+      clearCompanyScopedStorage();
+      const { company } = await createCompanyOnServer(name);
+      if (choices) await applyWizardChoices(choices);
+      else savePrintSettings({ ...getPrintSettings(), onboardingComplete: true, onboardingSkipped: false });
+      await pushAllMirroredNow();
+      await enterCompany(company.id, { keepStorage: true });
+    } catch (err) {
+      setWizardError(err?.body?.error || 'Could not create the company. Is ARTHA still running?');
+    }
+  }, []);
+
+  if (view === 'loading') return null;
+  if (view === 'app') return children;
+
+  if (view === 'error') {
+    return (
+      <div style={{ padding: '3rem 1.5rem', textAlign: 'center', fontFamily: 'system-ui, sans-serif' }}>
+        <h2>Cannot reach the ARTHA server</h2>
+        <p>Make sure ARTHA is running, then try again.</p>
+        <button type="button" className="btn btn-primary" onClick={() => { setView('loading'); check(); }}>Try again</button>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <CompanySelect
+        notice={notice}
+        suspended={view === 'wizard'}
+        onOpened={(company) => enterCompany(company.id)}
+        onNewCompany={(list) => { setCompanies(list); setWizardError(''); setView('wizard'); }}
+      />
+      {view === 'wizard' && (
+        <>
+          <SetupWizard mode="new-company" defaultCode={nextCompanyCode(companies)}
+            onCreate={createCompany} onCancel={() => setView('select')} />
+          {wizardError && (
+            <div role="alert" style={{ position: 'fixed', left: '50%', bottom: 24, transform: 'translateX(-50%)', zIndex: 10000,
+              background: 'var(--destructive-surface)', border: '1px solid var(--destructive-surface-border)', color: 'var(--destructive)', padding: '0.6rem 1rem', borderRadius: 8, fontSize: '0.9rem' }}>
+              {wizardError}
+            </div>
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
+```
+
+---
+
+<a id="src-components-companyselect-css"></a>
+## `src/components/CompanySelect.css`
+
+- Path: `src/components/CompanySelect.css`
+- Lines: 124 | Size: 5.3 KB
+
+```css
+/* Select Company page - modelled on BusyWin's "Select Company for Operation".
+   Fixed light palette on purpose: it shows before any company (and its theme)
+   is opened. */
+.cs-page {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 14px 18px 24px;
+  background: #ecebfa;
+  color: #1c3f7a;
+  font-family: Verdana, Tahoma, 'Segoe UI', system-ui, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  max-width: 980px;
+  margin: 0 auto;
+}
+.cs-title {
+  align-self: center;
+  background: #c9524e;
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 3px 14px;
+  letter-spacing: .2px;
+}
+.cs-datadir {
+  align-self: center;
+  margin: 12px 0 14px;
+  font-size: 11px;
+  color: #7a1fa2;
+  word-break: break-all;
+  text-align: center;
+}
+.cs-search { display: flex; align-items: center; gap: 24px; margin-bottom: 8px; font-size: 13px; }
+.cs-search span { white-space: nowrap; color: #1c3f7a; }
+.cs-search input {
+  flex: 1;
+  min-width: 0;
+  background: #3b3b3b;
+  color: #fff;
+  border: 1px solid #222;
+  padding: 5px 8px;
+  font: inherit;
+  outline: none;
+}
+.cs-search input::placeholder { color: #a8a8a8; }
+.cs-search input:focus { box-shadow: 0 0 0 2px #7aa2e8; }
+
+.cs-notice { background: #fff6d6; border: 1px solid #e5c75a; color: #6b5200; padding: 6px 10px; font-size: 12px; margin-bottom: 8px; }
+
+.cs-table-wrap { position: relative; border: 1px solid #555; background: #fff; }
+.cs-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 14px; }
+.cs-table thead th {
+  background: linear-gradient(#f4f4f4, #dcdcdc);
+  color: #111;
+  text-align: left;
+  font-weight: 700;
+  padding: 5px 8px;
+  border-bottom: 1px solid #555;
+  border-right: 1px solid #bdbdbd;
+}
+.cs-table thead th:first-child { width: 44%; }
+.cs-table td { padding: 4px 8px; border-bottom: 1px solid #ececec; border-right: 1px solid #f0f0f0; font-weight: 700; color: #1c4a8a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cs-table tbody tr { cursor: pointer; height: 23px; }
+/* Hover must never win over the selected row: `tr:hover:not(.cs-blank)` is
+   MORE specific than `tr.cs-selected`, so it used to repaint the selected row
+   near-white while its cells stayed white — the company details vanished
+   under the cursor. `:not(.cs-selected)` keeps the two states apart. */
+.cs-table tbody tr:hover:not(.cs-blank):not(.cs-selected) { background: #eaf1ff; }
+.cs-table tbody tr.cs-selected { background: #1c4a8a; }
+.cs-table tbody tr.cs-selected:hover { background: #245ba8; }
+.cs-table tbody tr.cs-selected td { color: #fff; }
+.cs-table tbody tr.cs-selected:hover td { color: #fff; }
+.cs-table tbody tr.cs-blank { cursor: default; }
+.cs-num { text-align: right !important; }
+.cs-lock { margin-left: 8px; vertical-align: -2px; opacity: .8; }
+
+.cs-empty { position: absolute; inset: 31px 0 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #4a5f86; font-size: 13px; text-align: center; padding: 0 12px; pointer-events: none; }
+.cs-empty p { margin: 2px 0; }
+.cs-error { color: #a12622; }
+
+.cs-pin { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; padding: 8px 10px; background: #fff; border: 1px solid #1c4a8a; font-size: 13px; }
+.cs-pin input { width: 150px; letter-spacing: 6px; text-align: center; font: inherit; padding: 4px 6px; border: 1px solid #555; }
+.cs-message { margin-top: 8px; color: #a12622; font-size: 13px; font-weight: 700; }
+
+.cs-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+.cs-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  font: inherit; font-size: 13px; font-weight: 700;
+  padding: 7px 14px;
+  background: linear-gradient(#fafafa, #dedede);
+  color: #1c3f7a;
+  border: 1px solid #777;
+  cursor: pointer;
+}
+.cs-btn:hover:not(:disabled) { background: linear-gradient(#fff, #e9e9e9); border-color: #1c4a8a; }
+.cs-btn:disabled { opacity: .5; cursor: not-allowed; }
+.cs-btn:focus-visible { outline: 2px solid #1c4a8a; outline-offset: 2px; }
+.cs-btn-primary { background: #1c4a8a; color: #fff; border-color: #123463; }
+.cs-btn-primary:hover:not(:disabled) { background: #245ba8; }
+.cs-btn-new { background: #c9524e; color: #fff; border-color: #9f3a37; }
+.cs-btn-new:hover:not(:disabled) { background: #d8605b; }
+.cs-btn kbd { font: inherit; font-size: 10px; opacity: .85; border: 1px solid rgba(255,255,255,.55); padding: 0 4px; }
+.cs-hint { margin-top: 12px; font-size: 11px; color: #5b6b8c; }
+
+/* The "Setup New Company" wizard sits ON TOP of this page and nothing behind it
+   may be read, clicked or focused — the page is inert (CompanySelect.jsx) and
+   this stronger blur + darker scrim makes that unmistakable. The base
+   .modal-overlay only blurs 4px, which is invisible over a flat lavender page. */
+/* `.modal-overlay` and this rule are both one class, and index.css is bundled
+   AFTER CompanySelect.css — so `.modal-overlay` would win the tie and keep its
+   faint 4px blur. Two classes make the wizard's overlay win outright. */
+.modal-overlay.cs-wizard-overlay {
+  -webkit-backdrop-filter: blur(10px) saturate(0.85);
+  backdrop-filter: blur(10px) saturate(0.85);
+  background: rgba(15, 23, 42, 0.55);
+}
+
+@media (max-width: 640px) {
+  .cs-hide-sm { display: none; }
+  .cs-table thead th:first-child { width: 58%; }
+  .cs-search { flex-direction: column; align-items: stretch; gap: 4px; }
+}
+
+```
+
+---
+
+<a id="src-components-companyselect-jsx"></a>
+## `src/components/CompanySelect.jsx`
+
+- Path: `src/components/CompanySelect.jsx`
+- Lines: 207 | Size: 9.8 KB
+
+```jsx
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Building2, Lock, Plus, FolderOpen, RefreshCw } from 'lucide-react';
+import { listCompanies, loginToCompany } from '../services/companies';
+import './CompanySelect.css';
+
+// ============================================================================
+// Select Company for Operation
+// The first screen of ARTHA: every company on this PC is listed (one folder
+// each, data/COMP0001, data/COMP0002 ...). Pick one and press Enter / double
+// click / "Open Company" to log in to it, or start a new company with
+// "Setup New Company" (that opens the same setup wizard every company uses).
+// A company protected by a PIN asks for it here.
+// ============================================================================
+
+const fmtDate = (iso) => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+};
+
+export default function CompanySelect({ onOpened, onNewCompany, notice = '', suspended = false }) {
+  const [state, setState] = useState({ loading: true, error: '', companies: [], dataDirectory: '' });
+  const [query, setQuery] = useState('');
+  const [selectedId, setSelectedId] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+  const [pinFor, setPinFor] = useState(null); // { company, length } while a PIN is being asked
+  const [pin, setPin] = useState('');
+  const searchRef = useRef(null);
+  const pinRef = useRef(null);
+
+  const load = useCallback(async () => {
+    setState((s) => ({ ...s, loading: true, error: '' }));
+    try {
+      const { companies, dataDirectory } = await listCompanies();
+      setState({ loading: false, error: '', companies, dataDirectory });
+      // Open the one used last, or the first.
+      setSelectedId((cur) => (companies.some((c) => c.id === cur) ? cur : (
+        [...companies].sort((a, b) => String(b.lastOpenedAt || '').localeCompare(String(a.lastOpenedAt || '')))[0]?.id || ''
+      )));
+    } catch {
+      setState({ loading: false, error: 'Cannot reach the ARTHA server. Make sure ARTHA is running, then try again.', companies: [], dataDirectory: '' });
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => { searchRef.current?.focus(); }, [state.loading]);
+  useEffect(() => { if (pinFor) pinRef.current?.focus(); }, [pinFor]);
+
+  // While the "Setup New Company" wizard sits on top, this page is INERT: its
+  // window-level shortcuts must not react at all. Before this, pressing Enter
+  // in the wizard's company-name box also fired openSelected() and logged the
+  // user straight into whichever company was highlighted underneath. When the
+  // wizard closes, the search box takes focus back so Enter/arrows still work.
+  useEffect(() => {
+    if (!suspended) searchRef.current?.focus();
+  }, [suspended]);
+
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const all = [...state.companies].sort((a, b) => a.id.localeCompare(b.id));
+    return q ? all.filter((c) => c.name.toLowerCase().includes(q) || c.id.toLowerCase().includes(q)) : all;
+  }, [state.companies, query]);
+
+  // Keep the highlighted row inside the filtered list.
+  useEffect(() => {
+    if (shown.length && !shown.some((c) => c.id === selectedId)) setSelectedId(shown[0].id);
+  }, [shown, selectedId]);
+
+  const selected = shown.find((c) => c.id === selectedId) || null;
+
+  const attemptLogin = useCallback(async (company, pinValue) => {
+    if (busy) return;
+    setBusy(true);
+    setMessage('');
+    try {
+      await loginToCompany(company.id, pinValue);
+      await onOpened(company);
+    } catch (err) {
+      if (err.status === 401 && err.body?.error === 'pin-required') {
+        setPinFor({ company, length: err.body.length === 8 ? 8 : 6 });
+        setPin('');
+      } else if (err.status === 401 && err.body?.error === 'wrong-pin') {
+        setPin('');
+        setMessage('Wrong PIN. Try again.');
+        setTimeout(() => pinRef.current?.focus(), 0);
+      } else if (err.status === 429) {
+        setPin('');
+        setMessage(`Too many wrong tries. Wait ${err.body?.wait || 30} seconds and try again.`);
+      } else {
+        setMessage('Could not open this company. Is ARTHA still running?');
+      }
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, onOpened]);
+
+  const openSelected = useCallback(() => { if (selected && !pinFor) attemptLogin(selected); }, [selected, pinFor, attemptLogin]);
+
+  // Keyboard: Up / Down move, Enter opens, Esc clears the search (or the PIN box).
+  // Suspended while the Setup New Company wizard is open — otherwise a keystroke
+  // meant for the wizard would open (log in to) the highlighted company.
+  useEffect(() => {
+    if (suspended) return undefined;
+    const onKey = (e) => {
+      if (e.defaultPrevented) return; // the wizard already claimed this key
+      if (e.key === 'Escape') {
+        if (pinFor) { setPinFor(null); setPin(''); setMessage(''); } else setQuery('');
+        return;
+      }
+      if (pinFor || !shown.length) return;
+      const i = shown.findIndex((c) => c.id === selectedId);
+      if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedId(shown[Math.min(shown.length - 1, i + 1)].id); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedId(shown[Math.max(0, i - 1)].id); }
+      else if (e.key === 'Enter' && !(e.target instanceof HTMLButtonElement)) { e.preventDefault(); openSelected(); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [suspended, shown, selectedId, pinFor, openSelected]);
+
+  const onPinChange = (e) => {
+    const v = e.target.value.replace(/\D/g, '').slice(0, pinFor.length);
+    setPin(v);
+    setMessage('');
+    if (v.length === pinFor.length) attemptLogin(pinFor.company, v);
+  };
+
+  return (
+    <div className="cs-page" inert={suspended || undefined}>
+      <div className="cs-title">Select Company for Operation</div>
+      <div className="cs-datadir">( Data Directory : {state.dataDirectory || '…'} )</div>
+
+      <label className="cs-search">
+        <span>Search Company</span>
+        <input ref={searchRef} type="text" value={query} onChange={(e) => setQuery(e.target.value)}
+          placeholder="Type a company name or code" aria-label="Search company" autoComplete="off" />
+      </label>
+
+      {notice && <div className="cs-notice" role="status">{notice}</div>}
+
+      <div className="cs-table-wrap">
+        <table className="cs-table">
+          <thead>
+            <tr>
+              <th>Company Name</th>
+              <th>Code</th>
+              <th className="cs-hide-sm">Created</th>
+              <th className="cs-hide-sm">Last Opened</th>
+              <th className="cs-num">Size (MB)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map((c) => (
+              <tr key={c.id} className={c.id === selectedId ? 'cs-selected' : ''} aria-selected={c.id === selectedId}
+                onClick={() => setSelectedId(c.id)} onDoubleClick={() => attemptLogin(c)}>
+                <td>{c.name}{c.locked && <Lock size={13} className="cs-lock" aria-label="PIN protected" />}</td>
+                <td>{c.id}</td>
+                <td className="cs-hide-sm">{fmtDate(c.createdAt)}</td>
+                <td className="cs-hide-sm">{fmtDate(c.lastOpenedAt)}</td>
+                <td className="cs-num">{c.sizeMB}</td>
+              </tr>
+            ))}
+            {Array.from({ length: Math.max(0, 8 - shown.length) }).map((_, i) => (
+              <tr key={`blank-${i}`} className="cs-blank" aria-hidden="true"><td colSpan={5}>&nbsp;</td></tr>
+            ))}
+          </tbody>
+        </table>
+        {!state.loading && !state.error && !state.companies.length && (
+          <div className="cs-empty">
+            <Building2 size={28} />
+            <p>No company yet.</p>
+            <p>Click <strong>Setup New Company</strong> to create your first one.</p>
+          </div>
+        )}
+        {!state.loading && !state.error && state.companies.length > 0 && !shown.length && (
+          <div className="cs-empty"><p>No company matches “{query}”.</p></div>
+        )}
+        {state.error && <div className="cs-empty cs-error" role="alert"><p>{state.error}</p></div>}
+      </div>
+
+      {pinFor && (
+        <form className="cs-pin" onSubmit={(e) => { e.preventDefault(); if (pin.length === pinFor.length) attemptLogin(pinFor.company, pin); }}>
+          <Lock size={16} />
+          <span><strong>{pinFor.company.name}</strong> is protected. Enter its {pinFor.length}-digit PIN:</span>
+          <input ref={pinRef} type="password" inputMode="numeric" autoComplete="off" value={pin} onChange={onPinChange}
+            maxLength={pinFor.length} placeholder={'•'.repeat(pinFor.length)} disabled={busy} aria-label={`${pinFor.length} digit PIN`} />
+          <button type="button" className="cs-btn" onClick={() => { setPinFor(null); setPin(''); setMessage(''); }}>Cancel</button>
+        </form>
+      )}
+      {message && <div className="cs-message" role="alert">{message}</div>}
+
+      <div className="cs-actions">
+        <button type="button" className="cs-btn cs-btn-primary" onClick={openSelected} disabled={!selected || busy || !!pinFor}>
+          <FolderOpen size={16} /> Open Company <kbd>Enter</kbd>
+        </button>
+        <button type="button" className="cs-btn cs-btn-new" onClick={() => onNewCompany(state.companies)} disabled={busy || state.loading || !!state.error}>
+          <Plus size={16} /> Setup New Company
+        </button>
+        <button type="button" className="cs-btn" onClick={load} disabled={busy} title="Reload the list">
+          <RefreshCw size={16} /> Refresh
+        </button>
+      </div>
+      <div className="cs-hint">↑ ↓ to choose · Enter or double-click to open · each company keeps its own data in its own folder</div>
+    </div>
+  );
+}
+
+```
+
+---
+
+<a id="src-components-companyswitcher-jsx"></a>
+## `src/components/CompanySwitcher.jsx`
+
+- Path: `src/components/CompanySwitcher.jsx`
+- Lines: 52 | Size: 2.0 KB
+
+```jsx
+import { useEffect, useState } from 'react';
+import { LogOut } from 'lucide-react';
+import { getSession, logoutAndReload } from '../services/companies';
+import { confirmAction } from './ConfirmModal';
+import { cn } from '@/lib/utils';
+import { NAV_BTN } from './navStyles';
+
+// Sidebar button: shows which company is open and logs out of it. Logging out
+// returns to the Select Company page (to switch to another company, or to
+// leave ARTHA closed). The company's data stays in its own folder.
+//
+// Ported to Tailwind: the label/code block used an inline flex style and a
+// second line at 0.68rem with 0.75 opacity. Both are classes now, reading the
+// sidebar tokens so the two lines keep their contrast in either theme.
+export default function CompanySwitcher({ className = NAV_BTN }) {
+  const [company, setCompany] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    getSession().then((s) => { if (alive && s.authenticated) setCompany(s.company); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
+  const logout = async () => {
+    const ok = await confirmAction({
+      title: 'Close this company?',
+      message: `${company ? `${company.name} (${company.id}) will be closed` : 'This company will be closed'} and you return to the company list. Anything you have typed but not saved is lost. Your saved data stays in its folder.`,
+      confirmLabel: 'Log out',
+      cancelLabel: 'Stay',
+    });
+    if (ok) logoutAndReload();
+  };
+
+  return (
+    <button
+      type="button"
+      className={cn(NAV_BTN, className)}
+      onClick={logout}
+      title={company ? `Open company: ${company.name} (${company.id}). Click to log out or switch company.` : 'Log out / switch company'}
+    >
+      <LogOut size={18} className="shrink-0" />
+      <span className="flex min-w-0 flex-col items-start leading-[1.15]">
+        <span>Switch / Logout</span>
+        {company && (
+          <span className="max-w-[150px] truncate text-[0.68rem] opacity-75">
+            {company.id} · {company.name}
+          </span>
+        )}
+      </span>
+    </button>
+  );
+}
+
+```
+
+---
+
 <a id="src-components-confirmmodal-jsx"></a>
 ## `src/components/ConfirmModal.jsx`
 
 - Path: `src/components/ConfirmModal.jsx`
-- Lines: 210 | Size: 8.3 KB
+- Lines: 207 | Size: 7.6 KB
 
 ```jsx
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { AlertTriangle, Trash2, HelpCircle } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 // v1.10.34 — In-app replacement for `window.confirm()` and `window.prompt()`.
 // The native dialogs look like OS chrome (title bar with the URL, generic
@@ -61736,6 +63349,10 @@ import { AlertTriangle, Trash2, HelpCircle } from 'lucide-react';
 //
 // The container mounts once at App root. All active calls are queued; only
 // one modal shows at a time so the visual flow stays clean.
+//
+// Ported to shadcn Dialog + tokens. Two behaviours are preserved on purpose
+// because other code depends on them: the promise must resolve exactly once,
+// and the fallback to native dialogs before the container mounts stays.
 
 let dispatchFn = null;
 
@@ -61753,8 +63370,6 @@ let dispatchFn = null;
 export function confirmAction(options) {
   return new Promise((resolve) => {
     if (typeof dispatchFn !== 'function') {
-      // Container not mounted yet — fall back to native so calls made
-      // pre-mount don't silently return undefined.
       resolve(window.confirm(options?.message || options?.title || 'Are you sure?'));
       return;
     }
@@ -61789,6 +63404,7 @@ export default function ConfirmModalContainer() {
   const [modal, setModal] = useState(null);
   const [value, setValue] = useState('');
   const inputRef = useRef(null);
+  const primaryRef = useRef(null);
   const previousActiveElement = useRef(null);
 
   const dispatch = useCallback((next) => {
@@ -61804,21 +63420,17 @@ export default function ConfirmModalContainer() {
   // Autofocus the input on prompt, or the confirm button on confirm.
   useEffect(() => {
     if (!modal) {
-      // Return focus to whatever was focused before the modal opened.
       previousActiveElement.current?.focus?.();
       previousActiveElement.current = null;
-      return;
+      return undefined;
     }
     previousActiveElement.current = document.activeElement;
-    // Wait a tick so the modal is in the DOM before focusing.
     const t = setTimeout(() => {
       if (modal.kind === 'prompt' && inputRef.current) {
         inputRef.current.focus();
         inputRef.current.select();
       } else {
-        // Confirm modal — focus the primary button.
-        const btn = document.querySelector('.confirm-modal-primary');
-        btn?.focus?.();
+        primaryRef.current?.focus?.();
       }
     }, 30);
     return () => clearTimeout(t);
@@ -61826,11 +63438,10 @@ export default function ConfirmModalContainer() {
 
   // Keyboard: Enter → confirm, Esc → cancel.
   useEffect(() => {
-    if (!modal) return;
+    if (!modal) return undefined;
     const onKey = (e) => {
       if (e.key === 'Escape') { e.preventDefault(); cancel(); }
       else if (e.key === 'Enter' && modal.kind === 'confirm') {
-        // Prompt handles Enter via its own form submit.
         e.preventDefault();
         confirm();
       }
@@ -61858,72 +63469,67 @@ export default function ConfirmModalContainer() {
   const isDanger = tone === 'danger';
   const isWarning = tone === 'warning';
   const Icon = isDanger ? Trash2 : isWarning ? AlertTriangle : HelpCircle;
-  const iconColor = isDanger ? 'var(--danger)' : isWarning ? '#f59e0b' : 'var(--primary)';
-  const iconBg = isDanger ? 'var(--danger-light)' : isWarning ? 'var(--warn-bg)' : 'var(--primary-light)';
+
+  const iconBox = isDanger
+    ? 'bg-destructive/10 text-destructive'
+    : isWarning
+      ? 'bg-warning text-warning-foreground'
+      : 'bg-primary/10 text-primary';
 
   const primaryLabel = modal.confirmLabel || (modal.kind === 'prompt' ? 'OK' : (isDanger ? 'Delete' : 'Confirm'));
   const secondaryLabel = modal.cancelLabel || 'Cancel';
 
   return (
-    <div className="modal-overlay confirm-modal-overlay"
-      onClick={(e) => { if (e.target === e.currentTarget) cancel(); }}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="confirm-modal-title"
-      style={{ zIndex: 10000 }}>
-      <div className="modal-content confirm-modal-content" onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: 440, padding: '1.5rem' }}>
-        <div style={{ display: 'flex', gap: '0.9rem', alignItems: 'flex-start' }}>
-          <div style={{
-            width: 40, height: 40, borderRadius: 999, flexShrink: 0,
-            background: iconBg, color: iconColor,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
+    <Dialog open onOpenChange={(open) => { if (!open) cancel(); }}>
+      <DialogContent
+        showCloseButton={false}
+        className="confirm-modal-content z-[10000] max-w-[440px] gap-0 overflow-hidden p-6"
+        overlayClassName="z-[10000]"
+        onKeyDown={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start gap-[0.9rem]">
+          <div className={cn('flex size-10 shrink-0 items-center justify-center rounded-full', iconBox)}>
             <Icon size={20} />
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h3 id="confirm-modal-title" style={{ margin: 0, fontSize: '1.05rem', lineHeight: 1.35 }}>
+          <div className="min-w-0 flex-1">
+            <DialogTitle id="confirm-modal-title" className="text-[1.05rem] leading-[1.35]">
               {modal.title}
-            </h3>
+            </DialogTitle>
             {modal.message && (
-              <p style={{ margin: '0.4rem 0 0', fontSize: '0.87rem', color: 'var(--text-muted)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+              <DialogDescription className="mt-[0.4rem] whitespace-pre-wrap text-[0.87rem] leading-relaxed">
                 {modal.message}
-              </p>
+              </DialogDescription>
             )}
             {modal.kind === 'prompt' && (
               <form onSubmit={(e) => { e.preventDefault(); confirm(); }}>
-                <input
+                <Input
                   ref={inputRef}
                   type={modal.inputType || 'text'}
-                  className="form-input"
+                  className="mt-[0.9rem] w-full"
                   value={value}
                   onChange={(e) => setValue(e.target.value)}
                   placeholder={modal.placeholder || ''}
-                  style={{ marginTop: '0.9rem', width: '100%' }}
                 />
               </form>
             )}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
-          <button type="button" className="btn btn-secondary" onClick={cancel}
-            style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button type="button" variant="outline" className="h-auto px-4 py-2 text-[0.85rem]" onClick={cancel}>
             {secondaryLabel}
-          </button>
-          <button type="button"
-            className={`btn confirm-modal-primary ${isDanger ? '' : 'btn-primary'}`}
+          </Button>
+          <Button
+            ref={primaryRef}
+            type="button"
+            variant={isDanger ? 'destructive' : 'default'}
+            className="confirm-modal-primary h-auto px-[1.1rem] py-2 text-[0.85rem]"
             onClick={confirm}
-            style={{
-              fontSize: '0.85rem', padding: '0.5rem 1.1rem',
-              ...(isDanger ? {
-                background: 'var(--danger)', color: '#fff', border: 'none',
-              } : {}),
-            }}>
+          >
             {primaryLabel}
-          </button>
+          </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -62156,7 +63762,7 @@ export default function ControlPanel() {
             </details>
           )}
           {lastResult.error && (
-            <p style={{ margin: '0.4rem 0 0', fontSize: '0.85rem', color: '#f87171' }}>
+            <p style={{ margin: '0.4rem 0 0', fontSize: '0.85rem', color: 'var(--destructive)' }}>
               {lastResult.error}
             </p>
           )}
@@ -66970,9 +68576,9 @@ export default function GSTReturns() {
                   <>
                     <StepList steps={GSTR1_STEPS} title="GSTR-1 — Sales Return (File This First)" />
 
-                    <div className="glass-panel p-4 mb-4" style={{ background: '#f0fdf4' }}>
-                      <h4 style={{ color: '#059669', marginBottom: '0.5rem', fontSize: '0.9rem' }}>GSTR-1 Pro Tips</h4>
-                      <ul style={{ fontSize: '0.82rem', color: '#047857', lineHeight: 1.8, paddingLeft: '1.25rem' }}>
+                    <div className="glass-panel p-4 mb-4" style={{ background: 'var(--success-surface)' }}>
+                      <h4 style={{ color: 'var(--success)', marginBottom: '0.5rem', fontSize: '0.9rem' }}>GSTR-1 Pro Tips</h4>
+                      <ul style={{ fontSize: '0.82rem', color: 'var(--success)', lineHeight: 1.8, paddingLeft: '1.25rem' }}>
                         <li><strong>Fastest method:</strong> Export GSTR-1 JSON from the GSTR-1 tab above → Go to GST portal → GSTR-1 → Prepare Offline → Download Offline Tool → Import JSON → Upload. Saves 90% of time.</li>
                         <li>If turnover {'<'} ₹5 Cr, opt for QRMP scheme — file quarterly instead of monthly. Apply via Services → User Services → Opt-in for QRMP.</li>
                         <li>Amendments to previous period invoices: Use Table 9A (not 4A). You can amend within the September return of the following FY.</li>
@@ -67016,9 +68622,9 @@ export default function GSTReturns() {
                     <StepList steps={NIL_GSTR1_STEPS} title="NIL GSTR-1 — File First (Even with Zero Sales)" />
                     <StepList steps={NIL_GSTR3B_STEPS} title="NIL GSTR-3B — File After NIL GSTR-1" />
 
-                    <div className="glass-panel p-4" style={{ background: '#f0fdf4' }}>
-                      <h4 style={{ color: '#059669', marginBottom: '0.5rem', fontSize: '0.9rem' }}>NIL Return Quick Summary</h4>
-                      <ul style={{ fontSize: '0.82rem', color: '#047857', lineHeight: 1.8, paddingLeft: '1.25rem' }}>
+                    <div className="glass-panel p-4" style={{ background: 'var(--success-surface)' }}>
+                      <h4 style={{ color: 'var(--success)', marginBottom: '0.5rem', fontSize: '0.9rem' }}>NIL Return Quick Summary</h4>
+                      <ul style={{ fontSize: '0.82rem', color: 'var(--success)', lineHeight: 1.8, paddingLeft: '1.25rem' }}>
                         <li>NIL GSTR-1 and NIL GSTR-3B are <strong>separate returns</strong> — file both</li>
                         <li>NIL filing takes 2-3 minutes per return — just login, verify zeros, submit, file</li>
                         <li>Late fee for NIL: ₹20/day (₹10 CGST + ₹10 SGST), capped at ₹500 per return</li>
@@ -67056,7 +68662,7 @@ export default function GSTReturns() {
                       </div>
                     </div>
 
-                    <div className="glass-panel p-4" style={{ background: '#f8fafc' }}>
+                    <div className="glass-panel p-4" style={{ background: 'var(--bg-secondary)' }}>
                       <h4 style={{ marginBottom: '0.5rem', fontSize: '0.9rem' }}>Key GST Rules to Remember</h4>
                       <ul style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.8, paddingLeft: '1.25rem' }}>
                         <li><strong>Section 16(4):</strong> ITC for any invoice must be claimed by the due date of September return of the following FY, or the date of filing annual return — whichever is earlier.</li>
@@ -73272,8 +74878,8 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                 onChange={(v) => setCustomNotes(v)}
                 placeholder="Project details, special instructions, additional notes..." />
             </div>
-            <div className="form-group" style={{ background: '#fefce8', border: '1px dashed #ca8a04', borderRadius: 8, padding: '0.75rem 1rem' }}>
-              <label className="form-label" style={{ color: '#92400e', fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div className="form-group" style={{ background: 'var(--note-bg)', border: '1px dashed var(--note-border)', borderRadius: 8, padding: '0.75rem 1rem' }}>
+              <label className="form-label" style={{ color: 'var(--note-text)', fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v4m0 4h.01"/></svg>
                 Private Note (not shown on invoice)
               </label>
@@ -75965,10 +77571,53 @@ export default function LockButton({ className = 'btn btn-secondary', label = 'L
   if (!enabled) return null;
   return (
     <button type="button" className={className} onClick={lockNow} title="Lock the app now (Ctrl+Shift+L). Your PIN opens it again.">
-      <Lock size={18} /> {label}
+      <Lock size={18} /> <span>{label}</span>
     </button>
   );
 }
+
+```
+
+---
+
+<a id="src-components-navstyles-js"></a>
+## `src/components/navStyles.js`
+
+- Path: `src/components/navStyles.js`
+- Lines: 32 | Size: 2.3 KB
+
+```javascript
+/**
+ * Sidebar navigation styles — one place for the rail's repeated classes.
+ *
+ * The rail follows the theme (white in Light Mode, navy in Dark Mode), so it
+ * reads from the `--sidebar-*` tokens rather than from `--card` /
+ * `--background`: the rail needs its own hover and muted tones, not the page's.
+ * Keeping the class strings here means the App shell, the company switcher and
+ * the lock button cannot drift apart.
+ *
+ * `nav-btn` is still on the element on purpose: the auto-hide rail is driven
+ * by legacy CSS that keys off it (`> span:not(.nav-badge) { display:none }`
+ * when the rail is collapsed). The colours and spacing come from the Tailwind
+ * classes below, which live in the utilities layer and therefore win.
+ */
+export const NAV_BTN =
+  'nav-btn flex w-full items-center gap-3 rounded-lg border border-transparent px-4 py-2.5 text-left text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+
+export const NAV_BTN_ACTIVE =
+  'nav-btn-active border-primary bg-primary text-primary-foreground shadow-[0_4px_12px_rgba(37,99,235,0.35)] hover:bg-primary hover:text-primary-foreground';
+
+export const NAV_BADGE =
+  'nav-badge absolute right-3 top-2 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-destructive px-1.5 text-[0.65rem] font-bold text-destructive-foreground';
+
+// "Support & About" keeps its rose identity in both modes. It cannot simply
+// reuse NAV_BTN: two `text-*` utilities would fight, and which one wins would
+// depend on stylesheet order rather than intent.
+export const NAV_BTN_SUPPORT =
+  'nav-btn flex w-full items-center gap-3 rounded-lg border border-rose-500/35 bg-rose-500/15 px-4 py-2.5 text-left text-sm font-medium text-rose-800 transition-colors hover:bg-rose-500/25 hover:text-rose-900 dark:text-rose-200 dark:hover:text-white [&>svg]:text-rose-600 dark:[&>svg]:text-rose-400';
+
+export const NAV_BTN_SUPPORT_ACTIVE =
+  'nav-btn flex w-full items-center gap-3 rounded-lg border border-rose-600 bg-rose-600 px-4 py-2.5 text-left text-sm font-medium text-white shadow-[0_4px_12px_rgba(225,29,72,0.35)] transition-colors hover:bg-rose-600 hover:text-white [&>svg]:text-white';
 
 ```
 
@@ -75978,78 +77627,72 @@ export default function LockButton({ className = 'btn btn-secondary', label = 'L
 ## `src/components/PageHeader.jsx`
 
 - Path: `src/components/PageHeader.jsx`
-- Lines: 73 | Size: 3.2 KB
+- Lines: 67 | Size: 2.7 KB
 
 ```jsx
-// v1.10.37 — Reusable page-header card. Reported: "I like the heading
-// that you gave into this page — I want you to do in all the pages,
-// that looks better". Extracted from the SettingsView v1.10.36 header
-// so every page gets a consistent visual identity: gradient card +
-// icon badge + title + subtitle + optional meta chip + right-side
-// action slot.
+// v1.10.37 — Reusable page-header card.
+//
+// Ported to Tailwind + design tokens. Nothing here names a colour: the card
+// gradient is built from --primary-rgb (kept as rgb channels because
+// html2canvas cannot parse oklch/color-mix, see src/styles/tokens.css) and the
+// surface comes from --card. That is why this header follows the theme in both
+// modes without a `[data-theme="dark"]` patch.
 //
 // Props:
 //   icon        emoji / string / element rendered inside the 44px badge
 //   title       page title (h1)
 //   subtitle    one-line description shown below the title
-//   meta        optional short string rendered as a pill next to the
-//               subtitle (e.g. "231 invoices", "11 sections", "FY 2025-26")
+//   meta        optional short string rendered as a pill next to the subtitle
 //   children    right-hand slot for action buttons, HelpButton, etc.
-//   compact     v1.10.77 (#84): a slim title row, no card, icon or subtitle,
-//               for screens where the table needs the room (the Dashboard).
+//   compact     slim title row, no card/icon/subtitle (the Dashboard)
+import { cn } from '@/lib/utils';
 
-export default function PageHeader({ icon, title, subtitle, meta, children, compact = false }) {
+const CARD_GRADIENT =
+  'bg-[linear-gradient(135deg,rgba(var(--primary-rgb),0.12),var(--card))]';
+
+export default function PageHeader({ icon, title, subtitle, meta, children, compact = false, className = '' }) {
   if (compact) {
     return (
-      <div className="page-header page-header-compact" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.9rem' }}>
-        <h1 className="page-title" style={{ margin: 0, fontSize: '1.3rem' }}>{title}</h1>
-        {meta && <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>{meta}</span>}
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>{children}</div>
+      <div className={cn('page-header page-header-compact mb-[0.9rem] flex flex-wrap items-center gap-3', className)}>
+        <h1 className="page-title m-0 text-[1.3rem] text-foreground">{title}</h1>
+        {meta && <span className="text-xs font-semibold text-muted-foreground">{meta}</span>}
+        <div className="ml-auto flex items-center gap-2">{children}</div>
       </div>
     );
   }
+
   return (
-    <div className="page-header" style={{
-      padding: '1.1rem 1.35rem',
-      background: 'linear-gradient(135deg, rgba(var(--primary-rgb), 0.12), var(--card-bg))',
-      border: '1px solid var(--border)',
-      borderRadius: 12,
-      marginBottom: '1.25rem',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+    <div
+      className={cn(
+        'page-header mb-5 flex flex-wrap items-center justify-between gap-4',
+        'rounded-xl border border-border px-[1.35rem] py-[1.1rem]',
+        CARD_GRADIENT,
+        className,
+      )}
+    >
+      <div className="flex min-w-0 flex-1 items-center gap-[0.85rem]">
         {icon !== undefined && (
-          <div style={{
-            width: 44, height: 44,
-            borderRadius: 12,
-            background: 'linear-gradient(135deg, var(--primary), var(--primary-darker))',
-            color: '#fff',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '1.15rem',
-            boxShadow: '0 6px 18px rgba(var(--primary-rgb), 0.35)',
-            flexShrink: 0,
-          }}>{icon}</div>
+          <div
+            className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(135deg,var(--primary),var(--primary-darker))] text-[1.15rem] text-primary-foreground shadow-[0_6px_18px_rgba(var(--primary-rgb),0.35)]"
+          >
+            {icon}
+          </div>
         )}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 className="page-title" style={{ margin: 0 }}>{title}</h1>
+        <div className="min-w-0 flex-1">
+          <h1 className="page-title m-0 text-foreground">{title}</h1>
           {(subtitle || meta) && (
-            <p className="page-subtitle" style={{ margin: '0.15rem 0 0', display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap' }}>
+            <p className="page-subtitle mt-[0.15rem] flex flex-wrap items-center gap-[0.55rem]">
               {subtitle && <span>{subtitle}</span>}
               {meta && (
-                <span style={{
-                  fontSize: '0.7rem',
-                  padding: '0.1rem 0.5rem',
-                  borderRadius: 999,
-                  background: 'var(--bg-secondary)',
-                  border: '1px solid var(--border)',
-                  fontWeight: 600,
-                  color: 'var(--text)',
-                }}>{meta}</span>
+                <span className="rounded-full border border-border bg-muted px-2 py-[0.1rem] text-[0.7rem] font-semibold text-foreground">
+                  {meta}
+                </span>
               )}
             </p>
           )}
         </div>
-        {children}
       </div>
+      {children}
     </div>
   );
 }
@@ -83281,10 +84924,10 @@ function BackupAndTrashPanel() {
 ## `src/components/SetupWizard.jsx`
 
 - Path: `src/components/SetupWizard.jsx`
-- Lines: 256 | Size: 12.9 KB
+- Lines: 331 | Size: 17.4 KB
 
 ```jsx
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, ChevronRight, Check } from 'lucide-react';
 import { getPrintSettings, savePrintSettings, BUSINESS_PRESETS, applyBusinessPreset } from '../utils/printSettings';
 import { toast } from './Toast';
@@ -83306,6 +84949,22 @@ const setDefaultPaperSize = async (paperSize) => {
   } catch { /* offline: the browser copy above still applies */ }
 };
 
+// What the wizard's choices do: the same for the first run of an existing
+// company and for a brand-new company created from the Select Company page.
+export async function applyWizardChoices({ selectedBiz, paperSize, language }) {
+  const current = getPrintSettings();
+  // v1.10.33 — Clear onboardingSkipped when the user actually
+  // completes setup, so the "Finish setup" pill hides for good.
+  let next = { ...current, onboardingComplete: true, onboardingSkipped: false };
+  // Preset first, THEN the language picked on step 2: four presets set
+  // English, which used to overwrite a Hindi / Tamil / ... choice.
+  if (selectedBiz) next = applyBusinessPreset(next, selectedBiz);
+  next.labelLanguage = language;
+  if (paperSize) next.paperSize = paperSize;
+  savePrintSettings(next);
+  if (paperSize) await setDefaultPaperSize(paperSize);
+}
+
 // ============================================================================
 // v1.9.3 — First-run Setup Wizard
 // Shown when onboardingComplete = false. 3 steps:
@@ -83313,13 +84972,40 @@ const setDefaultPaperSize = async (paperSize) => {
 //   2. Paper size + language
 //   3. Confirm + save
 // User can Skip at any time; setting is marked complete either way.
+//
+// Multi-company: the same wizard is used to create a company. In
+// mode="new-company" (opened from the Select Company page) it gets a first
+// step for the company name, and finishing it calls onCreate(name, choices)
+// instead of changing the settings of an open company. Cancel (or the X)
+// returns to the company list without creating anything.
 // ============================================================================
 
-export default function SetupWizard({ onClose }) {
-  const [step, setStep] = useState(1);
+export default function SetupWizard({ onClose, mode = 'existing', defaultCode = '', onCreate, onCancel }) {
+  const newCompany = mode === 'new-company';
+  const firstStep = newCompany ? 0 : 1;
+  const totalSteps = newCompany ? 4 : 3;
+  const [step, setStep] = useState(firstStep);
+  const [companyName, setCompanyName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const nameOk = companyName.trim().length > 0;
   const [selectedBiz, setSelectedBiz] = useState('');
   const [paperSize, setPaperSize] = useState('a4');
   const [language, setLanguage] = useState('en');
+
+  // ---- Modal discipline for the new-company wizard ------------------------
+  // Setting up a company is a modal step: the company list behind it is inert,
+  // a click on the backdrop does nothing, and Escape must NOT close it — only
+  // Cancel or the X button do. The capture-phase listener claims Escape before
+  // anything behind can act on it (it used to reach the Select Company page's
+  // window shortcut and wipe its search box).
+  useEffect(() => {
+    if (!newCompany) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [newCompany]);
 
   // v1.10.6 — audit L9. Prior code let `finish()` with no business
   // preset selected behave identically to `skip()` — user got two
@@ -83327,18 +85013,15 @@ export default function SetupWizard({ onClose }) {
   // (see button below) until at least one choice is made, so hitting
   // Finish always writes something meaningful. skip() stays available
   // for users who genuinely want to dismiss and configure later.
+  const createWith = async (choices) => {
+    if (busy || !nameOk) return;
+    setBusy(true);
+    try { await onCreate(companyName.trim(), choices); } finally { setBusy(false); }
+  };
+
   const finish = () => {
-    const current = getPrintSettings();
-    // v1.10.33 — Clear onboardingSkipped when the user actually
-    // completes setup, so the "Finish setup" pill hides for good.
-    let next = { ...current, onboardingComplete: true, onboardingSkipped: false };
-    // Preset first, THEN the language picked on step 2: four presets set
-    // English, which used to overwrite a Hindi / Tamil / ... choice.
-    if (selectedBiz) next = applyBusinessPreset(next, selectedBiz);
-    next.labelLanguage = language;
-    if (paperSize) next.paperSize = paperSize;
-    savePrintSettings(next);
-    if (paperSize) setDefaultPaperSize(paperSize);
+    if (newCompany) { createWith({ selectedBiz, paperSize, language }); return; }
+    applyWizardChoices({ selectedBiz, paperSize, language });
     toast('Setup complete! Your defaults are configured.', 'success');
     onClose();
   };
@@ -83359,27 +85042,51 @@ export default function SetupWizard({ onClose }) {
   const canFinish = !!selectedBiz || !!paperSize || language !== 'en';
 
   return (
-    <div className="modal-overlay" style={{ zIndex: 9999 }}>
-      <div className="modal-content" style={{ maxWidth: '640px', maxHeight: '90vh', overflow: 'auto' }}>
+    <div className={newCompany ? 'modal-overlay cs-wizard-overlay' : 'modal-overlay'} style={{ zIndex: 9999 }}>
+      <div className="modal-content" role="dialog" aria-modal="true"
+        aria-label={newCompany ? 'Set up a new company' : 'Welcome to ARTHA'}
+        style={{ maxWidth: '640px', maxHeight: '90vh', overflow: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: '1.35rem' }}>👋 Welcome to ARTHA</h2>
+            <h2 style={{ margin: 0, fontSize: '1.35rem' }}>{newCompany ? '🏢 Set up a new company' : '👋 Welcome to ARTHA'}</h2>
             <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              Step {step} of 3 · Takes 90 seconds
+              Step {step - firstStep + 1} of {totalSteps} · Takes 90 seconds
             </p>
           </div>
-          <button type="button" className="icon-btn" onClick={skip} title="Skip setup — I'll configure later"><X size={18} /></button>
+          {newCompany
+            ? <button type="button" className="icon-btn" onClick={onCancel} title="Cancel — back to the company list"><X size={18} /></button>
+            : <button type="button" className="icon-btn" onClick={skip} title="Skip setup — I'll configure later"><X size={18} /></button>}
         </div>
 
         {/* Progress bar */}
         <div style={{ display: 'flex', gap: '0.35rem', marginBottom: '1.5rem' }}>
-          {[1, 2, 3].map(n => (
+          {Array.from({ length: totalSteps }, (_, i) => i + firstStep).map(n => (
             <div key={n} style={{
               flex: 1, height: 4, borderRadius: 2,
               background: n <= step ? 'var(--primary)' : 'var(--border)',
             }} />
           ))}
         </div>
+
+        {step === 0 && (
+          <>
+            <h3 style={{ marginTop: 0 }}>What is the company called?</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+              This name is shown on the company list. GSTIN, address and bank details are added later in Settings.
+              Every company keeps its own invoices, clients, products and settings in its own folder.
+            </p>
+            <label htmlFor="new-company-name" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 6 }}>Company name</label>
+            <input id="new-company-name" className="form-input" type="text" autoFocus maxLength={100} value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)} placeholder="e.g. HPS Furniture & Decoration"
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (nameOk) setStep(1); } }}
+              style={{ width: '100%', boxSizing: 'border-box' }} />
+            {defaultCode && (
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 8 }}>
+                Company code: <strong>{defaultCode}</strong> (assigned automatically · data folder <code>data/{defaultCode}</code>)
+              </p>
+            )}
+          </>
+        )}
 
         {step === 1 && (
           <>
@@ -83416,7 +85123,9 @@ export default function SetupWizard({ onClose }) {
                   AND close. User lands on the dashboard with all defaults
                   intact, free to tweak from Settings when they want. */}
               <button type="button" className="btn btn-secondary" style={{ fontSize: '0.82rem' }}
+                disabled={busy}
                 onClick={() => {
+                  if (newCompany) { createWith(null); return; }
                   const current = getPrintSettings();
                   savePrintSettings({ ...current, onboardingComplete: true, onboardingSkipped: false });
                   toast('Setup dismissed — configure any time from Settings → Print & PDF.', 'info');
@@ -83490,6 +85199,7 @@ export default function SetupWizard({ onClose }) {
             </p>
 
             <div style={{ padding: '1rem', background: 'var(--bg-secondary)', borderRadius: 8, fontSize: '0.9rem' }}>
+              {newCompany && <Row label="Company" value={companyName.trim()} />}
               <Row label="Business type" value={selectedBiz ? BUSINESS_PRESETS[selectedBiz]?.label : '(none — manual config)'} />
               <Row label="Default paper size" value={PAPER_LABELS[paperSize] || paperSize} />
               <Row label="Section label language" value={
@@ -83504,24 +85214,32 @@ export default function SetupWizard({ onClose }) {
         )}
 
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1.5rem', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button type="button" className="btn btn-secondary" onClick={skip} style={{ fontSize: '0.82rem' }}>
-            Skip setup
-          </button>
+          {newCompany ? (
+            <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={busy} style={{ fontSize: '0.82rem' }}>
+              Cancel
+            </button>
+          ) : (
+            <button type="button" className="btn btn-secondary" onClick={skip} style={{ fontSize: '0.82rem' }}>
+              Skip setup
+            </button>
+          )}
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            {step > 1 && (
-              <button type="button" className="btn btn-secondary" onClick={() => setStep(step - 1)}>
+            {step > firstStep && (
+              <button type="button" className="btn btn-secondary" onClick={() => setStep(step - 1)} disabled={busy}>
                 Back
               </button>
             )}
             {step < 3 ? (
-              <button type="button" className="btn btn-primary" onClick={() => setStep(step + 1)}>
+              <button type="button" className="btn btn-primary" onClick={() => setStep(step + 1)}
+                disabled={step === 0 && !nameOk}
+                title={step === 0 && !nameOk ? 'Enter the company name first.' : ''}>
                 Continue <ChevronRight size={16} />
               </button>
             ) : (
               <button type="button" className="btn btn-primary" onClick={finish}
-                disabled={!canFinish}
+                disabled={!canFinish || busy || (newCompany && !nameOk)}
                 title={canFinish ? '' : 'Pick a business type, paper size, or language first — or use Skip.'}>
-                <Check size={16} /> Finish setup
+                <Check size={16} /> {newCompany ? (busy ? 'Creating…' : 'Create company') : 'Finish setup'}
               </button>
             )}
           </div>
@@ -83548,7 +85266,7 @@ function Row({ label, value }) {
 ## `src/components/StarBanner.jsx`
 
 - Path: `src/components/StarBanner.jsx`
-- Lines: 63 | Size: 2.9 KB
+- Lines: 76 | Size: 3.0 KB
 
 ```jsx
 // v1.10.75 - a slim "star us on GitHub" line at the top of the app. Asked
@@ -83557,8 +85275,13 @@ function Row({ label, value }) {
 // to someone on day one. ✕ hides it for 30 days; "Star on GitHub" or
 // "Already starred" hides it for good. Per browser (localStorage), which is
 // fine for a reminder: losing it only means one more polite line.
+//
+// Ported to Tailwind: the callout read --info-bg / --info-border / --info-text,
+// which have dark values, but the ✕ and "Already starred" used `color:
+// inherit`, so they only worked because of that. They are explicit now.
 import { useState } from 'react';
 import { Star, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const KEY = 'freegstbill_starBanner';
 const REPO = 'https://github.com/Kvijay199428/Artha';
@@ -83589,25 +85312,33 @@ export default function StarBanner() {
     setState(next);
   };
   return (
-    <div role="status" style={{
-      display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap',
-      padding: '0.6rem 0.9rem', marginBottom: '1rem', borderRadius: 10,
-      background: 'var(--info-bg)', border: '1px solid var(--info-border)', color: 'var(--info-text)', fontSize: '0.85rem',
-    }}>
-      <Star size={18} style={{ color: '#f59e0b', fill: '#f59e0b', flexShrink: 0 }} />
-      <span style={{ flex: '1 1 240px' }}>
+    <div
+      role="status"
+      className="mb-4 flex flex-wrap items-center gap-3 rounded-[10px] border border-info-border bg-info px-3.5 py-2.5 text-[0.85rem] text-info-foreground"
+    >
+      <Star size={18} className="shrink-0 fill-amber-500 text-amber-500" />
+      <span className="flex-[1_1_240px]">
         Finding Free GST Billing useful? A star on GitHub helps other businesses find it. It takes one click.
       </span>
-      <a className="btn btn-primary" href={REPO} target="_blank" rel="noopener noreferrer"
-        onClick={() => save({ done: true })} style={{ padding: '0.3rem 0.8rem', fontSize: '0.8rem', textDecoration: 'none' }}>
-        <Star size={14} /> Star on GitHub
-      </a>
-      <button type="button" onClick={() => save({ done: true })}
-        style={{ background: 'none', border: 0, color: 'inherit', cursor: 'pointer', fontSize: '0.78rem', textDecoration: 'underline', padding: '0.25rem' }}>
+      <Button asChild size="sm" className="h-auto px-3 py-1.5 text-[0.8rem]">
+        <a href={REPO} target="_blank" rel="noopener noreferrer" onClick={() => save({ done: true })}>
+          <Star size={14} /> Star on GitHub
+        </a>
+      </Button>
+      <button
+        type="button"
+        onClick={() => save({ done: true })}
+        className="cursor-pointer border-0 bg-transparent p-1 text-[0.78rem] text-info-foreground underline underline-offset-2 opacity-90 hover:opacity-100"
+      >
         Already starred
       </button>
-      <button type="button" onClick={() => save({ closedAt: Date.now() })} title="Close (asks again in a month)" aria-label="Close"
-        style={{ background: 'none', border: 0, color: 'inherit', cursor: 'pointer', padding: '0.25rem', lineHeight: 0 }}>
+      <button
+        type="button"
+        onClick={() => save({ closedAt: Date.now() })}
+        title="Close (asks again in a month)"
+        aria-label="Close"
+        className="cursor-pointer border-0 bg-transparent p-1 leading-none opacity-80 hover:opacity-100"
+      >
         <X size={16} />
       </button>
     </div>
@@ -83739,7 +85470,7 @@ export default function StockReport({ businessName }) {
 ## `src/components/SupportNudge.jsx`
 
 - Path: `src/components/SupportNudge.jsx`
-- Lines: 69 | Size: 4.1 KB
+- Lines: 90 | Size: 4.3 KB
 
 ```jsx
 // v1.10.80 - the daily support card on the Dashboard (was a 50-invoice
@@ -83749,10 +85480,15 @@ export default function StockReport({ businessName }) {
 // tomorrow, "Hide for 30 days" for a month. Never a popup, never blocks work,
 // never printed on an invoice. Per browser (localStorage), which is fine for a
 // reminder: losing it only means one more card.
+//
+// Ported to Tailwind: the progress track read `--border-color` with a #e5e7eb
+// fallback, so on dark it painted a light grey bar. Track and fill are tokens
+// now.
 import { useState } from 'react';
 import { Heart } from 'lucide-react';
 import useSupporters from './useSupporters';
 import { shouldShowSupportNudge, localDay, SNOOZE_DAYS } from '../utils/supporters';
+import { Button } from '@/components/ui/button';
 
 const KEY = 'freegstbill_supportNudge';
 
@@ -83778,33 +85514,49 @@ export default function SupportNudge({ invoiceCount, onOpen }) {
   const line = LINES[Math.floor(now.getTime() / 86400000) % LINES.length];
   const goal = tracker?.goal;
   return (
-    <div className="glass-panel" role="note" aria-label="Support Free GST Billing"
-      style={{ padding: '0.9rem 1.25rem', marginBottom: '1.25rem', display: 'flex', gap: '0.9rem', alignItems: 'center', flexWrap: 'wrap' }}>
-      <Heart size={22} style={{ color: '#e11d48', flexShrink: 0 }} />
-      <div style={{ flex: '1 1 300px', minWidth: 0 }}>
-        <div style={{ fontWeight: 700 }}>{invoiceCount} invoices made with Free GST Billing</div>
-        <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{line}</div>
+    <div
+      className="glass-panel mb-5 flex flex-wrap items-center gap-[0.9rem] rounded-xl border border-border bg-card px-5 py-[0.9rem] text-card-foreground shadow-sm"
+      role="note"
+      aria-label="Support Free GST Billing"
+    >
+      <Heart size={22} className="shrink-0 text-rose-600" />
+      <div className="min-w-0 flex-[1_1_300px]">
+        <div className="font-bold">{invoiceCount} invoices made with Free GST Billing</div>
+        <div className="text-[0.82rem] text-muted-foreground">{line}</div>
         {tracker && tracker.totalReceived > 0 && (
-          <div style={{ fontSize: '0.8rem', marginTop: '0.4rem' }}>
+          <div className="mt-[0.4rem] text-[0.8rem]">
             {goal
               ? <>{inr(tracker.totalReceived)} of {inr(goal.amount)} raised{goal.label ? ` for ${goal.label}` : ''}</>
               : <>{inr(tracker.totalReceived)} received so far{tracker.supporters ? ` from ${tracker.supporters} supporters` : ''}</>}
             {goal && (
-              <div role="progressbar" aria-label="Progress towards the goal" aria-valuemin={0} aria-valuemax={goal.amount}
+              <div
+                role="progressbar"
+                aria-label="Progress towards the goal"
+                aria-valuemin={0}
+                aria-valuemax={goal.amount}
                 aria-valuenow={Math.min(tracker.totalReceived, goal.amount)}
-                style={{ height: 6, maxWidth: 360, marginTop: 4, background: 'var(--border-color, #e5e7eb)', borderRadius: 3, overflow: 'hidden' }}>
-                <div style={{ width: `${Math.min(100, (tracker.totalReceived / goal.amount) * 100)}%`, height: '100%', background: 'var(--primary)' }} />
+                className="mt-1 h-1.5 max-w-[360px] overflow-hidden rounded-full bg-muted"
+              >
+                <div
+                  className="h-full bg-primary"
+                  style={{ width: `${Math.min(100, (tracker.totalReceived / goal.amount) * 100)}%` }}
+                />
               </div>
             )}
           </div>
         )}
       </div>
-      <button type="button" className="btn btn-primary" onClick={() => { hideToday(); onOpen(); }}
-        style={{ fontSize: '0.82rem' }}>Support with UPI</button>
-      <button type="button" className="btn btn-secondary" onClick={hideToday}
-        style={{ fontSize: '0.82rem' }}>Not today</button>
-      <button type="button" onClick={() => save({ ...state, snoozedUntil: now.getTime() + SNOOZE_DAYS * 86400000 })}
-        style={{ background: 'none', border: 0, color: 'var(--text-muted)', cursor: 'pointer', padding: '0.25rem', fontSize: '0.78rem', textDecoration: 'underline' }}>
+      <Button type="button" size="sm" className="text-[0.82rem]" onClick={() => { hideToday(); onOpen(); }}>
+        Support with UPI
+      </Button>
+      <Button type="button" variant="secondary" size="sm" className="text-[0.82rem]" onClick={hideToday}>
+        Not today
+      </Button>
+      <button
+        type="button"
+        onClick={() => save({ ...state, snoozedUntil: now.getTime() + SNOOZE_DAYS * 86400000 })}
+        className="cursor-pointer border-0 bg-transparent p-1 text-[0.78rem] text-muted-foreground underline underline-offset-2 hover:text-foreground"
+      >
         Hide for 30 days
       </button>
     </div>
@@ -83819,7 +85571,7 @@ export default function SupportNudge({ invoiceCount, onOpen }) {
 ## `src/components/SupportView.jsx`
 
 - Path: `src/components/SupportView.jsx`
-- Lines: 207 | Size: 12.3 KB
+- Lines: 207 | Size: 12.4 KB
 
 ```jsx
 // v1.10.75 - Support & About. Who builds the app, how to help (free ways
@@ -83930,7 +85682,7 @@ export default function SupportView() {
             ))}
           </div>
           <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ background: '#fff', padding: 8, borderRadius: 8, lineHeight: 0, border: '1px solid var(--border-color)' }}>
+            <div style={{ background: 'var(--card)', padding: 8, borderRadius: 8, lineHeight: 0, border: '1px solid var(--border-color)' }}>
               {qr ? <img src={qr} width={180} height={180} alt={`UPI QR code to pay ${UPI_NAME}${amount ? ` ₹${amount}` : ''}`} />
                 : <div style={{ width: 180, height: 180 }} />}
             </div>
@@ -84111,24 +85863,50 @@ export default function TableExport({ title, subtitle = '', headers, rows, filen
 ## `src/components/Toast.jsx`
 
 - Path: `src/components/Toast.jsx`
-- Lines: 77 | Size: 2.5 KB
+- Lines: 113 | Size: 3.6 KB
 
 ```jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { CheckCircle, XCircle, AlertTriangle, Info, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+// Toast — in-app notices.
+//
+// Ported to Tailwind + tokens. The four tones used to be hard-coded light
+// hexes (`#ecfdf5`, `#fef2f2`, …) with no dark variant at all, so every toast
+// stayed pale-green/red on a dark page. They now read from the status tokens
+// in src/styles/tokens.css and follow the theme.
+//
+// The API is unchanged: `toast(message, type, duration)`.
 
 const ICONS = {
   success: CheckCircle,
   error: XCircle,
   warning: AlertTriangle,
-  info: Info
+  info: Info,
 };
 
-const COLORS = {
-  success: { bg: '#ecfdf5', border: '#a7f3d0', text: '#065f46', icon: '#10b981' },
-  error: { bg: '#fef2f2', border: '#fecaca', text: '#991b1b', icon: '#ef4444' },
-  warning: { bg: '#fffbeb', border: '#fde68a', text: '#92400e', icon: '#f59e0b' },
-  info: { bg: '#eff6ff', border: '#bfdbfe', text: '#1e40af', icon: '#3b82f6' }
+const TONES = {
+  success: {
+    box: 'border-success/35 bg-success/10 text-success-foreground',
+    rail: 'bg-success',
+    icon: 'text-success',
+  },
+  error: {
+    box: 'border-destructive/35 bg-destructive/10 text-destructive-foreground',
+    rail: 'bg-destructive',
+    icon: 'text-destructive',
+  },
+  warning: {
+    box: 'border-warning-border bg-warning text-warning-foreground',
+    rail: 'bg-warning-border',
+    icon: 'text-warning-foreground',
+  },
+  info: {
+    box: 'border-info-border bg-info text-info-foreground',
+    rail: 'bg-info-border',
+    icon: 'text-info-foreground',
+  },
 };
 
 let toastId = 0;
@@ -84148,14 +85926,14 @@ export default function ToastContainer() {
     // preset three times used to stack three identical "Applied X" cards.
     // Now: if an identical-message toast is already visible, refresh its
     // timer instead of pushing a duplicate. Cap total on-screen at 4.
-    setToasts(prev => {
-      const dupe = prev.find(x => x.message === t.message && x.type === t.type);
-      if (dupe) return prev.map(x => x === dupe ? { ...x, id: t.id } : x);
+    setToasts((prev) => {
+      const dupe = prev.find((x) => x.message === t.message && x.type === t.type);
+      if (dupe) return prev.map((x) => (x === dupe ? { ...x, id: t.id } : x));
       const next = [...prev, t];
       return next.length > 4 ? next.slice(-4) : next;
     });
     setTimeout(() => {
-      setToasts(prev => prev.filter(x => x.id !== t.id));
+      setToasts((prev) => prev.filter((x) => x.id !== t.id));
     }, t.duration);
   }, []);
 
@@ -84165,23 +85943,33 @@ export default function ToastContainer() {
   }, [addToast]);
 
   const dismiss = (id) => {
-    setToasts(prev => prev.filter(x => x.id !== id));
+    setToasts((prev) => prev.filter((x) => x.id !== id));
   };
 
   return (
-    <div className="toast-container">
-      {toasts.map(t => {
+    <div className="pointer-events-none fixed bottom-5 right-5 z-[11000] flex w-[min(360px,calc(100vw-2.5rem))] flex-col gap-2">
+      {toasts.map((t) => {
         const Icon = ICONS[t.type] || ICONS.info;
-        const color = COLORS[t.type] || COLORS.info;
+        const tone = TONES[t.type] || TONES.info;
         return (
-          <div key={t.id} className="toast-item" style={{
-            background: color.bg,
-            borderLeft: `4px solid ${color.icon}`,
-            color: color.text
-          }}>
-            <Icon size={18} style={{ color: color.icon, flexShrink: 0 }} />
-            <span className="toast-message">{t.message}</span>
-            <button className="toast-close" onClick={() => dismiss(t.id)}>
+          <div
+            key={t.id}
+            role="status"
+            className={cn(
+              'pointer-events-auto flex items-start gap-2.5 overflow-hidden rounded-lg border py-2.5 pl-3 pr-2 shadow-lg',
+              'animate-in slide-in-from-bottom-2 fade-in-0',
+              tone.box,
+            )}
+          >
+            <span className={cn('-ml-3 -my-2.5 w-1 self-stretch', tone.rail)} aria-hidden="true" />
+            <Icon size={18} className={cn('mt-px shrink-0', tone.icon)} />
+            <span className="flex-1 text-sm leading-snug">{t.message}</span>
+            <button
+              type="button"
+              onClick={() => dismiss(t.id)}
+              aria-label="Dismiss"
+              className="shrink-0 rounded p-1 opacity-70 transition-opacity hover:opacity-100"
+            >
               <X size={14} />
             </button>
           </div>
@@ -84195,16 +85983,1488 @@ export default function ToastContainer() {
 
 ---
 
+<a id="src-components-ui-alert-dialog-jsx"></a>
+## `src/components/ui/alert-dialog.jsx`
+
+- Path: `src/components/ui/alert-dialog.jsx`
+- Lines: 121 | Size: 3.2 KB
+
+```jsx
+import * as React from 'react';
+import * as AlertDialogPrimitive from '@radix-ui/react-alert-dialog';
+import { cn } from '@/lib/utils';
+import { buttonVariants } from '@/components/ui/button';
+
+function AlertDialog(props) {
+  return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />;
+}
+
+function AlertDialogTrigger(props) {
+  return <AlertDialogPrimitive.Trigger data-slot="alert-dialog-trigger" {...props} />;
+}
+
+function AlertDialogPortal(props) {
+  return <AlertDialogPrimitive.Portal data-slot="alert-dialog-portal" {...props} />;
+}
+
+function AlertDialogOverlay({ className, ...props }) {
+  return (
+    <AlertDialogPrimitive.Overlay
+      data-slot="alert-dialog-overlay"
+      className={cn(
+        'fixed inset-0 z-50 bg-black/50 backdrop-blur-sm',
+        'data-[state=open]:animate-in data-[state=closed]:animate-out',
+        'data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function AlertDialogContent({ className, ...props }) {
+  return (
+    <AlertDialogPortal>
+      <AlertDialogOverlay />
+      <AlertDialogPrimitive.Content
+        data-slot="alert-dialog-content"
+        className={cn(
+          'fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4',
+          'rounded-xl border border-border bg-card p-6 text-card-foreground shadow-lg sm:max-w-lg',
+          'data-[state=open]:animate-in data-[state=closed]:animate-out',
+          'data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0',
+          'data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95',
+          className,
+        )}
+        {...props}
+      />
+    </AlertDialogPortal>
+  );
+}
+
+function AlertDialogHeader({ className, ...props }) {
+  return (
+    <div
+      data-slot="alert-dialog-header"
+      className={cn('flex flex-col gap-2 text-center sm:text-left', className)}
+      {...props}
+    />
+  );
+}
+
+function AlertDialogFooter({ className, ...props }) {
+  return (
+    <div
+      data-slot="alert-dialog-footer"
+      className={cn('flex flex-col-reverse gap-2 sm:flex-row sm:justify-end', className)}
+      {...props}
+    />
+  );
+}
+
+function AlertDialogTitle({ className, ...props }) {
+  return (
+    <AlertDialogPrimitive.Title
+      data-slot="alert-dialog-title"
+      className={cn('text-lg font-semibold', className)}
+      {...props}
+    />
+  );
+}
+
+function AlertDialogDescription({ className, ...props }) {
+  return (
+    <AlertDialogPrimitive.Description
+      data-slot="alert-dialog-description"
+      className={cn('text-sm text-muted-foreground', className)}
+      {...props}
+    />
+  );
+}
+
+function AlertDialogAction({ className, ...props }) {
+  return (
+    <AlertDialogPrimitive.Action className={cn(buttonVariants(), className)} {...props} />
+  );
+}
+
+function AlertDialogCancel({ className, ...props }) {
+  return (
+    <AlertDialogPrimitive.Cancel
+      className={cn(buttonVariants({ variant: 'outline' }), className)}
+      {...props}
+    />
+  );
+}
+
+export {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogOverlay,
+  AlertDialogPortal,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+};
+
+```
+
+---
+
+<a id="src-components-ui-badge-jsx"></a>
+## `src/components/ui/badge.jsx`
+
+- Path: `src/components/ui/badge.jsx`
+- Lines: 29 | Size: 1.0 KB
+
+```jsx
+import * as React from 'react';
+import { Slot } from '@radix-ui/react-slot';
+import { cva } from 'class-variance-authority';
+import { cn } from '@/lib/utils';
+
+const badgeVariants = cva(
+  'inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-md border px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-[color,box-shadow] [&>svg]:pointer-events-none [&>svg]:size-3',
+  {
+    variants: {
+      variant: {
+        default: 'border-transparent bg-primary text-primary-foreground',
+        secondary: 'border-transparent bg-secondary text-secondary-foreground',
+        destructive: 'border-transparent bg-destructive text-destructive-foreground',
+        outline: 'border-border text-foreground',
+      },
+    },
+    defaultVariants: {
+      variant: 'default',
+    },
+  },
+);
+
+function Badge({ className, variant, asChild = false, ...props }) {
+  const Comp = asChild ? Slot : 'span';
+  return <Comp data-slot="badge" className={cn(badgeVariants({ variant }), className)} {...props} />;
+}
+
+export { Badge, badgeVariants };
+
+```
+
+---
+
+<a id="src-components-ui-button-jsx"></a>
+## `src/components/ui/button.jsx`
+
+- Path: `src/components/ui/button.jsx`
+- Lines: 61 | Size: 2.4 KB
+
+```jsx
+import * as React from 'react';
+import { Slot } from '@radix-ui/react-slot';
+import { cva } from 'class-variance-authority';
+import { cn } from '@/lib/utils';
+
+/**
+ * Button — shadcn/ui primitive, ARTHA palette.
+ *
+ * No colour is named here. `bg-primary` / `text-primary-foreground` resolve to
+ * the tokens in src/styles/tokens.css, so a theme swap repaints every button.
+ *
+ * NOTE for anything that will be rasterised by html2canvas (the invoice PDF):
+ * the `/90` opacity modifiers compile to color-mix(in oklab, …), which
+ * html2canvas cannot parse. Buttons belong to app chrome, never to the printed
+ * invoice, so they are safe here — but do not copy these classes into
+ * InvoicePreview.
+ *
+ * Every variant names its own text colour on purpose. Tailwind's preflight
+ * (`button { color: inherit }`) is not imported yet, so without an explicit
+ * `text-*` the browser's UA stylesheet paints button text `buttontext`
+ * (black) even inside a dark dialog.
+ */
+const buttonVariants = cva(
+  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium outline-none transition-[color,box-shadow,background-color] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0 focus-visible:ring-2 focus-visible:ring-ring/50",
+  {
+    variants: {
+      variant: {
+        default: 'bg-primary text-primary-foreground hover:bg-primary/90',
+        destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+        outline: 'border border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground',
+        secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+        ghost: 'text-foreground hover:bg-accent hover:text-accent-foreground',
+        link: 'text-primary underline-offset-4 hover:underline',
+      },
+      size: {
+        default: 'h-9 px-4 py-2 has-[>svg]:px-3',
+        sm: 'h-8 gap-1.5 rounded-md px-3 has-[>svg]:px-2.5',
+        lg: 'h-10 rounded-md px-6 has-[>svg]:px-4',
+        icon: 'size-9',
+      },
+    },
+    defaultVariants: {
+      variant: 'default',
+      size: 'default',
+    },
+  },
+);
+
+function Button({ className, variant, size, asChild = false, ...props }) {
+  const Comp = asChild ? Slot : 'button';
+  return (
+    <Comp
+      data-slot="button"
+      className={cn(buttonVariants({ variant, size, className }))}
+      {...props}
+    />
+  );
+}
+
+export { Button, buttonVariants };
+
+```
+
+---
+
+<a id="src-components-ui-card-jsx"></a>
+## `src/components/ui/card.jsx`
+
+- Path: `src/components/ui/card.jsx`
+- Lines: 57 | Size: 1.5 KB
+
+```jsx
+import * as React from 'react';
+import { cn } from '@/lib/utils';
+
+function Card({ className, ...props }) {
+  return (
+    <div
+      data-slot="card"
+      className={cn('flex flex-col gap-6 rounded-xl border border-border bg-card py-6 text-card-foreground shadow-sm', className)}
+      {...props}
+    />
+  );
+}
+
+function CardHeader({ className, ...props }) {
+  return (
+    <div
+      data-slot="card-header"
+      className={cn('grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6', className)}
+      {...props}
+    />
+  );
+}
+
+function CardTitle({ className, ...props }) {
+  return (
+    <div data-slot="card-title" className={cn('leading-none font-semibold', className)} {...props} />
+  );
+}
+
+function CardDescription({ className, ...props }) {
+  return (
+    <div data-slot="card-description" className={cn('text-sm text-muted-foreground', className)} {...props} />
+  );
+}
+
+function CardAction({ className, ...props }) {
+  return (
+    <div
+      data-slot="card-action"
+      className={cn('col-start-2 row-span-2 row-start-1 self-start justify-self-end', className)}
+      {...props}
+    />
+  );
+}
+
+function CardContent({ className, ...props }) {
+  return <div data-slot="card-content" className={cn('px-6', className)} {...props} />;
+}
+
+function CardFooter({ className, ...props }) {
+  return (
+    <div data-slot="card-footer" className={cn('flex items-center px-6', className)} {...props} />
+  );
+}
+
+export { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent, CardFooter };
+
+```
+
+---
+
+<a id="src-components-ui-checkbox-jsx"></a>
+## `src/components/ui/checkbox.jsx`
+
+- Path: `src/components/ui/checkbox.jsx`
+- Lines: 28 | Size: 1.1 KB
+
+```jsx
+import * as React from 'react';
+import * as CheckboxPrimitive from '@radix-ui/react-checkbox';
+import { Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+function Checkbox({ className, ...props }) {
+  return (
+    <CheckboxPrimitive.Root
+      data-slot="checkbox"
+      className={cn(
+        'peer size-4 shrink-0 rounded-[4px] border border-input shadow-xs outline-none transition-shadow',
+        'bg-background data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground',
+        'focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50',
+        'disabled:cursor-not-allowed disabled:opacity-50',
+        'aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20',
+        className,
+      )}
+      {...props}
+    >
+      <CheckboxPrimitive.Indicator data-slot="checkbox-indicator" className="grid place-content-center text-current">
+        <Check className="size-3.5" />
+      </CheckboxPrimitive.Indicator>
+    </CheckboxPrimitive.Root>
+  );
+}
+
+export { Checkbox };
+
+```
+
+---
+
+<a id="src-components-ui-dialog-jsx"></a>
+## `src/components/ui/dialog.jsx`
+
+- Path: `src/components/ui/dialog.jsx`
+- Lines: 127 | Size: 3.5 KB
+
+```jsx
+import * as React from 'react';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { X } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+/**
+ * Dialog — Radix + tokens.
+ *
+ * The overlay is `bg-black/50` on purpose: it must darken whatever is behind
+ * it in BOTH themes. Everything else (panel, title, description, close button)
+ * is token-driven.
+ */
+function Dialog(props) {
+  return <DialogPrimitive.Root data-slot="dialog" {...props} />;
+}
+
+function DialogTrigger(props) {
+  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
+}
+
+function DialogPortal(props) {
+  return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
+}
+
+function DialogClose(props) {
+  return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
+}
+
+function DialogOverlay({ className, ...props }) {
+  return (
+    <DialogPrimitive.Overlay
+      data-slot="dialog-overlay"
+      className={cn(
+        'fixed inset-0 z-50 bg-black/50 backdrop-blur-sm',
+        'data-[state=open]:animate-in data-[state=closed]:animate-out',
+        'data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function DialogContent({ className, overlayClassName, overlayStyle, children, showCloseButton = true, ...props }) {
+  return (
+    <DialogPortal>
+      <DialogOverlay className={overlayClassName} style={overlayStyle} />
+      <DialogPrimitive.Content
+        data-slot="dialog-content"
+        className={cn(
+          'fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4',
+          'rounded-xl border border-border bg-card p-6 text-card-foreground shadow-lg sm:max-w-lg',
+          'data-[state=open]:animate-in data-[state=closed]:animate-out',
+          'data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0',
+          'data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95',
+          className,
+        )}
+        {...props}
+      >
+        {children}
+        {showCloseButton && (
+          <DialogPrimitive.Close
+            data-slot="dialog-close"
+            className="absolute top-4 right-4 rounded-sm opacity-70 outline-none transition-opacity hover:opacity-100 focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none"
+          >
+            <X className="size-4" />
+            <span className="sr-only">Close</span>
+          </DialogPrimitive.Close>
+        )}
+      </DialogPrimitive.Content>
+    </DialogPortal>
+  );
+}
+
+function DialogHeader({ className, ...props }) {
+  return (
+    <div
+      data-slot="dialog-header"
+      className={cn('flex flex-col gap-2 text-center sm:text-left', className)}
+      {...props}
+    />
+  );
+}
+
+function DialogFooter({ className, ...props }) {
+  return (
+    <div
+      data-slot="dialog-footer"
+      className={cn('flex flex-col-reverse gap-2 sm:flex-row sm:justify-end', className)}
+      {...props}
+    />
+  );
+}
+
+function DialogTitle({ className, ...props }) {
+  return (
+    <DialogPrimitive.Title
+      data-slot="dialog-title"
+      className={cn('text-lg leading-none font-semibold', className)}
+      {...props}
+    />
+  );
+}
+
+function DialogDescription({ className, ...props }) {
+  return (
+    <DialogPrimitive.Description
+      data-slot="dialog-description"
+      className={cn('text-sm text-muted-foreground', className)}
+      {...props}
+    />
+  );
+}
+
+export {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+  DialogTrigger,
+};
+
+```
+
+---
+
+<a id="src-components-ui-dropdown-menu-jsx"></a>
+## `src/components/ui/dropdown-menu.jsx`
+
+- Path: `src/components/ui/dropdown-menu.jsx`
+- Lines: 185 | Size: 6.0 KB
+
+```jsx
+import * as React from 'react';
+import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
+import { Check, ChevronRight, Circle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+function DropdownMenu(props) {
+  return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
+}
+
+function DropdownMenuTrigger(props) {
+  return <DropdownMenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props} />;
+}
+
+function DropdownMenuContent({ className, sideOffset = 4, ...props }) {
+  return (
+    <DropdownMenuPrimitive.Portal>
+      <DropdownMenuPrimitive.Content
+        data-slot="dropdown-menu-content"
+        sideOffset={sideOffset}
+        className={cn(
+          'z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-[8rem] overflow-y-auto overflow-x-hidden',
+          'rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md',
+          'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+          'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+          className,
+        )}
+        {...props}
+      />
+    </DropdownMenuPrimitive.Portal>
+  );
+}
+
+function DropdownMenuItem({ className, inset, variant = 'default', ...props }) {
+  return (
+    <DropdownMenuPrimitive.Item
+      data-slot="dropdown-menu-item"
+      data-inset={inset}
+      data-variant={variant}
+      className={cn(
+        "relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none",
+        "focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        "data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        'data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function DropdownMenuCheckboxItem({ className, children, checked, ...props }) {
+  return (
+    <DropdownMenuPrimitive.CheckboxItem
+      data-slot="dropdown-menu-checkbox-item"
+      className={cn(
+        'relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-sm outline-none select-none',
+        'focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+        className,
+      )}
+      checked={checked}
+      {...props}
+    >
+      <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
+        <DropdownMenuPrimitive.ItemIndicator>
+          <Check className="size-4" />
+        </DropdownMenuPrimitive.ItemIndicator>
+      </span>
+      {children}
+    </DropdownMenuPrimitive.CheckboxItem>
+  );
+}
+
+function DropdownMenuRadioItem({ className, children, ...props }) {
+  return (
+    <DropdownMenuPrimitive.RadioItem
+      data-slot="dropdown-menu-radio-item"
+      className={cn(
+        'relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-sm outline-none select-none',
+        'focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+        className,
+      )}
+      {...props}
+    >
+      <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
+        <DropdownMenuPrimitive.ItemIndicator>
+          <Circle className="size-2 fill-current" />
+        </DropdownMenuPrimitive.ItemIndicator>
+      </span>
+      {children}
+    </DropdownMenuPrimitive.RadioItem>
+  );
+}
+
+function DropdownMenuLabel({ className, inset, ...props }) {
+  return (
+    <DropdownMenuPrimitive.Label
+      data-slot="dropdown-menu-label"
+      data-inset={inset}
+      className={cn('px-2 py-1.5 text-xs font-medium text-muted-foreground data-[inset]:pl-8', className)}
+      {...props}
+    />
+  );
+}
+
+function DropdownMenuSeparator({ className, ...props }) {
+  return (
+    <DropdownMenuPrimitive.Separator
+      data-slot="dropdown-menu-separator"
+      className={cn('-mx-1 my-1 h-px bg-border', className)}
+      {...props}
+    />
+  );
+}
+
+function DropdownMenuShortcut({ className, ...props }) {
+  return (
+    <span
+      data-slot="dropdown-menu-shortcut"
+      className={cn('ml-auto text-xs tracking-widest text-muted-foreground', className)}
+      {...props}
+    />
+  );
+}
+
+function DropdownMenuSub(props) {
+  return <DropdownMenuPrimitive.Sub data-slot="dropdown-menu-sub" {...props} />;
+}
+
+function DropdownMenuSubTrigger({ className, inset, children, ...props }) {
+  return (
+    <DropdownMenuPrimitive.SubTrigger
+      data-slot="dropdown-menu-sub-trigger"
+      data-inset={inset}
+      className={cn(
+        'flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none',
+        'focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[inset]:pl-8',
+        className,
+      )}
+      {...props}
+    >
+      {children}
+      <ChevronRight className="ml-auto size-4" />
+    </DropdownMenuPrimitive.SubTrigger>
+  );
+}
+
+function DropdownMenuSubContent({ className, ...props }) {
+  return (
+    <DropdownMenuPrimitive.SubContent
+      data-slot="dropdown-menu-sub-content"
+      className={cn(
+        'z-50 min-w-[8rem] overflow-hidden rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-lg',
+        'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function DropdownMenuGroup(props) {
+  return <DropdownMenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />;
+}
+
+function DropdownMenuRadioGroup(props) {
+  return <DropdownMenuPrimitive.RadioGroup data-slot="dropdown-menu-radio-group" {...props} />;
+}
+
+export {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+};
+
+```
+
+---
+
+<a id="src-components-ui-input-jsx"></a>
+## `src/components/ui/input.jsx`
+
+- Path: `src/components/ui/input.jsx`
+- Lines: 30 | Size: 1.1 KB
+
+```jsx
+import * as React from 'react';
+import { cn } from '@/lib/utils';
+
+/**
+ * Input — token-driven replacement for `.form-input`.
+ * No literal colour: border-input / bg-background / text-foreground, with the
+ * focus ring coming from --ring, so it is correct in both themes by default.
+ */
+function Input({ className, type, ...props }) {
+  return (
+    <input
+      type={type}
+      data-slot="input"
+      className={cn(
+        'flex h-9 w-full min-w-0 rounded-md border border-input bg-background px-3 py-1 text-sm text-foreground shadow-xs outline-none transition-[color,box-shadow]',
+        'placeholder:text-muted-foreground',
+        'selection:bg-primary selection:text-primary-foreground',
+        'file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium',
+        'disabled:cursor-not-allowed disabled:opacity-50',
+        'focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50',
+        'aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export { Input };
+
+```
+
+---
+
+<a id="src-components-ui-label-jsx"></a>
+## `src/components/ui/label.jsx`
+
+- Path: `src/components/ui/label.jsx`
+- Lines: 20 | Size: 0.5 KB
+
+```jsx
+import * as React from 'react';
+import { cn } from '@/lib/utils';
+
+function Label({ className, ...props }) {
+  return (
+    <label
+      data-slot="label"
+      className={cn(
+        'flex items-center gap-2 text-sm leading-none font-medium select-none',
+        'group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50',
+        'peer-disabled:cursor-not-allowed peer-disabled:opacity-50',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export { Label };
+
+```
+
+---
+
+<a id="src-components-ui-popover-jsx"></a>
+## `src/components/ui/popover.jsx`
+
+- Path: `src/components/ui/popover.jsx`
+- Lines: 37 | Size: 1.2 KB
+
+```jsx
+import * as React from 'react';
+import * as PopoverPrimitive from '@radix-ui/react-popover';
+import { cn } from '@/lib/utils';
+
+function Popover(props) {
+  return <PopoverPrimitive.Root data-slot="popover" {...props} />;
+}
+
+function PopoverTrigger(props) {
+  return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />;
+}
+
+function PopoverContent({ className, align = 'center', sideOffset = 4, ...props }) {
+  return (
+    <PopoverPrimitive.Portal>
+      <PopoverPrimitive.Content
+        data-slot="popover-content"
+        align={align}
+        sideOffset={sideOffset}
+        className={cn(
+          'z-50 w-72 origin-(--radix-popover-content-transform-origin) rounded-md border border-border bg-popover p-4 text-popover-foreground shadow-md outline-none',
+          'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+          'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+          className,
+        )}
+        {...props}
+      />
+    </PopoverPrimitive.Portal>
+  );
+}
+
+function PopoverAnchor(props) {
+  return <PopoverPrimitive.Anchor data-slot="popover-anchor" {...props} />;
+}
+
+export { Popover, PopoverTrigger, PopoverContent, PopoverAnchor };
+
+```
+
+---
+
+<a id="src-components-ui-progress-jsx"></a>
+## `src/components/ui/progress.jsx`
+
+- Path: `src/components/ui/progress.jsx`
+- Lines: 22 | Size: 0.6 KB
+
+```jsx
+import * as React from 'react';
+import * as ProgressPrimitive from '@radix-ui/react-progress';
+import { cn } from '@/lib/utils';
+
+function Progress({ className, value, ...props }) {
+  return (
+    <ProgressPrimitive.Root
+      data-slot="progress"
+      className={cn('relative h-2 w-full overflow-hidden rounded-full bg-secondary', className)}
+      {...props}
+    >
+      <ProgressPrimitive.Indicator
+        data-slot="progress-indicator"
+        className="h-full w-full flex-1 bg-primary transition-all"
+        style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
+      />
+    </ProgressPrimitive.Root>
+  );
+}
+
+export { Progress };
+
+```
+
+---
+
+<a id="src-components-ui-radio-group-jsx"></a>
+## `src/components/ui/radio-group.jsx`
+
+- Path: `src/components/ui/radio-group.jsx`
+- Lines: 34 | Size: 1.3 KB
+
+```jsx
+import * as React from 'react';
+import * as RadioGroupPrimitive from '@radix-ui/react-radio-group';
+import { Circle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+function RadioGroup({ className, ...props }) {
+  return <RadioGroupPrimitive.Root data-slot="radio-group" className={cn('grid gap-3', className)} {...props} />;
+}
+
+function RadioGroupItem({ className, ...props }) {
+  return (
+    <RadioGroupPrimitive.Item
+      data-slot="radio-group-item"
+      className={cn(
+        'aspect-square size-4 shrink-0 rounded-full border border-input text-primary shadow-xs outline-none transition-[color,box-shadow]',
+        'focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50',
+        'disabled:cursor-not-allowed disabled:opacity-50',
+        'aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20',
+        className,
+      )}
+      {...props}
+    >
+      <RadioGroupPrimitive.Indicator
+        data-slot="radio-group-indicator"
+        className="relative flex items-center justify-center"
+      >
+        <Circle className="absolute top-1/2 left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 fill-primary" />
+      </RadioGroupPrimitive.Indicator>
+    </RadioGroupPrimitive.Item>
+  );
+}
+
+export { RadioGroup, RadioGroupItem };
+
+```
+
+---
+
+<a id="src-components-ui-select-jsx"></a>
+## `src/components/ui/select.jsx`
+
+- Path: `src/components/ui/select.jsx`
+- Lines: 154 | Size: 5.0 KB
+
+```jsx
+import * as React from 'react';
+import * as SelectPrimitive from '@radix-ui/react-select';
+import { Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+function Select(props) {
+  return <SelectPrimitive.Root data-slot="select" {...props} />;
+}
+
+function SelectGroup(props) {
+  return <SelectPrimitive.Group data-slot="select-group" {...props} />;
+}
+
+function SelectValue(props) {
+  return <SelectPrimitive.Value data-slot="select-value" {...props} />;
+}
+
+function SelectTrigger({ className, size = 'default', children, ...props }) {
+  return (
+    <SelectPrimitive.Trigger
+      data-slot="select-trigger"
+      data-size={size}
+      className={cn(
+        'flex w-full items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm whitespace-nowrap text-foreground shadow-xs outline-none',
+        'transition-[color,box-shadow] data-[size=default]:h-9 data-[size=sm]:h-8',
+        'data-[placeholder]:text-muted-foreground',
+        'focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50',
+        'disabled:cursor-not-allowed disabled:opacity-50',
+        'aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20',
+        '*:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2',
+        '[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=\'size-\'])]:size-4',
+        className,
+      )}
+      {...props}
+    >
+      {children}
+      <SelectPrimitive.Icon asChild>
+        <ChevronDown className="size-4 opacity-50" />
+      </SelectPrimitive.Icon>
+    </SelectPrimitive.Trigger>
+  );
+}
+
+function SelectContent({ className, children, position = 'popper', ...props }) {
+  return (
+    <SelectPrimitive.Portal>
+      <SelectPrimitive.Content
+        data-slot="select-content"
+        className={cn(
+          'relative z-50 max-h-(--radix-select-content-available-height) min-w-[8rem] overflow-x-hidden overflow-y-auto',
+          'rounded-md border border-border bg-popover text-popover-foreground shadow-md',
+          'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+          'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+          position === 'popper' && 'data-[side=bottom]:translate-y-1 data-[side=top]:-translate-y-1',
+          className,
+        )}
+        position={position}
+        {...props}
+      >
+        <SelectScrollUpButton />
+        <SelectPrimitive.Viewport
+          className={cn(
+            'p-1',
+            position === 'popper' &&
+              'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1',
+          )}
+        >
+          {children}
+        </SelectPrimitive.Viewport>
+        <SelectScrollDownButton />
+      </SelectPrimitive.Content>
+    </SelectPrimitive.Portal>
+  );
+}
+
+function SelectLabel({ className, ...props }) {
+  return (
+    <SelectPrimitive.Label
+      data-slot="select-label"
+      className={cn('px-2 py-1.5 text-xs text-muted-foreground', className)}
+      {...props}
+    />
+  );
+}
+
+function SelectItem({ className, children, ...props }) {
+  return (
+    <SelectPrimitive.Item
+      data-slot="select-item"
+      className={cn(
+        "relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-none select-none",
+        'focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+        "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        className,
+      )}
+      {...props}
+    >
+      <span className="absolute right-2 flex size-3.5 items-center justify-center">
+        <SelectPrimitive.ItemIndicator>
+          <Check className="size-4" />
+        </SelectPrimitive.ItemIndicator>
+      </span>
+      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+    </SelectPrimitive.Item>
+  );
+}
+
+function SelectSeparator({ className, ...props }) {
+  return (
+    <SelectPrimitive.Separator
+      data-slot="select-separator"
+      className={cn('pointer-events-none -mx-1 my-1 h-px bg-border', className)}
+      {...props}
+    />
+  );
+}
+
+function SelectScrollUpButton({ className, ...props }) {
+  return (
+    <SelectPrimitive.ScrollUpButton
+      data-slot="select-scroll-up-button"
+      className={cn('flex cursor-default items-center justify-center py-1', className)}
+      {...props}
+    >
+      <ChevronUp className="size-4" />
+    </SelectPrimitive.ScrollUpButton>
+  );
+}
+
+function SelectScrollDownButton({ className, ...props }) {
+  return (
+    <SelectPrimitive.ScrollDownButton
+      data-slot="select-scroll-down-button"
+      className={cn('flex cursor-default items-center justify-center py-1', className)}
+      {...props}
+    >
+      <ChevronDown className="size-4" />
+    </SelectPrimitive.ScrollDownButton>
+  );
+}
+
+export {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectScrollDownButton,
+  SelectScrollUpButton,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+};
+
+```
+
+---
+
+<a id="src-components-ui-separator-jsx"></a>
+## `src/components/ui/separator.jsx`
+
+- Path: `src/components/ui/separator.jsx`
+- Lines: 22 | Size: 0.5 KB
+
+```jsx
+import * as React from 'react';
+import * as SeparatorPrimitive from '@radix-ui/react-separator';
+import { cn } from '@/lib/utils';
+
+function Separator({ className, orientation = 'horizontal', decorative = true, ...props }) {
+  return (
+    <SeparatorPrimitive.Root
+      data-slot="separator"
+      decorative={decorative}
+      orientation={orientation}
+      className={cn(
+        'shrink-0 bg-border',
+        orientation === 'horizontal' ? 'h-px w-full' : 'h-full w-px',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export { Separator };
+
+```
+
+---
+
+<a id="src-components-ui-sheet-jsx"></a>
+## `src/components/ui/sheet.jsx`
+
+- Path: `src/components/ui/sheet.jsx`
+- Lines: 60 | Size: 2.0 KB
+
+```jsx
+import * as React from 'react';
+import { cn } from '@/lib/utils';
+
+const Sheet = ({ open, onOpenChange, children }) => {
+  const [internal, setInternal] = React.useState(false);
+  const isOpen = open !== undefined ? open : internal;
+  const setOpen = onOpenChange || setInternal;
+  React.useEffect(() => {
+    document.body.style.overflow = isOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[10000]">
+      <div className="absolute inset-0 bg-black/50" onClick={() => setOpen(false)} />
+      {children}
+    </div>
+  );
+};
+
+const SheetContent = React.forwardRef(({ className, side = 'right', children, ...props }, ref) => {
+  const sideCls = side === 'left' ? 'left-0 border-r' : 'right-0 border-l';
+  return (
+    <div
+      ref={ref}
+      role="dialog"
+      aria-modal="true"
+      className={cn(
+        'absolute top-0 h-full w-3/4 gap-4 border-border bg-card p-6 text-card-foreground shadow-lg transition ease-in-out sm:max-w-sm',
+        sideCls,
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+});
+SheetContent.displayName = 'SheetContent';
+
+const SheetHeader = ({ className, ...props }) => (
+  <div className={cn('flex flex-col space-y-2 text-center sm:text-left', className)} {...props} />
+);
+
+const SheetFooter = ({ className, ...props }) => (
+  <div className={cn('flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2', className)} {...props} />
+);
+
+const SheetTitle = React.forwardRef(({ className, ...props }, ref) => (
+  <h3 ref={ref} className={cn('text-lg font-semibold text-foreground', className)} {...props} />
+));
+SheetTitle.displayName = 'SheetTitle';
+
+const SheetDescription = React.forwardRef(({ className, ...props }, ref) => (
+  <p ref={ref} className={cn('text-sm text-muted-foreground', className)} {...props} />
+));
+SheetDescription.displayName = 'SheetDescription';
+
+export { Sheet, SheetContent, SheetHeader, SheetFooter, SheetTitle, SheetDescription };
+
+```
+
+---
+
+<a id="src-components-ui-sonner-jsx"></a>
+## `src/components/ui/sonner.jsx`
+
+- Path: `src/components/ui/sonner.jsx`
+- Lines: 31 | Size: 1.0 KB
+
+```jsx
+import * as React from 'react';
+import { Toaster as SonnerToaster } from 'sonner';
+
+/**
+ * Toaster — Sonner, wired to the same light/dark switch as the rest of the app.
+ *
+ * The app's own `<Toast>` component still exists for in-app notices; this is
+ * the shadcn-compatible `toast()` API new code should use. Palette classes are
+ * token-driven so it follows the theme in both modes.
+ */
+function Toaster({ ...props }) {
+  return (
+    <SonnerToaster
+      theme="system"
+      className="toaster group"
+      toastOptions={{
+        classNames: {
+          toast:
+            'group toast group-[.toaster]:bg-card group-[.toaster]:text-card-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg',
+          description: 'group-[.toast]:text-muted-foreground',
+          actionButton: 'group-[.toast]:bg-primary group-[.toast]:text-primary-foreground',
+          cancelButton: 'group-[.toast]:bg-muted group-[.toast]:text-muted-foreground',
+        },
+      }}
+      {...props}
+    />
+  );
+}
+
+export { Toaster };
+
+```
+
+---
+
+<a id="src-components-ui-switch-jsx"></a>
+## `src/components/ui/switch.jsx`
+
+- Path: `src/components/ui/switch.jsx`
+- Lines: 30 | Size: 1.0 KB
+
+```jsx
+import * as React from 'react';
+import * as SwitchPrimitive from '@radix-ui/react-switch';
+import { cn } from '@/lib/utils';
+
+function Switch({ className, ...props }) {
+  return (
+    <SwitchPrimitive.Root
+      data-slot="switch"
+      className={cn(
+        'peer inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-transparent shadow-xs outline-none transition-all',
+        'data-[state=checked]:bg-primary data-[state=unchecked]:bg-input',
+        'focus-visible:ring-2 focus-visible:ring-ring/50',
+        'disabled:cursor-not-allowed disabled:opacity-50',
+        className,
+      )}
+      {...props}
+    >
+      <SwitchPrimitive.Thumb
+        data-slot="switch-thumb"
+        className={cn(
+          'pointer-events-none block size-4 rounded-full bg-background shadow-sm ring-0 transition-transform',
+          'data-[state=checked]:translate-x-4 data-[state=unchecked]:translate-x-0',
+        )}
+      />
+    </SwitchPrimitive.Root>
+  );
+}
+
+export { Switch };
+
+```
+
+---
+
+<a id="src-components-ui-table-jsx"></a>
+## `src/components/ui/table.jsx`
+
+- Path: `src/components/ui/table.jsx`
+- Lines: 82 | Size: 2.1 KB
+
+```jsx
+import * as React from 'react';
+import { cn } from '@/lib/utils';
+
+/**
+ * Table — token-driven table shell.
+ * `data-slot` attributes are kept so a screen can target parts without
+ * inventing new class names.
+ */
+function Table({ className, ...props }) {
+  return (
+    <div data-slot="table-container" className="relative w-full overflow-x-auto">
+      <table data-slot="table" className={cn('w-full caption-bottom text-sm', className)} {...props} />
+    </div>
+  );
+}
+
+function TableHeader({ className, ...props }) {
+  return <thead data-slot="table-header" className={cn('[&_tr]:border-b', className)} {...props} />;
+}
+
+function TableBody({ className, ...props }) {
+  return (
+    <tbody data-slot="table-body" className={cn('[&_tr:last-child]:border-0', className)} {...props} />
+  );
+}
+
+function TableFooter({ className, ...props }) {
+  return (
+    <tfoot
+      data-slot="table-footer"
+      className={cn('border-t bg-muted/50 font-medium [&>tr]:last:border-b-0', className)}
+      {...props}
+    />
+  );
+}
+
+function TableRow({ className, ...props }) {
+  return (
+    <tr
+      data-slot="table-row"
+      className={cn('border-b border-border transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted', className)}
+      {...props}
+    />
+  );
+}
+
+function TableHead({ className, ...props }) {
+  return (
+    <th
+      data-slot="table-head"
+      className={cn(
+        'h-10 px-2 text-left align-middle text-xs font-semibold whitespace-nowrap text-muted-foreground',
+        '[&:has([role=checkbox])]:pr-0',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function TableCell({ className, ...props }) {
+  return (
+    <td
+      data-slot="table-cell"
+      className={cn('p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0', className)}
+      {...props}
+    />
+  );
+}
+
+function TableCaption({ className, ...props }) {
+  return (
+    <caption
+      data-slot="table-caption"
+      className={cn('mt-4 text-sm text-muted-foreground', className)}
+      {...props}
+    />
+  );
+}
+
+export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption };
+
+```
+
+---
+
+<a id="src-components-ui-tabs-jsx"></a>
+## `src/components/ui/tabs.jsx`
+
+- Path: `src/components/ui/tabs.jsx`
+- Lines: 50 | Size: 1.5 KB
+
+```jsx
+import * as React from 'react';
+import * as TabsPrimitive from '@radix-ui/react-tabs';
+import { cn } from '@/lib/utils';
+
+function Tabs({ className, ...props }) {
+  return <TabsPrimitive.Root data-slot="tabs" className={cn('flex flex-col gap-2', className)} {...props} />;
+}
+
+function TabsList({ className, ...props }) {
+  return (
+    <TabsPrimitive.List
+      data-slot="tabs-list"
+      className={cn(
+        'inline-flex w-fit items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function TabsTrigger({ className, ...props }) {
+  return (
+    <TabsPrimitive.Trigger
+      data-slot="tabs-trigger"
+      className={cn(
+        "inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1 text-sm font-medium whitespace-nowrap outline-none",
+        'text-muted-foreground transition-[color,box-shadow]',
+        'data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm',
+        'focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50',
+        "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function TabsContent({ className, ...props }) {
+  return (
+    <TabsPrimitive.Content
+      data-slot="tabs-content"
+      className={cn('flex-1 outline-none', className)}
+      {...props}
+    />
+  );
+}
+
+export { Tabs, TabsList, TabsTrigger, TabsContent };
+
+```
+
+---
+
+<a id="src-components-ui-textarea-jsx"></a>
+## `src/components/ui/textarea.jsx`
+
+- Path: `src/components/ui/textarea.jsx`
+- Lines: 22 | Size: 0.7 KB
+
+```jsx
+import * as React from 'react';
+import { cn } from '@/lib/utils';
+
+function Textarea({ className, ...props }) {
+  return (
+    <textarea
+      data-slot="textarea"
+      className={cn(
+        'flex field-sizing-content min-h-16 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-xs outline-none',
+        'placeholder:text-muted-foreground',
+        'focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50',
+        'disabled:cursor-not-allowed disabled:opacity-50',
+        'aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export { Textarea };
+
+```
+
+---
+
+<a id="src-components-ui-tooltip-jsx"></a>
+## `src/components/ui/tooltip.jsx`
+
+- Path: `src/components/ui/tooltip.jsx`
+- Lines: 38 | Size: 1.3 KB
+
+```jsx
+import * as React from 'react';
+import * as TooltipPrimitive from '@radix-ui/react-tooltip';
+import { cn } from '@/lib/utils';
+
+function TooltipProvider({ delayDuration = 150, ...props }) {
+  return <TooltipPrimitive.Provider data-slot="tooltip-provider" delayDuration={delayDuration} {...props} />;
+}
+
+function Tooltip(props) {
+  return <TooltipPrimitive.Root data-slot="tooltip" {...props} />;
+}
+
+function TooltipTrigger(props) {
+  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />;
+}
+
+function TooltipContent({ className, sideOffset = 4, children, ...props }) {
+  return (
+    <TooltipPrimitive.Portal>
+      <TooltipPrimitive.Content
+        data-slot="tooltip-content"
+        sideOffset={sideOffset}
+        className={cn(
+          'z-50 w-fit rounded-md bg-primary px-3 py-1.5 text-xs text-balance text-primary-foreground',
+          'animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
+          className,
+        )}
+        {...props}
+      >
+        {children}
+        <TooltipPrimitive.Arrow className="z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px] bg-primary fill-primary" />
+      </TooltipPrimitive.Content>
+    </TooltipPrimitive.Portal>
+  );
+}
+
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider };
+
+```
+
+---
+
 <a id="src-components-unassignedbanner-jsx"></a>
 ## `src/components/UnassignedBanner.jsx`
 
 - Path: `src/components/UnassignedBanner.jsx`
-- Lines: 76 | Size: 3.0 KB
+- Lines: 70 | Size: 3.0 KB
 
 ```jsx
 import { Building2 } from 'lucide-react';
 import { confirmAction } from './ConfirmModal';
 import { toast } from './Toast';
+import { Button } from '@/components/ui/button';
 
 /**
  * Offers to attach records that predate multi-business separation to the
@@ -84225,6 +87485,10 @@ import { toast } from './Toast';
  *
  * Assigning is one-way — it names the business in the confirmation so the
  * user cannot do it while looking at the wrong company by accident.
+ *
+ * Ported to Tailwind: the tint is `bg-primary/10` over `bg-card`, so it stays
+ * a light blue wash on light and a deep blue wash on dark instead of a fixed
+ * rgba that only suited one mode.
  */
 export default function UnassignedBanner({ count, businessName, noun, onAssign }) {
   if (!count || !businessName) return null;
@@ -84252,28 +87516,17 @@ export default function UnassignedBanner({ count, businessName, noun, onAssign }
   };
 
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: '1rem',
-      flexWrap: 'wrap',
-      padding: '0.7rem 1rem',
-      marginBottom: '1rem',
-      borderRadius: 10,
-      border: '1px solid var(--border)',
-      background: 'rgba(59, 130, 246, 0.07)',
-    }}>
-      <span style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', fontSize: '0.88rem' }}>
-        <Building2 size={18} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-4 rounded-[10px] border border-border bg-primary/10 px-4 py-[0.7rem] text-foreground">
+      <span className="flex items-center gap-[0.55rem] text-[0.88rem]">
+        <Building2 size={18} className="shrink-0 text-primary" />
         <span>
           <strong>{label}</strong> {count === 1 ? 'is' : 'are'} not assigned to a business,
           so {count === 1 ? 'it shows' : 'they show'} under all of them.
         </span>
       </span>
-      <button type="button" className="btn" onClick={handleClick} style={{ fontSize: '0.85rem' }}>
+      <Button type="button" size="sm" className="text-[0.85rem]" onClick={handleClick}>
         Assign to {businessName}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -84870,11 +88123,284 @@ export default BRAND;
 
 ---
 
+<a id="src-dev-styleguide-jsx"></a>
+## `src/dev/StyleGuide.jsx`
+
+- Path: `src/dev/StyleGuide.jsx`
+- Lines: 262 | Size: 10.5 KB
+
+```jsx
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Progress } from '@/components/ui/progress';
+import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
+/**
+ * Styleguide — /?styleguide
+ *
+ * Every primitive on one page, in the current theme. This is the page you
+ * screenshot when judging "is the theme applied everywhere?", and the page to
+ * extend whenever a new primitive is added. Not linked from the app.
+ */
+const swatches = [
+  ['background', 'bg-background', 'border-border'],
+  ['foreground', 'bg-foreground', ''],
+  ['card', 'bg-card', 'border-border'],
+  ['primary', 'bg-primary', ''],
+  ['secondary', 'bg-secondary', ''],
+  ['muted', 'bg-muted', ''],
+  ['accent', 'bg-accent', ''],
+  ['destructive', 'bg-destructive', ''],
+  ['border', 'bg-border', ''],
+];
+
+const Section = ({ title, children }) => (
+  <section className="flex flex-col gap-4">
+    <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+    <div className="flex flex-wrap items-start gap-3">{children}</div>
+    <Separator />
+  </section>
+);
+
+export default function StyleGuide() {
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));
+  const [progress, setProgress] = useState(40);
+
+  const toggle = () => {
+    const next = !dark;
+    setDark(next);
+    document.documentElement.setAttribute('data-theme', next ? 'dark' : 'light');
+    document.documentElement.classList.toggle('dark', next);
+  };
+
+  return (
+    <div className="min-h-screen bg-background p-8 text-foreground">
+      <div className="mx-auto flex max-w-5xl flex-col gap-8">
+        <header className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">ARTHA UI kit</h1>
+            <p className="text-sm text-muted-foreground">
+              shadcn/ui primitives on the ARTHA token layer — every colour below comes from
+              <code className="mx-1 rounded bg-muted px-1 py-0.5 text-xs">src/styles/tokens.css</code>.
+            </p>
+          </div>
+          <Button variant="outline" onClick={toggle}>
+            {dark ? 'Switch to Light' : 'Switch to Dark'}
+          </Button>
+        </header>
+
+        <Section title="Tokens">
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
+            {swatches.map(([label, cls, border]) => (
+              <div key={label} className="flex flex-col gap-1">
+                <div className={`h-14 w-full rounded-md border ${cls} ${border || 'border-transparent'}`} />
+                <span className="text-xs text-muted-foreground">{label}</span>
+              </div>
+            ))}
+          </div>
+        </Section>
+
+        <Section title="Buttons">
+          <Button>Default</Button>
+          <Button variant="secondary">Secondary</Button>
+          <Button variant="outline">Outline</Button>
+          <Button variant="ghost">Ghost</Button>
+          <Button variant="destructive">Destructive</Button>
+          <Button variant="link">Link</Button>
+          <Button size="sm">Small</Button>
+          <Button size="lg">Large</Button>
+          <Button disabled>Disabled</Button>
+        </Section>
+
+        <Section title="Badges">
+          <Badge>Default</Badge>
+          <Badge variant="secondary">Secondary</Badge>
+          <Badge variant="outline">Outline</Badge>
+          <Badge variant="destructive">Destructive</Badge>
+        </Section>
+
+        <Section title="Form controls">
+          <div className="grid w-full max-w-md gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="sg-name">Business name</Label>
+              <Input id="sg-name" placeholder="Acme Traders" />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="sg-notes">Notes</Label>
+              <Textarea id="sg-notes" placeholder="Payment terms…" />
+            </div>
+            <div className="grid gap-2">
+              <Label>GST rate</Label>
+              <Select defaultValue="18">
+                <SelectTrigger>
+                  <SelectValue placeholder="Pick a rate" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">0%</SelectItem>
+                  <SelectItem value="5">5%</SelectItem>
+                  <SelectItem value="12">12%</SelectItem>
+                  <SelectItem value="18">18%</SelectItem>
+                  <SelectItem value="28">28%</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox id="sg-check" defaultChecked />
+              <Label htmlFor="sg-check">Tax inclusive prices</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch id="sg-switch" defaultChecked />
+              <Label htmlFor="sg-switch">Round off total</Label>
+            </div>
+            <RadioGroup defaultValue="b2b" className="flex gap-6">
+              {['b2b', 'b2c'].map((v) => (
+                <div key={v} className="flex items-center gap-2">
+                  <RadioGroupItem value={v} id={`sg-radio-${v}`} />
+                  <Label htmlFor={`sg-radio-${v}`}>{v.toUpperCase()}</Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+        </Section>
+
+        <Section title="Card">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>This month</CardTitle>
+              <CardDescription>Revenue after returns</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              <div className="text-2xl font-bold">₹1,28,054.20</div>
+              <Progress value={progress} />
+              <Input
+                type="range"
+                min="0"
+                max="100"
+                value={progress}
+                onChange={(e) => setProgress(Number(e.target.value))}
+                className="h-2 border-0 bg-transparent p-0 shadow-none"
+              />
+            </CardContent>
+            <CardFooter className="justify-end gap-2">
+              <Button variant="outline" size="sm">Export</Button>
+              <Button size="sm">Open</Button>
+            </CardFooter>
+          </Card>
+        </Section>
+
+        <Section title="Overlays">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline">Open dialog</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Delete this invoice?</DialogTitle>
+                <DialogDescription>
+                  INV/2026-27/0042 will be removed from this company. This cannot be undone.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline">Cancel</Button>
+                <Button variant="destructive">Delete</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">Dropdown</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuLabel>Invoice</DropdownMenuLabel>
+              <DropdownMenuItem>Edit</DropdownMenuItem>
+              <DropdownMenuItem>Duplicate</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost">Tooltip</Button>
+              </TooltipTrigger>
+              <TooltipContent>Saved locally</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </Section>
+
+        <Section title="Tabs &amp; table">
+          <div className="w-full">
+            <Tabs defaultValue="all">
+              <TabsList>
+                <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="unpaid">Unpaid</TabsTrigger>
+                <TabsTrigger value="paid">Paid</TabsTrigger>
+              </TabsList>
+              <TabsContent value="all">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Client</TableHead>
+                      <TableHead>Invoice</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>Sharma Interiors</TableCell>
+                      <TableCell>INV/2026-27/0041</TableCell>
+                      <TableCell className="text-right">₹18,880.00</TableCell>
+                    </TableRow>
+                    <TableRow data-state="selected">
+                      <TableCell>Patel Hardware</TableCell>
+                      <TableCell>INV/2026-27/0042</TableCell>
+                      <TableCell className="text-right">₹4,130.00</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </TabsContent>
+              <TabsContent value="unpaid">Nothing unpaid.</TabsContent>
+              <TabsContent value="paid">Nothing paid.</TabsContent>
+            </Tabs>
+          </div>
+        </Section>
+      </div>
+    </div>
+  );
+}
+
+```
+
+---
+
 <a id="src-index-css"></a>
 ## `src/index.css`
 
 - Path: `src/index.css`
-- Lines: 3516 | Size: 117.1 KB
+- Lines: 3540 | Size: 118.7 KB
 
 ```css
 /* v1.10.2 — Removed render-blocking `@import url(https://fonts.googleapis.com/...)`.
@@ -84890,6 +88416,35 @@ export default BRAND;
    are covered. Fallback stack is the system font (Segoe UI, San
    Francisco, Roboto) so pre-cache users get clean typography
    immediately. */
+
+/* ============================================================================
+   THEME FOUNDATION (Tailwind v4 + shadcn token contract)
+   ----------------------------------------------------------------------------
+   Everything below `@layer legacy` is the old stylesheet, unchanged. It is
+   wrapped in a cascade layer for one reason: unlayered CSS always beats
+   layered CSS, so without this wrapper every Tailwind utility added to a
+   component would lose to the legacy rule and appear to do nothing.
+
+   Layer order, weakest first:
+     legacy    — the old hand-written rules (this file, still winning over
+                 nothing but losing to everything else)
+     theme     — Tailwind's default theme scale (spacing, radius, fonts)
+     base      — Tailwind preflight. NOT imported yet on purpose: its reset
+                 would restyle every existing button/input before those
+                 screens are ported. Enabled in the final stage.
+     utilities — Tailwind utility classes, which must win.
+
+   tokens.css is imported UNLAYERED so its custom properties are
+   authoritative — that is what makes the dark values apply.
+   ========================================================================== */
+@layer legacy, theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "tw-animate-css";
+@import "./styles/tokens.css";
+
+@layer legacy {
 
 :root {
   --primary: #2563eb;
@@ -85302,18 +88857,20 @@ body {
      Receipts, Reports, GST Returns, Income Tax, User Guide, Dark Mode,
      Control Panel, Settings) which exceeds the viewport height. Prior
      CSS had no overflow rule so bottom items got clipped invisibly.
-     Now: sidebar scrolls internally, brand stays at top. */
+     v1.10.81 — The whole rail used to scroll, so the ARTHA brand and the
+     business switcher slid out of view. Only the menu scrolls now; the
+     rail itself is fixed and the header stays put. */
   height: 100vh;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 /* v1.10.78 (#92) - a scrollbar you can grab (was "thin", a hairline): 10px in
    Chrome/Edge via ::-webkit-scrollbar below. Firefox has no such selector, so
    it gets the standard properties; set for Chrome they would switch its
-   ::-webkit-scrollbar styling off. */
+   ::-webkit-scrollbar styling off. The bar belongs to the scrolling menu, not
+   the whole rail. */
 @supports not selector(::-webkit-scrollbar) {
-  .sidebar { scrollbar-width: auto; scrollbar-color: rgba(255,255,255,0.22) transparent; }
-  html:not([data-theme="dark"]) .sidebar { scrollbar-color: rgba(15, 23, 42, 0.22) transparent; }
+  .sidebar-nav { scrollbar-width: auto; scrollbar-color: rgba(255,255,255,0.22) transparent; }
+  html:not([data-theme="dark"]) .sidebar-nav { scrollbar-color: rgba(15, 23, 42, 0.22) transparent; }
 }
 
 /* v1.10.77 (#84) - sidebar auto-hide (desktop only; phones already slide it
@@ -85355,10 +88912,10 @@ body {
   /* v1.10.78 (#92) - the closed rail is slim and clean: the logo and centred
      icons only, nothing cut in half. The name, the Auto-hide checkbox and the
      business switcher come back when it opens. */
-  .app-layout.sidebar-autohide > .sidebar:not(:hover):not(:has(:focus-visible)) {
+  .app-layout.sidebar-autohide > .sidebar:not(:hover):not(:has(:focus-visible)) .sidebar-nav {
     scrollbar-width: none;
   }
-  .app-layout.sidebar-autohide > .sidebar:not(:hover):not(:has(:focus-visible))::-webkit-scrollbar { width: 0; }
+  .app-layout.sidebar-autohide > .sidebar:not(:hover):not(:has(:focus-visible)) .sidebar-nav::-webkit-scrollbar { width: 0; }
   .app-layout.sidebar-autohide > .sidebar:not(:hover):not(:has(:focus-visible)) .sidebar-brand { justify-content: center; gap: 0; }
   .app-layout.sidebar-autohide > .sidebar:not(:hover):not(:has(:focus-visible)) .sidebar-brand > :not(.sidebar-logo),
   .app-layout.sidebar-autohide > .sidebar:not(:hover):not(:has(:focus-visible)) .sidebar-autohide-toggle,
@@ -85385,8 +88942,8 @@ body {
 .is-scrolling > .low-stock-ticker-track { animation: low-stock-scroll linear infinite; }
 .low-stock-ticker:hover .low-stock-ticker-track, .low-stock-ticker:focus-within .low-stock-ticker-track { animation-play-state: paused; }
 @keyframes low-stock-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-.low-stock-chip { padding: 0.3rem 0.7rem; border-radius: 6px; font: inherit; font-size: 0.8rem; cursor: pointer; background: #fffbeb; border: 1px solid #fde68a; color: #d97706; flex-shrink: 0; }
-.low-stock-chip.low-stock-out { background: #fef2f2; border-color: #fecaca; color: #dc2626; }
+.low-stock-chip { padding: 0.3rem 0.7rem; border-radius: 6px; font: inherit; font-size: 0.8rem; cursor: pointer; background: var(--warning); border: 1px solid var(--warning-border); color: var(--warning-foreground); flex-shrink: 0; }
+.low-stock-chip.low-stock-out { background: var(--destructive-surface); border-color: var(--destructive-surface-border); color: var(--destructive); }
 @media (prefers-reduced-motion: reduce) {
   .is-scrolling > .low-stock-ticker-track { animation: none; }
   .low-stock-ticker-window, .low-stock-ticker-window.is-scrolling { overflow-x: auto; -webkit-mask-image: none; mask-image: none; }
@@ -85464,14 +89021,14 @@ body {
   .app-layout .settings-bar { top: -1rem; } /* just under the fixed mobile header; two classes to outrank the base rule below */
   .pwa-install-banner { top: 52px; }
 }
-.sidebar::-webkit-scrollbar { width: 10px; }
-.sidebar::-webkit-scrollbar-thumb {
+.sidebar-nav::-webkit-scrollbar { width: 10px; }
+.sidebar-nav::-webkit-scrollbar-thumb {
   background: rgba(255,255,255,0.22);
   border-radius: 5px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
-.sidebar::-webkit-scrollbar-thumb:hover {
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
   background: rgba(255,255,255,0.25);
 }
 
@@ -85516,7 +89073,16 @@ body {
   flex-direction: column;
   gap: 0.25rem;
   flex: 1;
+  /* v1.10.81 — only the menu scrolls. `min-height: 0` lets this flex child
+     shrink below its content height inside the fixed rail, so the brand and
+     the business switcher above it never move. */
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
+/* A column flex container compresses its children to fit before it scrolls.
+   Keep every row at its natural height so the menu actually scrolls. */
+.sidebar-nav > * { flex-shrink: 0; }
 
 /* Business profile switcher */
 .profile-switcher {
@@ -85619,8 +89185,8 @@ body {
 }
 
 .nav-btn-active {
-  background: var(--primary) !important;
-  color: white !important;
+  background: var(--primary);
+  color: white;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
 }
 
@@ -85667,18 +89233,9 @@ body {
    Settings) inherits the same visual identity automatically. Right-
    side action slot is preserved via the existing justify-content:
    space-between + align-items: center. */
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
-  padding: 1.1rem 1.35rem;
-  background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.12), var(--card-bg));
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  margin-bottom: 1.5rem;
-}
+/* .page-header was migrated to Tailwind in src/components/PageHeader.jsx.
+   .page-title / .page-subtitle stay until every screen that writes them
+   directly has been ported. */
 
 .page-title {
   font-size: 1.55rem;
@@ -85693,15 +89250,6 @@ body {
   font-size: 0.86rem;
   margin: 0;
 }
-/* Fallback for dark mode — some browsers render color-mix() with
-   `oklab` slightly differently; the fallback ensures the gradient
-   still reads correctly. */
-[data-theme="dark"] .page-header {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.14), var(--card-bg));
-}
-/* v1.10.77 (#84) - compact header (Dashboard): a plain title row. */
-.page-header.page-header-compact,
-[data-theme="dark"] .page-header.page-header-compact { padding: 0; background: none; border: 0; border-radius: 0; }
 
 .section-title {
   font-size: 0.95rem;
@@ -86309,7 +89857,7 @@ textarea.form-input { resize: vertical; min-height: 60px; }
   height: 40px;
   border-radius: 10px;
   background: linear-gradient(135deg, var(--primary), #3b82f6);
-  color: white;
+  color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -86377,10 +89925,10 @@ textarea.form-input { resize: vertical; min-height: 60px; }
 
 /* Icon button green */
 .icon-btn-green {
-  color: #059669;
+  color: var(--success);
 }
 .icon-btn-green:hover {
-  background: #ecfdf5;
+  background: var(--success-surface);
 }
 
 .line-item-row {
@@ -87771,7 +91319,7 @@ kbd {
   padding: 0.45rem 1rem;
   border-radius: 20px;
   border: 1.5px solid var(--border);
-  background: white;
+  background: var(--card);
   font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
@@ -88321,8 +91869,8 @@ html:not([data-theme="dark"]) .sidebar {
   color: #0f172a;
   border-right: 1px solid var(--border);
 }
-html:not([data-theme="dark"]) .sidebar::-webkit-scrollbar-thumb { background: rgba(15, 23, 42, 0.22); background-clip: padding-box; }
-html:not([data-theme="dark"]) .sidebar::-webkit-scrollbar-thumb:hover { background: rgba(15, 23, 42, 0.38); background-clip: padding-box; }
+html:not([data-theme="dark"]) .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(15, 23, 42, 0.22); background-clip: padding-box; }
+html:not([data-theme="dark"]) .sidebar-nav::-webkit-scrollbar-thumb:hover { background: rgba(15, 23, 42, 0.38); background-clip: padding-box; }
 html:not([data-theme="dark"]) .sidebar-title { color: #0f172a; }
 html:not([data-theme="dark"]) .sidebar-subtitle { color: #64748b; }
 html:not([data-theme="dark"]) .sidebar-autohide-toggle { color: #64748b; }
@@ -88392,6 +91940,8 @@ html:not([data-theme="dark"]) .mobile-topbar-btn { background: rgba(15, 23, 42, 
   font-size: 0.85rem;
 }
 .app-lock-help { font-size: 0.8rem; color: var(--text-muted); text-align: left; line-height: 1.5; }
+
+} /* @layer legacy */
 
 ```
 
@@ -88563,11 +92113,41 @@ html:not([data-theme="dark"]) .mobile-topbar-btn { background: rgba(15, 23, 42, 
 
 ---
 
+<a id="src-lib-utils-js"></a>
+## `src/lib/utils.js`
+
+- Path: `src/lib/utils.js`
+- Lines: 19 | Size: 0.7 KB
+
+```javascript
+/**
+ * `cn` — merge class names the way shadcn/ui expects.
+ *
+ * Why it exists: a component receives `className="px-4"` from the caller and
+ * also carries its own `px-2`. Plain string concatenation leaves both, and
+ * whichever rule Tailwind emitted last wins — usually not the caller's. `twMerge`
+ * removes the earlier conflicting utility so the caller always wins, and `clsx`
+ * handles the conditional/array/object forms.
+ *
+ * Not a styling helper: it never decides colours. Colours come from the tokens
+ * in `src/styles/tokens.css`.
+ */
+import { clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+export function cn(...inputs) {
+  return twMerge(clsx(inputs));
+}
+
+```
+
+---
+
 <a id="src-main-jsx"></a>
 ## `src/main.jsx`
 
 - Path: `src/main.jsx`
-- Lines: 146 | Size: 6.3 KB
+- Lines: 168 | Size: 7.2 KB
 
 ```jsx
 import { StrictMode } from 'react'
@@ -88575,6 +92155,8 @@ import { createRoot } from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
 import App from './App.jsx'
 import AppLockGate from './components/AppLock.jsx'
+import CompanyGate from './components/CompanyGate.jsx'
+import { installAuthWatcher } from './services/companies'
 import { restorePrefs, startMirroring } from './utils/prefsMirror'
 import './index.css'
 
@@ -88705,16 +92287,161 @@ if ('serviceWorker' in navigator) {
 
 // v1.10.77 (#84) - settings the browser has lost come back from the data
 // folder before the first render (the wizard and Region read them on start).
+// Multi-company: no company is open until one is chosen on the Select Company
+// page. restorePrefs() then gets "not signed in" and returns false (nothing is
+// mirrored); after a company is opened the page reloads and it restores THAT
+// company's settings.
+installAuthWatcher()
 restorePrefs().then((restored) => {
   startMirroring(restored)
+
+  // /?styleguide — the UI-kit page. Mounted instead of the app so the
+  // primitives can be reviewed in both themes without logging in. Lazy so it
+  // costs nothing in the normal bundle.
+  if (new URLSearchParams(window.location.search).has('styleguide')) {
+    import('./dev/StyleGuide.jsx').then(({ default: StyleGuide }) => {
+      createRoot(document.getElementById('root')).render(
+        <StrictMode><StyleGuide /></StrictMode>,
+      )
+    })
+    return
+  }
+
   createRoot(document.getElementById('root')).render(
     <StrictMode>
-      <AppLockGate>
-        <App />
-      </AppLockGate>
+      <CompanyGate>
+        <AppLockGate>
+          <App />
+        </AppLockGate>
+      </CompanyGate>
     </StrictMode>,
   )
 })
+
+```
+
+---
+
+<a id="src-services-companies-js"></a>
+## `src/services/companies.js`
+
+- Path: `src/services/companies.js`
+- Lines: 114 | Size: 5.1 KB
+
+```javascript
+// ============================================================================
+// ARTHA - companies, login and logout (browser side)
+// ----------------------------------------------------------------------------
+// The server keeps one folder per company (data/COMP0001, data/COMP0002 ...)
+// and knows which company this browser opened from a session cookie. This file
+// is the only place that talks to /api/companies and /api/auth/*.
+//
+// Several settings live in the browser (Print & PDF, Region, theme ...). They
+// belong to a company too, so they are cleared when another company is opened;
+// the new company's own copy is then restored from its data folder (see
+// utils/prefsMirror.js) when the page reloads.
+// ============================================================================
+import { flushPrefs, pauseMirroring } from '../utils/prefsMirror';
+import { UNLOCKED_KEY } from '../utils/appLock';
+
+export const AUTH_REQUIRED_EVENT = 'artha-auth-required';
+const ACTIVE_COMPANY_KEY = 'artha_activeCompany'; // which company this browser last opened
+
+async function call(url, options = {}) {
+  const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...options });
+  let body = null;
+  try { body = await res.json(); } catch { /* empty body */ }
+  if (!res.ok) {
+    const err = new Error(body?.error || `Request failed (${res.status})`);
+    err.status = res.status;
+    err.body = body;
+    throw err;
+  }
+  return body;
+}
+
+export const getSession = () => call('/api/auth/session');
+export const listCompanies = () => call('/api/companies');
+export const createCompanyOnServer = (name) => call('/api/companies', { method: 'POST', body: JSON.stringify({ name }) });
+export const loginToCompany = (companyId, pin) => call('/api/auth/login', {
+  method: 'POST', body: JSON.stringify(pin ? { companyId, pin } : { companyId }),
+});
+export const logoutOnServer = () => call('/api/auth/logout', { method: 'POST' });
+
+// Any API answer "401 + X-Artha-Auth: required" means the company was closed
+// (the app was restarted, or another tab logged out): show the company list.
+export function installAuthWatcher() {
+  if (window.__arthaAuthWatcher) return;
+  window.__arthaAuthWatcher = true;
+  const original = window.fetch.bind(window);
+  window.fetch = async (...args) => {
+    const res = await original(...args);
+    if (res.status === 401 && res.headers.get('X-Artha-Auth') === 'required') {
+      window.dispatchEvent(new Event(AUTH_REQUIRED_EVENT));
+    }
+    return res;
+  };
+}
+
+// What belongs to the company that is open, and must not leak into the next one.
+// App-level notices (PWA install, update banner) are not company data.
+const KEEP_KEYS = new Set(['freegstbill_pwa_dismissed_at', 'freegstbill_dismissedUpdate', ACTIVE_COMPANY_KEY]);
+const COMPANY_PREFIXES = ['gst_', 'freegstbill_', 'fgsb_'];
+
+export function clearCompanyScopedStorage() {
+  pauseMirroring(); // clearing must not wipe the closing company's saved copy
+  try {
+    const doomed = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && !KEEP_KEYS.has(k) && COMPANY_PREFIXES.some((p) => k.startsWith(p))) doomed.push(k);
+    }
+    doomed.forEach((k) => localStorage.removeItem(k));
+  } catch { /* storage blocked */ }
+  try { sessionStorage.clear(); } catch { /* storage blocked */ }
+}
+
+// Cached API answers (offline copy) are per company too.
+async function dropOfflineApiCache() {
+  try { if (typeof caches !== 'undefined') await caches.delete('api-cache'); } catch { /* none */ }
+}
+
+export const rememberedCompany = () => { try { return localStorage.getItem(ACTIVE_COMPANY_KEY); } catch { return null; } };
+
+// Call after a successful login / company creation. Reloads the page so the
+// whole app starts fresh for that company (its own settings, its own data).
+export async function enterCompany(companyId, { keepStorage = false } = {}) {
+  const switching = rememberedCompany() !== companyId;
+  if (switching) {
+    await dropOfflineApiCache();
+    // keepStorage: a company that was just created already holds its first
+    // settings (from the setup wizard); they must survive the reload.
+    if (!keepStorage) clearCompanyScopedStorage();
+  }
+  try {
+    localStorage.setItem(ACTIVE_COMPANY_KEY, companyId);
+    // The PIN (if the company has one) was just checked by the login.
+    sessionStorage.setItem(UNLOCKED_KEY, '1');
+  } catch { /* storage blocked */ }
+  window.location.reload();
+}
+
+// Close the company: save what is pending, end the session, back to the list.
+export async function logoutAndReload() {
+  try { await flushPrefs(); } catch { /* best effort */ }
+  try { await logoutOnServer(); } catch { /* the server may be gone already */ }
+  clearCompanyScopedStorage();
+  await dropOfflineApiCache();
+  try { localStorage.removeItem(ACTIVE_COMPANY_KEY); } catch { /* storage blocked */ }
+  window.location.reload();
+}
+
+// "COMP0007" -> 7
+export const companySeq = (id) => parseInt(String(id).slice(4), 10) || 0;
+export const nextCompanyCode = (companies) => {
+  const n = companies.reduce((m, c) => Math.max(m, companySeq(c.id)), 0) + 1;
+  return `COMP${String(n).padStart(4, '0')}`;
+};
 
 ```
 
@@ -89506,6 +93233,227 @@ export const importData = async (jsonString, selection) => {
 
   return result;
 };
+
+```
+
+---
+
+<a id="src-styles-tokens-css"></a>
+## `src/styles/tokens.css`
+
+- Path: `src/styles/tokens.css`
+- Lines: 210 | Size: 7.5 KB
+
+```css
+/* ============================================================================
+   ARTHA design tokens — the shadcn/ui contract
+   ============================================================================
+
+   WHY THIS FILE EXISTS
+   --------------------
+   The app used to hardcode colours in every rule (`background: white`,
+   `color: #64748b`) and then patch dark mode with ~144 one-off
+   `[data-theme="dark"] .something { … }` blocks. Anything nobody
+   remembered kept its light colour, which is exactly the "some parts
+   don't follow the theme" bug.
+
+   From here on a component names a ROLE, never a colour:
+
+       bg-background   text-foreground   bg-card   text-muted-foreground
+       bg-primary      text-primary-foreground      border-border
+       bg-secondary    bg-accent         bg-destructive   ring-ring
+
+   Swap the values below and the whole app follows, in both modes.
+
+   HARD CONSTRAINT — NO oklch / color-mix
+   --------------------------------------
+   html2canvas rasterises the invoice for "Save & Download". It cannot
+   parse `oklch()` or `color-mix()`; that shipped as a real bug once
+   (see the v1.10.40 note in index.css: "Attempting to parse an
+   unsupported color function oklab"). shadcn's stock v4 theme is
+   oklch-only, so every value here is hex / rgba. If you import a
+   tweakcn or shadcn theme, convert its oklch values to hex first.
+
+   MODE
+   ----
+   Both selectors are supported:
+     - `.dark`                 — shadcn / Tailwind convention
+     - `[data-theme="dark"]`   — what App.jsx has always written
+   During the migration App.jsx sets both, so legacy CSS and new
+   utilities agree no matter which one a component reads.
+
+   Values are deliberately identical to the old `:root` /
+   `[data-theme="dark"]` block in index.css, so adding this file
+   changes nothing visually. Only --primary, --border and --radius
+   overlap with the old names; both copies hold the same value.
+   ========================================================================== */
+
+:root {
+  /* geometry */
+  --radius: 0.625rem;              /* 10px — matches the old --radius */
+
+  /* surfaces */
+  --background: #f0f2f5;           /* page */
+  --foreground: #111827;           /* body text */
+  --card: #ffffff;
+  --card-foreground: #111827;
+  --popover: #ffffff;
+  --popover-foreground: #111827;
+
+  /* brand */
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+
+  /* supports / neutrals */
+  --secondary: #f1f5f9;
+  --secondary-foreground: #111827;
+  --muted: #f1f5f9;
+  --muted-foreground: #6b7280;
+  --accent: #f1f5f9;
+  --accent-foreground: #111827;
+
+  /* feedback */
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+
+  /* status surfaces — the "info" callout, warnings, success text and the
+     support nudge all used to hardcode a light tint and then a separate
+     dark patch. They are tokens now, so a banner cannot be left behind. */
+  --success: #059669;
+  --success-foreground: #ffffff;
+  --success-surface: #ecfdf5;
+  --success-surface-border: #a7f3d0;
+  --info: #ecfdf5;
+  --info-border: #bbf7d0;
+  --info-foreground: #065f46;
+  --warning: #fffbeb;
+  --warning-border: #fde68a;
+  --warning-foreground: #92400e;
+  --destructive-surface: #fef2f2;
+  --destructive-surface-border: #fecaca;
+
+  /* the navigation rail. It follows the theme: white in Light Mode, navy in
+     Dark Mode (the legacy sheet did this with `html:not([data-theme="dark"])`
+     patches; these tokens express the same thing once). */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #475569;
+  --sidebar-foreground-strong: #0f172a;
+  --sidebar-muted: #64748b;
+  --sidebar-accent: rgba(15, 23, 42, 0.06);
+  --sidebar-accent-hover: rgba(15, 23, 42, 0.09);
+  --sidebar-border: rgba(229, 231, 235, 0.8);
+
+  /* lines + focus */
+  --border: rgba(229, 231, 235, 0.8);
+  --input: #e2e8f0;
+  --ring: #2563eb;
+}
+
+[data-theme="dark"],
+.dark {
+  --background: #0f172a;
+  --foreground: #f1f5f9;
+  --card: #1e293b;
+  --card-foreground: #f1f5f9;
+  --popover: #1e293b;
+  --popover-foreground: #f1f5f9;
+
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+
+  --secondary: #334155;
+  --secondary-foreground: #f1f5f9;
+  --muted: #334155;
+  --muted-foreground: #94a3b8;
+  --accent: #334155;
+  --accent-foreground: #f1f5f9;
+
+  --destructive: #f87171;
+  --destructive-foreground: #0f172a;
+
+  --success: #34d399;
+  --success-foreground: #0f172a;
+  --success-surface: rgba(16, 185, 129, 0.12);
+  --success-surface-border: rgba(16, 185, 129, 0.4);
+  --info: rgba(16, 185, 129, 0.12);
+  --info-border: rgba(16, 185, 129, 0.4);
+  --info-foreground: #6ee7b7;
+  --warning: rgba(217, 119, 6, 0.12);
+  --warning-border: rgba(217, 119, 6, 0.4);
+  --warning-foreground: #fcd34d;
+  --destructive-surface: rgba(248, 113, 113, 0.12);
+  --destructive-surface-border: rgba(248, 113, 113, 0.4);
+
+  --sidebar: #0f172a;
+  --sidebar-foreground: #94a3b8;
+  --sidebar-foreground-strong: #e2e8f0;
+  --sidebar-muted: #64748b;
+  --sidebar-accent: rgba(255, 255, 255, 0.06);
+  --sidebar-accent-hover: rgba(255, 255, 255, 0.1);
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+
+  --border: rgba(51, 65, 85, 0.8);
+  --input: #334155;
+  --ring: #3b82f6;
+}
+
+/* ---------------------------------------------------------------------------
+   Expose the tokens as Tailwind utilities.
+
+   `inline` makes `bg-card` compile to `background-color: var(--card)` rather
+   than baking in today's hex, which is what lets a mode switch repaint the
+   app without a rebuild.
+   ------------------------------------------------------------------------- */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-surface: var(--success-surface);
+  --color-success-surface-border: var(--success-surface-border);
+  --color-info: var(--info);
+  --color-info-border: var(--info-border);
+  --color-info-foreground: var(--info-foreground);
+  --color-warning: var(--warning);
+  --color-warning-border: var(--warning-border);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-destructive-surface: var(--destructive-surface);
+  --color-destructive-surface-border: var(--destructive-surface-border);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-foreground-strong: var(--sidebar-foreground-strong);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-hover: var(--sidebar-accent-hover);
+  --color-sidebar-border: var(--sidebar-border);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* `dark:` utilities must follow the app's two mode switches, not the OS. */
+@custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
 
 ```
 
@@ -94198,7 +98146,7 @@ export function partyOutstanding(bills, months, currency = 'INR') {
 ## `src/utils/prefsMirror.js`
 
 - Path: `src/utils/prefsMirror.js`
-- Lines: 78 | Size: 3.8 KB
+- Lines: 113 | Size: 5.2 KB
 
 ```javascript
 // v1.10.77 (#84) - settings that lived ONLY in this browser's storage are now
@@ -94244,6 +98192,10 @@ export async function restorePrefs() {
 // merges them, so nothing this browser did not touch is ever replaced.
 const dirty = new Set();
 let timer = null;
+// Multi-company: the copy in the data folder belongs to the company that is
+// open. While the browser is being switched to another company, nothing may be
+// written to it (see pauseMirroring / services/companies.js).
+let paused = false;
 const push = () => {
   const set = {};
   const remove = [];
@@ -94254,9 +98206,40 @@ const push = () => {
     }
   } catch { return; }
   dirty.clear();
-  fetch(ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ set, remove }) }).catch(() => {});
+  return fetch(ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ set, remove }) }).catch(() => {});
 };
-const touch = (k) => { dirty.add(k); clearTimeout(timer); timer = setTimeout(push, 600); };
+const touch = (k) => { if (paused) return; dirty.add(k); clearTimeout(timer); timer = setTimeout(push, 600); };
+
+// Send any change still waiting for its 600 ms timer right now (before the
+// company is closed), so the closing company's copy is complete.
+export async function flushPrefs() {
+  clearTimeout(timer);
+  if (dirty.size) await push();
+}
+
+// Stop mirroring for good in this page: the next step reloads it for another
+// company. Anything not yet sent is dropped, never sent to the wrong company.
+export function pauseMirroring() {
+  paused = true;
+  clearTimeout(timer);
+  dirty.clear();
+}
+
+// A brand-new company: its first settings (from the setup wizard) are written
+// to the browser while no mirroring runs, so they are sent in one go here.
+export async function pushAllMirroredNow() {
+  const set = {};
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (isMirrored(k)) set[k] = localStorage.getItem(k);
+    }
+  } catch { return false; }
+  try {
+    const res = await fetch(ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ set, remove: [] }) });
+    return res.ok;
+  } catch { return false; }
+}
 
 // Every write or removal of a mirrored key, from anywhere in the app, updates
 // the copy in the data folder (one write per burst of changes). Only after a
@@ -95155,7 +99138,7 @@ export function buildXlsx(rows, sheetName = 'Sheet1') {
 ## `tests/smoke.mjs`
 
 - Path: `tests/smoke.mjs`
-- Lines: 1844 | Size: 107.5 KB
+- Lines: 1978 | Size: 114.4 KB
 
 ```javascript
 /**
@@ -95293,11 +99276,59 @@ async function dismissFirstRun(page) {
 const APP = await startServer();
 console.log(`\nRunning smoke tests against ${APP} (Firefox)\n`);
 
+// ---- Multi-company: open a company before anything touches /api ----------
+// Every /api route now runs inside ONE company's folder (data/COMPxxxx) and
+// needs the `artha_sid` session cookie; without it the answer is 401
+// no-session. A fresh install has no company at all, so create one (which
+// also logs us in) and hand the same cookie to the browser contexts and to
+// the plain Node fetch() calls below.
+const cookiePair = (res) => {
+  const all = res.headers.getSetCookie?.() || [];
+  const raw = all[0] || res.headers.get('set-cookie') || '';
+  return raw.split(';')[0] || ''; // "artha_sid=<token>"
+};
+
+async function openCompany() {
+  const listed = await fetch(`${APP}/api/companies`)
+    .then((r) => (r.ok ? r.json() : { companies: [] }))
+    .catch(() => ({ companies: [] }));
+  const companies = listed.companies || [];
+  if (companies.length) {
+    const company = companies.find((c) => !c.locked) || companies[0];
+    const login = await fetch(`${APP}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ companyId: company.id, pin: process.env.ARTHA_SMOKE_PIN || undefined }),
+    });
+    if (login.ok) return cookiePair(login);
+    // A PIN-locked company needs the user's PIN; never guess it.
+    if (login.status === 401 && companies.every((c) => c.locked)) {
+      throw new Error(`company ${company.id} is PIN-locked — set ARTHA_SMOKE_PIN to run the suite`);
+    }
+    if (login.status !== 401) throw new Error(`could not log in to ${company.id} (${login.status})`);
+  }
+  // No company yet (fresh install): create one; the server opens it for us.
+  const created = await fetch(`${APP}/api/companies`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: 'Smoke Test Company' }),
+  });
+  if (!created.ok) throw new Error(`could not create a company (${created.status})`);
+  const pair = cookiePair(created);
+  if (!pair) throw new Error('the server did not return a session cookie');
+  return pair;
+}
+
+const sessionPair = await openCompany();
+const sessionValue = sessionPair.slice(sessionPair.indexOf('=') + 1);
+const authHeaders = { Cookie: sessionPair };
+console.log(`Logged in to a company (${sessionPair.split('=')[0]})\n`);
+
 // The suite changes the ACTIVE business profile several times, and the server
 // replaces that file wholesale on every save. Snapshot it before anything runs
 // and put it back in `finally`, so a step that times out half way can never
 // leave a real profile reduced to a bare "Smoke Alpha".
-const profileAtStart = await fetch(`${APP}/api/profile`)
+const profileAtStart = await fetch(`${APP}/api/profile`, { headers: authHeaders })
   .then((r) => (r.ok ? r.json() : null))
   .catch(() => null);
 
@@ -95305,6 +99336,10 @@ const browser = await firefox.launch({ headless: true });
 // 1366x768 is the resolution the preview-clipping bug needed (ERR-005).
 // It is also the most common laptop size among this app's users.
 const ctx = await browser.newContext({ viewport: { width: 1366, height: 768 }, acceptDownloads: true });
+// Multi-company: the page must start already logged in to the company opened
+// above, otherwise CompanyGate shows the Select Company page and every later
+// click times out.
+await ctx.addCookies([{ name: 'artha_sid', value: sessionValue, url: APP }]);
 // Playwright gives a page 30 s to load. On a busy machine - another dev
 // server pinning three cores was enough - a reload under the release gate ran
 // past that and aborted the whole suite, twice in a row, with code that had
@@ -95323,6 +99358,87 @@ try {
   await dismissFirstRun(page);
   check('first-run setup can be dismissed',
     await page.evaluate(() => !!document.querySelector('.nav-btn')));
+
+  // ---- Select Company + Setup New Company wizard (v1.10.81) --------------
+  // Two field bugs, both invisible to a build:
+  //   1. the wizard sat ON TOP of the Select Company page, but that page's
+  //      window-level shortcut was still live — pressing Enter in the company
+  //      name box logged the user straight into the company highlighted
+  //      underneath;
+  //   2. hovering the highlighted company repainted it near-white while its
+  //      cells stayed white, so the name/code/dates vanished under the cursor.
+  // A guest context (no session cookie) is the only way to SEE that page once
+  // a company is open — the suite's own context is already logged in. It runs
+  // FIRST, because a later timeout elsewhere in this file used to abort the
+  // run before these checks were ever reached.
+  {
+    const guest = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const gp = await guest.newPage();
+    try {
+      await gp.goto(APP, { waitUntil: 'networkidle' });
+      await gp.waitForSelector('.cs-page', { timeout: 20000 });
+      await sleep(1200);
+
+      // (1) the keyboard must not leak through the wizard
+      await gp.getByRole('button', { name: /Setup New Company/i }).first().click();
+      await gp.waitForSelector('[role="dialog"]', { timeout: 10000 });
+      const nameBox = gp.locator('#new-company-name');
+      await nameBox.fill('Smoke Wizard Test');
+      await gp.keyboard.press('Enter');
+      await sleep(800);
+      const afterEnter = await gp.evaluate(() => {
+        const dialog = document.querySelector('[role="dialog"]');
+        return {
+          dialog: !!dialog,
+          step: dialog ? (dialog.innerText.match(/Step\s+(\d+)\s+of\s+(\d+)/) || [])[1] || null : null,
+          app: !!document.querySelector('.sidebar'),
+          selectPage: !!document.querySelector('.cs-page'),
+          inert: !!document.querySelector('.cs-page')?.inert,
+        };
+      });
+      check('wizard: Enter in the company name advances the step instead of opening the company underneath',
+        afterEnter.dialog && afterEnter.step === '2' && !afterEnter.app && afterEnter.selectPage,
+        JSON.stringify(afterEnter));
+      check('wizard: the Select Company page behind it is inert while the wizard is open',
+        afterEnter.inert === true, `inert=${afterEnter.inert}`);
+
+      // (2) only Cancel / X may close it
+      await gp.keyboard.press('Escape');
+      await sleep(250);
+      await gp.mouse.click(4, 4); // the backdrop, outside the 640px modal
+      await sleep(250);
+      const stillOpen = await gp.evaluate(() => !!document.querySelector('[role="dialog"]'));
+      check('wizard: Escape and a backdrop click do NOT close it (only Cancel / X)', stillOpen, `open=${stillOpen}`);
+
+      await gp.getByRole('button', { name: /^Cancel$/ }).first().click();
+      await sleep(500);
+      const backToList = await gp.evaluate(() => !document.querySelector('[role="dialog"]') && !!document.querySelector('.cs-page'));
+      check('wizard: Cancel returns to the company list', backToList, `back=${backToList}`);
+
+      // (3) hovering the highlighted company keeps its text readable
+      const row = gp.locator('.cs-table tbody tr.cs-selected').first();
+      await row.hover();
+      await sleep(150);
+      const hovered = await row.evaluate((tr) => {
+        const luminance = (rgb) => {
+          const [r, g, b] = rgb.map((v) => {
+            const s = v / 255;
+            return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+          });
+          return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        };
+        const parse = (c) => (c.match(/\d+/g) || []).slice(0, 3).map(Number);
+        const bg = parse(getComputedStyle(tr).backgroundColor);
+        const fg = parse(getComputedStyle(tr.cells[0]).color);
+        const [l1, l2] = [luminance(bg), luminance(fg)].sort((a, b) => b - a);
+        return { bg: getComputedStyle(tr).backgroundColor, fg: getComputedStyle(tr.cells[0]).color, ratio: (l1 + 0.05) / (l2 + 0.05) };
+      });
+      check('select company: the highlighted company stays readable while hovered',
+        hovered.ratio >= 4.5, `contrast ${hovered.ratio.toFixed(2)}:1 (bg ${hovered.bg}, text ${hovered.fg})`);
+    } finally {
+      await guest.close();
+    }
+  }
 
   // ---- App loads without breaking its own security policy ----------------
   // ERR-004 / ERR-007: the CSP blocked the print iframe and, separately,
@@ -96033,6 +100149,7 @@ try {
     desk.bar === 'none' && desk.left === 0 && desk.width > 200, JSON.stringify(desk));
 
   const phone = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  await phone.addCookies([{ name: 'artha_sid', value: sessionValue, url: APP }]);
   const mob = await phone.newPage();
   try {
     await mob.goto(APP, { waitUntil: 'networkidle' });
@@ -96986,7 +101103,7 @@ try {
 } finally {
   if (profileAtStart) {
     await fetch(`${APP}/api/profile`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profileAtStart),
+      method: 'POST', headers: { ...authHeaders, 'Content-Type': 'application/json' }, body: JSON.stringify(profileAtStart),
     }).catch(() => {});
   }
   await browser.close();

@@ -1,72 +1,66 @@
-// v1.10.37 — Reusable page-header card. Reported: "I like the heading
-// that you gave into this page — I want you to do in all the pages,
-// that looks better". Extracted from the SettingsView v1.10.36 header
-// so every page gets a consistent visual identity: gradient card +
-// icon badge + title + subtitle + optional meta chip + right-side
-// action slot.
+// v1.10.37 — Reusable page-header card.
+//
+// Ported to Tailwind + design tokens. Nothing here names a colour: the card
+// gradient is built from --primary-rgb (kept as rgb channels because
+// html2canvas cannot parse oklch/color-mix, see src/styles/tokens.css) and the
+// surface comes from --card. That is why this header follows the theme in both
+// modes without a `[data-theme="dark"]` patch.
 //
 // Props:
 //   icon        emoji / string / element rendered inside the 44px badge
 //   title       page title (h1)
 //   subtitle    one-line description shown below the title
-//   meta        optional short string rendered as a pill next to the
-//               subtitle (e.g. "231 invoices", "11 sections", "FY 2025-26")
+//   meta        optional short string rendered as a pill next to the subtitle
 //   children    right-hand slot for action buttons, HelpButton, etc.
-//   compact     v1.10.77 (#84): a slim title row, no card, icon or subtitle,
-//               for screens where the table needs the room (the Dashboard).
+//   compact     slim title row, no card/icon/subtitle (the Dashboard)
+import { cn } from '@/lib/utils';
 
-export default function PageHeader({ icon, title, subtitle, meta, children, compact = false }) {
+const CARD_GRADIENT =
+  'bg-[linear-gradient(135deg,rgba(var(--primary-rgb),0.12),var(--card))]';
+
+export default function PageHeader({ icon, title, subtitle, meta, children, compact = false, className = '' }) {
   if (compact) {
     return (
-      <div className="page-header page-header-compact" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.9rem' }}>
-        <h1 className="page-title" style={{ margin: 0, fontSize: '1.3rem' }}>{title}</h1>
-        {meta && <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>{meta}</span>}
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>{children}</div>
+      <div className={cn('page-header page-header-compact mb-[0.9rem] flex flex-wrap items-center gap-3', className)}>
+        <h1 className="page-title m-0 text-[1.3rem] text-foreground">{title}</h1>
+        {meta && <span className="text-xs font-semibold text-muted-foreground">{meta}</span>}
+        <div className="ml-auto flex items-center gap-2">{children}</div>
       </div>
     );
   }
+
   return (
-    <div className="page-header" style={{
-      padding: '1.1rem 1.35rem',
-      background: 'linear-gradient(135deg, rgba(var(--primary-rgb), 0.12), var(--card-bg))',
-      border: '1px solid var(--border)',
-      borderRadius: 12,
-      marginBottom: '1.25rem',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+    <div
+      className={cn(
+        'page-header mb-5 flex flex-wrap items-center justify-between gap-4',
+        'rounded-xl border border-border px-[1.35rem] py-[1.1rem]',
+        CARD_GRADIENT,
+        className,
+      )}
+    >
+      <div className="flex min-w-0 flex-1 items-center gap-[0.85rem]">
         {icon !== undefined && (
-          <div style={{
-            width: 44, height: 44,
-            borderRadius: 12,
-            background: 'linear-gradient(135deg, var(--primary), var(--primary-darker))',
-            color: '#fff',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '1.15rem',
-            boxShadow: '0 6px 18px rgba(var(--primary-rgb), 0.35)',
-            flexShrink: 0,
-          }}>{icon}</div>
+          <div
+            className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(135deg,var(--primary),var(--primary-darker))] text-[1.15rem] text-primary-foreground shadow-[0_6px_18px_rgba(var(--primary-rgb),0.35)]"
+          >
+            {icon}
+          </div>
         )}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 className="page-title" style={{ margin: 0 }}>{title}</h1>
+        <div className="min-w-0 flex-1">
+          <h1 className="page-title m-0 text-foreground">{title}</h1>
           {(subtitle || meta) && (
-            <p className="page-subtitle" style={{ margin: '0.15rem 0 0', display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap' }}>
+            <p className="page-subtitle mt-[0.15rem] flex flex-wrap items-center gap-[0.55rem]">
               {subtitle && <span>{subtitle}</span>}
               {meta && (
-                <span style={{
-                  fontSize: '0.7rem',
-                  padding: '0.1rem 0.5rem',
-                  borderRadius: 999,
-                  background: 'var(--bg-secondary)',
-                  border: '1px solid var(--border)',
-                  fontWeight: 600,
-                  color: 'var(--text)',
-                }}>{meta}</span>
+                <span className="rounded-full border border-border bg-muted px-2 py-[0.1rem] text-[0.7rem] font-semibold text-foreground">
+                  {meta}
+                </span>
               )}
             </p>
           )}
         </div>
-        {children}
       </div>
+      {children}
     </div>
   );
 }

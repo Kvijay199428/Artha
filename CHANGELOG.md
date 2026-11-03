@@ -7,6 +7,94 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.0] - 2026-11-03
+
+**Multiple companies in one install, a new Tailwind CSS v4 + shadcn/ui theme
+layer across the app shell, a sidebar that keeps ARTHA in place while the menu
+scrolls, and launcher / BusyWin import fixes.**
+
+### How to update
+
+**Current version:** 1.10.80 → **New version:** 1.11.0
+
+> 1.10.80 was the last release of the single-company app. v1.11.0 gives every
+> company its own folder. Your existing data is moved into `data/COMP0001`
+> automatically the first time it starts. Copy your whole `data` folder first
+> if you want a safety net.
+
+#### If the in-app Update button works for you (1.10.73 and later)
+1. Open the app and click **Update to v1.11.0** in the sidebar, or
+   **Settings → App Updates → Update Now**.
+2. Wait about a minute, then reload the page.
+
+#### On 1.10.72 or older
+Use the launcher: **More options → Update to the latest version**, then
+**Open App**.
+
+#### If that does not work (or you are unsure)
+1. Download `Free-GST-Billing-v1.11.0.zip` from the
+   [Releases page](https://github.com/Kvijay199428/Artha/releases/latest).
+2. Close the app (click **Stop the app** in the launcher if it is running).
+3. **Right-click the ZIP → Extract All.** Do not open anything while still inside the ZIP.
+4. Extract over your existing Free GST Billing folder, replacing files when asked.
+5. Double-click **Free GST Billing - WINDOWS**.
+
+#### Linux / NAS
+Run `update-unix.sh` from the `_system` folder, or extract the new ZIP over
+the old folder. Restart the app afterwards.
+
+Your invoices, clients, products and settings are kept. Every company stays in
+its own folder, and logging out does not delete anything.
+
+### Added
+- **Multiple companies in one install.** ARTHA now opens on a
+  **Select Company for Operation** screen. Each company has its own folder
+  (`data/COMP0001`, `data/COMP0002`, …), its own login, settings, invoices,
+  numbering, backups and PIN lock. Nothing is shared between companies. An
+  installation from before this version is moved into `COMP0001` once, on
+  first start.
+- **Setup New Company** on the company screen, using the same setup wizard as
+  before (business details, GST, invoice numbering, theme), so a second set of
+  books can be started without touching the first.
+- **Company switcher in the sidebar:** shows the open company and its code;
+  **Log out** returns to the company screen without deleting anything.
+- **Per-company PIN lock** is checked on the company screen, before that
+  company's data is opened.
+- **New theme layer on Tailwind CSS v4 + shadcn/ui.** The sidebar, header,
+  footer, modals, confirm dialogs, toasts, banners, dropdowns, badges and
+  shared form controls now take their colours from design tokens, so Light and
+  Dark Mode apply to all of them from one place.
+- **Style guide** at `?styleguide`, showing every shared control in both modes
+  (useful when adding screens).
+- **`npm run theme:audit`** — a guard that flags hardcoded colours that would
+  ignore the theme.
+
+### Changed
+- **Sidebar:** the ARTHA brand and the company/business switcher stay fixed;
+  only the menu scrolls, so the bottom items stay reachable on 1366×768
+  laptops. The slim auto-hide icon rail still works, scrollbar included.
+- **Setup wizard** can only be left with **Cancel/X**; clicking outside no
+  longer closes it half-way through.
+- **Launcher and start scripts** check `/api/health` instead of
+  `/api/profile`. Profiles are now company-scoped, so the old check could
+  report a healthy server as down.
+- **BusyWin importer** takes `--artha-company` and imports into that company's
+  folder (`data/COMP0002`, …), with a clear message if the company does not
+  exist yet.
+- Hardcoded colours in shared controls, client statistics, warnings and
+  status chips now come from theme tokens.
+
+### Fixed
+- The ARTHA brand no longer scrolls out of view when the menu is long.
+- Startup no longer stalls when a company is PIN-locked, because health checks
+  no longer need a logged-in profile.
+
+### Docs
+- **`README-MULTI-COMPANY.md`** — how the folders work, how to update, how to
+  move an existing install, and how to import BusyWin data into a company.
+
+---
+
 ## [1.10.80] - 2026-10-24
 
 **Bulk CSV import / export, a Lock button, View + a tidier Actions menu,

@@ -8,7 +8,7 @@ echo   ARTHA Accounting Software - BusyWin Data Importer
 echo ========================================================
 echo.
 echo Source: C:\BusyWin\DATA\COMP0001
-echo Target: %~dp0data
+echo Target: %~dp0data\COMP0001  (use --artha-company COMP0002 for another company)
 echo.
 
 where python >nul 2>&1

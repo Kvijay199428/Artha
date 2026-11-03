@@ -2356,9 +2356,9 @@ export default function GSTReturns() {
                   <>
                     <StepList steps={GSTR1_STEPS} title="GSTR-1 — Sales Return (File This First)" />
 
-                    <div className="glass-panel p-4 mb-4" style={{ background: '#f0fdf4' }}>
-                      <h4 style={{ color: '#059669', marginBottom: '0.5rem', fontSize: '0.9rem' }}>GSTR-1 Pro Tips</h4>
-                      <ul style={{ fontSize: '0.82rem', color: '#047857', lineHeight: 1.8, paddingLeft: '1.25rem' }}>
+                    <div className="glass-panel p-4 mb-4" style={{ background: 'var(--success-surface)' }}>
+                      <h4 style={{ color: 'var(--success)', marginBottom: '0.5rem', fontSize: '0.9rem' }}>GSTR-1 Pro Tips</h4>
+                      <ul style={{ fontSize: '0.82rem', color: 'var(--success)', lineHeight: 1.8, paddingLeft: '1.25rem' }}>
                         <li><strong>Fastest method:</strong> Export GSTR-1 JSON from the GSTR-1 tab above → Go to GST portal → GSTR-1 → Prepare Offline → Download Offline Tool → Import JSON → Upload. Saves 90% of time.</li>
                         <li>If turnover {'<'} ₹5 Cr, opt for QRMP scheme — file quarterly instead of monthly. Apply via Services → User Services → Opt-in for QRMP.</li>
                         <li>Amendments to previous period invoices: Use Table 9A (not 4A). You can amend within the September return of the following FY.</li>
@@ -2402,9 +2402,9 @@ export default function GSTReturns() {
                     <StepList steps={NIL_GSTR1_STEPS} title="NIL GSTR-1 — File First (Even with Zero Sales)" />
                     <StepList steps={NIL_GSTR3B_STEPS} title="NIL GSTR-3B — File After NIL GSTR-1" />
 
-                    <div className="glass-panel p-4" style={{ background: '#f0fdf4' }}>
-                      <h4 style={{ color: '#059669', marginBottom: '0.5rem', fontSize: '0.9rem' }}>NIL Return Quick Summary</h4>
-                      <ul style={{ fontSize: '0.82rem', color: '#047857', lineHeight: 1.8, paddingLeft: '1.25rem' }}>
+                    <div className="glass-panel p-4" style={{ background: 'var(--success-surface)' }}>
+                      <h4 style={{ color: 'var(--success)', marginBottom: '0.5rem', fontSize: '0.9rem' }}>NIL Return Quick Summary</h4>
+                      <ul style={{ fontSize: '0.82rem', color: 'var(--success)', lineHeight: 1.8, paddingLeft: '1.25rem' }}>
                         <li>NIL GSTR-1 and NIL GSTR-3B are <strong>separate returns</strong> — file both</li>
                         <li>NIL filing takes 2-3 minutes per return — just login, verify zeros, submit, file</li>
                         <li>Late fee for NIL: ₹20/day (₹10 CGST + ₹10 SGST), capped at ₹500 per return</li>
@@ -2442,7 +2442,7 @@ export default function GSTReturns() {
                       </div>
                     </div>
 
-                    <div className="glass-panel p-4" style={{ background: '#f8fafc' }}>
+                    <div className="glass-panel p-4" style={{ background: 'var(--bg-secondary)' }}>
                       <h4 style={{ marginBottom: '0.5rem', fontSize: '0.9rem' }}>Key GST Rules to Remember</h4>
                       <ul style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.8, paddingLeft: '1.25rem' }}>
                         <li><strong>Section 16(4):</strong> ITC for any invoice must be claimed by the due date of September return of the following FY, or the date of filing annual return — whichever is earlier.</li>

@@ -29,7 +29,7 @@
 // This script will refuse to proceed if dist/ is missing so users
 // don't get a broken release.
 
-import { readdirSync, statSync, existsSync, mkdirSync, rmSync, copyFileSync, readFileSync } from 'fs';
+import { readdirSync, statSync, existsSync, mkdirSync, rmSync, copyFileSync, readFileSync, writeFileSync } from 'fs';
 import { join, resolve, basename } from 'path';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
@@ -103,7 +103,16 @@ if (existsSync(scriptsSrc)) {
   const scriptFiles = readdirSync(scriptsSrc);
   assertAsciiOnly(scriptsSrc, scriptFiles);
   for (const f of scriptFiles) {
-    copyFileSync(join(scriptsSrc, f), join(SYSTEM, f));
+    const dest = join(SYSTEM, f);
+    copyFileSync(join(scriptsSrc, f), dest);
+    // A Windows checkout (core.autocrlf) turns every LF into CRLF, and `sh`
+    // on Linux/macOS then stops at the first line of update-unix.sh with
+    // ": not found". The release must carry LF regardless of how the repo
+    // was checked out, so normalise here instead of trusting the working tree.
+    if (/\.sh$/i.test(f)) {
+      const text = readFileSync(dest, 'utf8').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
+      writeFileSync(dest, text, 'utf8');
+    }
   }
 }
 assertAsciiOnly(REPO_ROOT, readdirSync(REPO_ROOT));
@@ -122,6 +131,10 @@ const includeAtSystem = [
   'package.json',
   'package-lock.json',
   'server.js',
+  // v1.11.0 — multi-company core. server.js imports ./companies.js, which
+  // owns the data/COMPxxxx folders and the login sessions. Without it the
+  // packaged server exits before binding (the #54 failure mode).
+  'companies.js',
   'README.md',
   'LICENSE',
   'CHANGELOG.md',

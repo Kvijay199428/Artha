@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { AlertTriangle, Trash2, HelpCircle } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 // v1.10.34 — In-app replacement for `window.confirm()` and `window.prompt()`.
 // The native dialogs look like OS chrome (title bar with the URL, generic
@@ -17,6 +21,10 @@ import { AlertTriangle, Trash2, HelpCircle } from 'lucide-react';
 //
 // The container mounts once at App root. All active calls are queued; only
 // one modal shows at a time so the visual flow stays clean.
+//
+// Ported to shadcn Dialog + tokens. Two behaviours are preserved on purpose
+// because other code depends on them: the promise must resolve exactly once,
+// and the fallback to native dialogs before the container mounts stays.
 
 let dispatchFn = null;
 
@@ -34,8 +42,6 @@ let dispatchFn = null;
 export function confirmAction(options) {
   return new Promise((resolve) => {
     if (typeof dispatchFn !== 'function') {
-      // Container not mounted yet — fall back to native so calls made
-      // pre-mount don't silently return undefined.
       resolve(window.confirm(options?.message || options?.title || 'Are you sure?'));
       return;
     }
@@ -70,6 +76,7 @@ export default function ConfirmModalContainer() {
   const [modal, setModal] = useState(null);
   const [value, setValue] = useState('');
   const inputRef = useRef(null);
+  const primaryRef = useRef(null);
   const previousActiveElement = useRef(null);
 
   const dispatch = useCallback((next) => {
@@ -85,21 +92,17 @@ export default function ConfirmModalContainer() {
   // Autofocus the input on prompt, or the confirm button on confirm.
   useEffect(() => {
     if (!modal) {
-      // Return focus to whatever was focused before the modal opened.
       previousActiveElement.current?.focus?.();
       previousActiveElement.current = null;
-      return;
+      return undefined;
     }
     previousActiveElement.current = document.activeElement;
-    // Wait a tick so the modal is in the DOM before focusing.
     const t = setTimeout(() => {
       if (modal.kind === 'prompt' && inputRef.current) {
         inputRef.current.focus();
         inputRef.current.select();
       } else {
-        // Confirm modal — focus the primary button.
-        const btn = document.querySelector('.confirm-modal-primary');
-        btn?.focus?.();
+        primaryRef.current?.focus?.();
       }
     }, 30);
     return () => clearTimeout(t);
@@ -107,11 +110,10 @@ export default function ConfirmModalContainer() {
 
   // Keyboard: Enter → confirm, Esc → cancel.
   useEffect(() => {
-    if (!modal) return;
+    if (!modal) return undefined;
     const onKey = (e) => {
       if (e.key === 'Escape') { e.preventDefault(); cancel(); }
       else if (e.key === 'Enter' && modal.kind === 'confirm') {
-        // Prompt handles Enter via its own form submit.
         e.preventDefault();
         confirm();
       }
@@ -139,71 +141,66 @@ export default function ConfirmModalContainer() {
   const isDanger = tone === 'danger';
   const isWarning = tone === 'warning';
   const Icon = isDanger ? Trash2 : isWarning ? AlertTriangle : HelpCircle;
-  const iconColor = isDanger ? 'var(--danger)' : isWarning ? '#f59e0b' : 'var(--primary)';
-  const iconBg = isDanger ? 'var(--danger-light)' : isWarning ? 'var(--warn-bg)' : 'var(--primary-light)';
+
+  const iconBox = isDanger
+    ? 'bg-destructive/10 text-destructive'
+    : isWarning
+      ? 'bg-warning text-warning-foreground'
+      : 'bg-primary/10 text-primary';
 
   const primaryLabel = modal.confirmLabel || (modal.kind === 'prompt' ? 'OK' : (isDanger ? 'Delete' : 'Confirm'));
   const secondaryLabel = modal.cancelLabel || 'Cancel';
 
   return (
-    <div className="modal-overlay confirm-modal-overlay"
-      onClick={(e) => { if (e.target === e.currentTarget) cancel(); }}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="confirm-modal-title"
-      style={{ zIndex: 10000 }}>
-      <div className="modal-content confirm-modal-content" onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: 440, padding: '1.5rem' }}>
-        <div style={{ display: 'flex', gap: '0.9rem', alignItems: 'flex-start' }}>
-          <div style={{
-            width: 40, height: 40, borderRadius: 999, flexShrink: 0,
-            background: iconBg, color: iconColor,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
+    <Dialog open onOpenChange={(open) => { if (!open) cancel(); }}>
+      <DialogContent
+        showCloseButton={false}
+        className="confirm-modal-content z-[10000] max-w-[440px] gap-0 overflow-hidden p-6"
+        overlayClassName="z-[10000]"
+        onKeyDown={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start gap-[0.9rem]">
+          <div className={cn('flex size-10 shrink-0 items-center justify-center rounded-full', iconBox)}>
             <Icon size={20} />
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h3 id="confirm-modal-title" style={{ margin: 0, fontSize: '1.05rem', lineHeight: 1.35 }}>
+          <div className="min-w-0 flex-1">
+            <DialogTitle id="confirm-modal-title" className="text-[1.05rem] leading-[1.35]">
               {modal.title}
-            </h3>
+            </DialogTitle>
             {modal.message && (
-              <p style={{ margin: '0.4rem 0 0', fontSize: '0.87rem', color: 'var(--text-muted)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+              <DialogDescription className="mt-[0.4rem] whitespace-pre-wrap text-[0.87rem] leading-relaxed">
                 {modal.message}
-              </p>
+              </DialogDescription>
             )}
             {modal.kind === 'prompt' && (
               <form onSubmit={(e) => { e.preventDefault(); confirm(); }}>
-                <input
+                <Input
                   ref={inputRef}
                   type={modal.inputType || 'text'}
-                  className="form-input"
+                  className="mt-[0.9rem] w-full"
                   value={value}
                   onChange={(e) => setValue(e.target.value)}
                   placeholder={modal.placeholder || ''}
-                  style={{ marginTop: '0.9rem', width: '100%' }}
                 />
               </form>
             )}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
-          <button type="button" className="btn btn-secondary" onClick={cancel}
-            style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button type="button" variant="outline" className="h-auto px-4 py-2 text-[0.85rem]" onClick={cancel}>
             {secondaryLabel}
-          </button>
-          <button type="button"
-            className={`btn confirm-modal-primary ${isDanger ? '' : 'btn-primary'}`}
+          </Button>
+          <Button
+            ref={primaryRef}
+            type="button"
+            variant={isDanger ? 'destructive' : 'default'}
+            className="confirm-modal-primary h-auto px-[1.1rem] py-2 text-[0.85rem]"
             onClick={confirm}
-            style={{
-              fontSize: '0.85rem', padding: '0.5rem 1.1rem',
-              ...(isDanger ? {
-                background: 'var(--danger)', color: '#fff', border: 'none',
-              } : {}),
-            }}>
+          >
             {primaryLabel}
-          </button>
+          </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

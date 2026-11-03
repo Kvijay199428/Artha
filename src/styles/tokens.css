@@ -1,0 +1,209 @@
+/* ============================================================================
+   ARTHA design tokens — the shadcn/ui contract
+   ============================================================================
+
+   WHY THIS FILE EXISTS
+   --------------------
+   The app used to hardcode colours in every rule (`background: white`,
+   `color: #64748b`) and then patch dark mode with ~144 one-off
+   `[data-theme="dark"] .something { … }` blocks. Anything nobody
+   remembered kept its light colour, which is exactly the "some parts
+   don't follow the theme" bug.
+
+   From here on a component names a ROLE, never a colour:
+
+       bg-background   text-foreground   bg-card   text-muted-foreground
+       bg-primary      text-primary-foreground      border-border
+       bg-secondary    bg-accent         bg-destructive   ring-ring
+
+   Swap the values below and the whole app follows, in both modes.
+
+   HARD CONSTRAINT — NO oklch / color-mix
+   --------------------------------------
+   html2canvas rasterises the invoice for "Save & Download". It cannot
+   parse `oklch()` or `color-mix()`; that shipped as a real bug once
+   (see the v1.10.40 note in index.css: "Attempting to parse an
+   unsupported color function oklab"). shadcn's stock v4 theme is
+   oklch-only, so every value here is hex / rgba. If you import a
+   tweakcn or shadcn theme, convert its oklch values to hex first.
+
+   MODE
+   ----
+   Both selectors are supported:
+     - `.dark`                 — shadcn / Tailwind convention
+     - `[data-theme="dark"]`   — what App.jsx has always written
+   During the migration App.jsx sets both, so legacy CSS and new
+   utilities agree no matter which one a component reads.
+
+   Values are deliberately identical to the old `:root` /
+   `[data-theme="dark"]` block in index.css, so adding this file
+   changes nothing visually. Only --primary, --border and --radius
+   overlap with the old names; both copies hold the same value.
+   ========================================================================== */
+
+:root {
+  /* geometry */
+  --radius: 0.625rem;              /* 10px — matches the old --radius */
+
+  /* surfaces */
+  --background: #f0f2f5;           /* page */
+  --foreground: #111827;           /* body text */
+  --card: #ffffff;
+  --card-foreground: #111827;
+  --popover: #ffffff;
+  --popover-foreground: #111827;
+
+  /* brand */
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+
+  /* supports / neutrals */
+  --secondary: #f1f5f9;
+  --secondary-foreground: #111827;
+  --muted: #f1f5f9;
+  --muted-foreground: #6b7280;
+  --accent: #f1f5f9;
+  --accent-foreground: #111827;
+
+  /* feedback */
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+
+  /* status surfaces — the "info" callout, warnings, success text and the
+     support nudge all used to hardcode a light tint and then a separate
+     dark patch. They are tokens now, so a banner cannot be left behind. */
+  --success: #059669;
+  --success-foreground: #ffffff;
+  --success-surface: #ecfdf5;
+  --success-surface-border: #a7f3d0;
+  --info: #ecfdf5;
+  --info-border: #bbf7d0;
+  --info-foreground: #065f46;
+  --warning: #fffbeb;
+  --warning-border: #fde68a;
+  --warning-foreground: #92400e;
+  --destructive-surface: #fef2f2;
+  --destructive-surface-border: #fecaca;
+
+  /* the navigation rail. It follows the theme: white in Light Mode, navy in
+     Dark Mode (the legacy sheet did this with `html:not([data-theme="dark"])`
+     patches; these tokens express the same thing once). */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #475569;
+  --sidebar-foreground-strong: #0f172a;
+  --sidebar-muted: #64748b;
+  --sidebar-accent: rgba(15, 23, 42, 0.06);
+  --sidebar-accent-hover: rgba(15, 23, 42, 0.09);
+  --sidebar-border: rgba(229, 231, 235, 0.8);
+
+  /* lines + focus */
+  --border: rgba(229, 231, 235, 0.8);
+  --input: #e2e8f0;
+  --ring: #2563eb;
+}
+
+[data-theme="dark"],
+.dark {
+  --background: #0f172a;
+  --foreground: #f1f5f9;
+  --card: #1e293b;
+  --card-foreground: #f1f5f9;
+  --popover: #1e293b;
+  --popover-foreground: #f1f5f9;
+
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+
+  --secondary: #334155;
+  --secondary-foreground: #f1f5f9;
+  --muted: #334155;
+  --muted-foreground: #94a3b8;
+  --accent: #334155;
+  --accent-foreground: #f1f5f9;
+
+  --destructive: #f87171;
+  --destructive-foreground: #0f172a;
+
+  --success: #34d399;
+  --success-foreground: #0f172a;
+  --success-surface: rgba(16, 185, 129, 0.12);
+  --success-surface-border: rgba(16, 185, 129, 0.4);
+  --info: rgba(16, 185, 129, 0.12);
+  --info-border: rgba(16, 185, 129, 0.4);
+  --info-foreground: #6ee7b7;
+  --warning: rgba(217, 119, 6, 0.12);
+  --warning-border: rgba(217, 119, 6, 0.4);
+  --warning-foreground: #fcd34d;
+  --destructive-surface: rgba(248, 113, 113, 0.12);
+  --destructive-surface-border: rgba(248, 113, 113, 0.4);
+
+  --sidebar: #0f172a;
+  --sidebar-foreground: #94a3b8;
+  --sidebar-foreground-strong: #e2e8f0;
+  --sidebar-muted: #64748b;
+  --sidebar-accent: rgba(255, 255, 255, 0.06);
+  --sidebar-accent-hover: rgba(255, 255, 255, 0.1);
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+
+  --border: rgba(51, 65, 85, 0.8);
+  --input: #334155;
+  --ring: #3b82f6;
+}
+
+/* ---------------------------------------------------------------------------
+   Expose the tokens as Tailwind utilities.
+
+   `inline` makes `bg-card` compile to `background-color: var(--card)` rather
+   than baking in today's hex, which is what lets a mode switch repaint the
+   app without a rebuild.
+   ------------------------------------------------------------------------- */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-surface: var(--success-surface);
+  --color-success-surface-border: var(--success-surface-border);
+  --color-info: var(--info);
+  --color-info-border: var(--info-border);
+  --color-info-foreground: var(--info-foreground);
+  --color-warning: var(--warning);
+  --color-warning-border: var(--warning-border);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-destructive-surface: var(--destructive-surface);
+  --color-destructive-surface-border: var(--destructive-surface-border);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-foreground-strong: var(--sidebar-foreground-strong);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-hover: var(--sidebar-accent-hover);
+  --color-sidebar-border: var(--sidebar-border);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* `dark:` utilities must follow the app's two mode switches, not the OS. */
+@custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));

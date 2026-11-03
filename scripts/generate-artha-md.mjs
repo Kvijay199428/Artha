@@ -22,7 +22,10 @@ const IGNORED_DIRS = new Set([
   'obj',
   'publish-launcher',
   'publish-installer',
-  'release-build'
+  'release-build',
+  // Local feature snapshots hold a copy of the multi-company patch and a
+  // backup of real invoices and clients. Never bundle personal data.
+  'feature'
 ]);
 
 // Specific files to ignore

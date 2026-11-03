@@ -4511,8 +4511,8 @@ export default function InvoiceGenerator({ onBack, profile: profileProp, editing
                 onChange={(v) => setCustomNotes(v)}
                 placeholder="Project details, special instructions, additional notes..." />
             </div>
-            <div className="form-group" style={{ background: '#fefce8', border: '1px dashed #ca8a04', borderRadius: 8, padding: '0.75rem 1rem' }}>
-              <label className="form-label" style={{ color: '#92400e', fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div className="form-group" style={{ background: 'var(--note-bg)', border: '1px dashed var(--note-border)', borderRadius: 8, padding: '0.75rem 1rem' }}>
+              <label className="form-label" style={{ color: 'var(--note-text)', fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v4m0 4h.01"/></svg>
                 Private Note (not shown on invoice)
               </label>

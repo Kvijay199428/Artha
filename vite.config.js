@@ -3,6 +3,7 @@ import path from 'path'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // __dirname equivalent for ES modules. Used to resolve absolute paths
@@ -34,6 +35,10 @@ export default defineConfig({
   root: path.resolve(__dirname, 'src'),
   publicDir: path.resolve(__dirname, 'public'),
   plugins: [
+    // Tailwind v4. Emits the utility layer referenced by src/index.css.
+    // Preflight is intentionally NOT imported yet — see the comment at the
+    // top of src/index.css.
+    tailwindcss(),
     react(),
     VitePWA({
       // v1.10.2 â€” Prior 'autoUpdate' triggered an immediate location.reload()
@@ -182,7 +187,9 @@ export default defineConfig({
           // POST/DELETE would need a background-sync queue (future).
           {
             urlPattern: ({ url, request }) =>
-              request.method === 'GET' && url.pathname.startsWith('/api/'),
+              request.method === 'GET' && url.pathname.startsWith('/api/')
+              // Multi-company: who is logged in and the company list must always be live.
+              && !url.pathname.startsWith('/api/auth/') && url.pathname !== '/api/companies',
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
@@ -249,6 +256,12 @@ export default defineConfig({
       },
     }),
   ],
+  resolve: {
+    alias: {
+      // shadcn convention: components import each other as `@/components/ui/…`
+      '@': path.resolve(__dirname, 'src'),
+    },
+  },
   build: {
     // outDir + publicDir point at project-root paths because Vite's
     // `root` is src/ â€” without absolute resolution the output would

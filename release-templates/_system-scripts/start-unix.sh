@@ -23,7 +23,7 @@ if [ -f "$SYSTEM_DIR/data/port.txt" ]; then
 fi
 
 # Is our server already up?
-if curl -fsS --max-time 1 "http://localhost:$PORT/api/profile" >/dev/null 2>&1; then
+if curl -fsS --max-time 1 "http://localhost:$PORT/api/health" >/dev/null 2>&1; then
   echo "  Server already running on port $PORT — opening browser…"
 else
   echo "  Starting server on port $PORT…"
@@ -34,7 +34,7 @@ else
   deadline=$(($(date +%s) + 15))
   while [ $(date +%s) -lt $deadline ]; do
     sleep 0.4
-    if curl -fsS --max-time 1 "http://localhost:$PORT/api/profile" >/dev/null 2>&1; then
+    if curl -fsS --max-time 1 "http://localhost:$PORT/api/health" >/dev/null 2>&1; then
       break
     fi
   done

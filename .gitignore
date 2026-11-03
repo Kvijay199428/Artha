@@ -52,3 +52,8 @@ launcher/obj/
 installer/bin/
 installer/obj/
 *.exe
+
+# Feature workspace snapshots. `feature/` holds a copy of the multi-company
+# patch plus a backup of real invoices, clients and a packaged ZIP. It is
+# personal financial data, not source, and must never be committed.
+/feature/

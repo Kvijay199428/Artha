@@ -1,6 +1,7 @@
 import { Building2 } from 'lucide-react';
 import { confirmAction } from './ConfirmModal';
 import { toast } from './Toast';
+import { Button } from '@/components/ui/button';
 
 /**
  * Offers to attach records that predate multi-business separation to the
@@ -21,6 +22,10 @@ import { toast } from './Toast';
  *
  * Assigning is one-way — it names the business in the confirmation so the
  * user cannot do it while looking at the wrong company by accident.
+ *
+ * Ported to Tailwind: the tint is `bg-primary/10` over `bg-card`, so it stays
+ * a light blue wash on light and a deep blue wash on dark instead of a fixed
+ * rgba that only suited one mode.
  */
 export default function UnassignedBanner({ count, businessName, noun, onAssign }) {
   if (!count || !businessName) return null;
@@ -48,28 +53,17 @@ export default function UnassignedBanner({ count, businessName, noun, onAssign }
   };
 
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: '1rem',
-      flexWrap: 'wrap',
-      padding: '0.7rem 1rem',
-      marginBottom: '1rem',
-      borderRadius: 10,
-      border: '1px solid var(--border)',
-      background: 'rgba(59, 130, 246, 0.07)',
-    }}>
-      <span style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', fontSize: '0.88rem' }}>
-        <Building2 size={18} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-4 rounded-[10px] border border-border bg-primary/10 px-4 py-[0.7rem] text-foreground">
+      <span className="flex items-center gap-[0.55rem] text-[0.88rem]">
+        <Building2 size={18} className="shrink-0 text-primary" />
         <span>
           <strong>{label}</strong> {count === 1 ? 'is' : 'are'} not assigned to a business,
           so {count === 1 ? 'it shows' : 'they show'} under all of them.
         </span>
       </span>
-      <button type="button" className="btn" onClick={handleClick} style={{ fontSize: '0.85rem' }}>
+      <Button type="button" size="sm" className="text-[0.85rem]" onClick={handleClick}>
         Assign to {businessName}
-      </button>
+      </Button>
     </div>
   );
 }

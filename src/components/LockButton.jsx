@@ -18,7 +18,7 @@ export default function LockButton({ className = 'btn btn-secondary', label = 'L
   if (!enabled) return null;
   return (
     <button type="button" className={className} onClick={lockNow} title="Lock the app now (Ctrl+Shift+L). Your PIN opens it again.">
-      <Lock size={18} /> {label}
+      <Lock size={18} /> <span>{label}</span>
     </button>
   );
 }

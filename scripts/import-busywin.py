@@ -10,6 +10,7 @@ import os
 import sys
 import json
 import argparse
+import re
 from datetime import datetime
 
 try:
@@ -497,8 +498,16 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Import BusyWin data to ARTHA")
     parser.add_argument('--busy-path', default=r'C:\BusyWin\DATA', help="Path to BusyWin DATA directory")
     parser.add_argument('--artha-data', default=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data'), help="Path to ARTHA data directory")
-    parser.add_argument('--company', default='COMP0001', help="Company folder name (e.g. COMP0001)")
+    parser.add_argument('--company', default='COMP0001', help="BusyWin company folder name (e.g. COMP0001)")
+    parser.add_argument('--artha-company', default='COMP0001', help="ARTHA company to import INTO (its folder is data/<id>, e.g. COMP0002). Create the company in ARTHA first.")
     parser.add_argument('--dry-run', action='store_true', help="Preview without writing files")
 
     args = parser.parse_args()
-    import_busywin(args.busy_path, args.artha_data, args.company, args.dry_run)
+    # Multi-company ARTHA: every company has its own folder inside data/.
+    target = args.artha_data
+    if not re.match(r'^COMP\d{4,}$', os.path.basename(os.path.normpath(target))):
+        target = os.path.join(target, args.artha_company)
+        if not os.path.isdir(target) and not args.dry_run:
+            print(f"Error: ARTHA company folder not found: {target}\n  Create the company in ARTHA first (Setup New Company), then run the import again.")
+            raise SystemExit(1)
+    import_busywin(args.busy_path, target, args.company, args.dry_run)

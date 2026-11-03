@@ -12,6 +12,35 @@
    Francisco, Roboto) so pre-cache users get clean typography
    immediately. */
 
+/* ============================================================================
+   THEME FOUNDATION (Tailwind v4 + shadcn token contract)
+   ----------------------------------------------------------------------------
+   Everything below `@layer legacy` is the old stylesheet, unchanged. It is
+   wrapped in a cascade layer for one reason: unlayered CSS always beats
+   layered CSS, so without this wrapper every Tailwind utility added to a
+   component would lose to the legacy rule and appear to do nothing.
+
+   Layer order, weakest first:
+     legacy    — the old hand-written rules (this file, still winning over
+                 nothing but losing to everything else)
+     theme     — Tailwind's default theme scale (spacing, radius, fonts)
+     base      — Tailwind preflight. NOT imported yet on purpose: its reset
+                 would restyle every existing button/input before those
+                 screens are ported. Enabled in the final stage.
+     utilities — Tailwind utility classes, which must win.
+
+   tokens.css is imported UNLAYERED so its custom properties are
+   authoritative — that is what makes the dark values apply.
+   ========================================================================== */
+@layer legacy, theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "tw-animate-css";
+@import "./styles/tokens.css";
+
+@layer legacy {
+
 :root {
   --primary: #2563eb;
   --primary-hover: #1d4ed8;
@@ -423,18 +452,20 @@ body {
      Receipts, Reports, GST Returns, Income Tax, User Guide, Dark Mode,
      Control Panel, Settings) which exceeds the viewport height. Prior
      CSS had no overflow rule so bottom items got clipped invisibly.
-     Now: sidebar scrolls internally, brand stays at top. */
+     v1.10.81 — The whole rail used to scroll, so the ARTHA brand and the
+     business switcher slid out of view. Only the menu scrolls now; the
+     rail itself is fixed and the header stays put. */
   height: 100vh;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 /* v1.10.78 (#92) - a scrollbar you can grab (was "thin", a hairline): 10px in
    Chrome/Edge via ::-webkit-scrollbar below. Firefox has no such selector, so
    it gets the standard properties; set for Chrome they would switch its
-   ::-webkit-scrollbar styling off. */
+   ::-webkit-scrollbar styling off. The bar belongs to the scrolling menu, not
+   the whole rail. */
 @supports not selector(::-webkit-scrollbar) {
-  .sidebar { scrollbar-width: auto; scrollbar-color: rgba(255,255,255,0.22) transparent; }
-  html:not([data-theme="dark"]) .sidebar { scrollbar-color: rgba(15, 23, 42, 0.22) transparent; }
+  .sidebar-nav { scrollbar-width: auto; scrollbar-color: rgba(255,255,255,0.22) transparent; }
+  html:not([data-theme="dark"]) .sidebar-nav { scrollbar-color: rgba(15, 23, 42, 0.22) transparent; }
 }
 
 /* v1.10.77 (#84) - sidebar auto-hide (desktop only; phones already slide it
@@ -476,10 +507,10 @@ body {
   /* v1.10.78 (#92) - the closed rail is slim and clean: the logo and centred
      icons only, nothing cut in half. The name, the Auto-hide checkbox and the
      business switcher come back when it opens. */
-  .app-layout.sidebar-autohide > .sidebar:not(:hover):not(:has(:focus-visible)) {
+  .app-layout.sidebar-autohide > .sidebar:not(:hover):not(:has(:focus-visible)) .sidebar-nav {
     scrollbar-width: none;
   }
-  .app-layout.sidebar-autohide > .sidebar:not(:hover):not(:has(:focus-visible))::-webkit-scrollbar { width: 0; }
+  .app-layout.sidebar-autohide > .sidebar:not(:hover):not(:has(:focus-visible)) .sidebar-nav::-webkit-scrollbar { width: 0; }
   .app-layout.sidebar-autohide > .sidebar:not(:hover):not(:has(:focus-visible)) .sidebar-brand { justify-content: center; gap: 0; }
   .app-layout.sidebar-autohide > .sidebar:not(:hover):not(:has(:focus-visible)) .sidebar-brand > :not(.sidebar-logo),
   .app-layout.sidebar-autohide > .sidebar:not(:hover):not(:has(:focus-visible)) .sidebar-autohide-toggle,
@@ -506,8 +537,8 @@ body {
 .is-scrolling > .low-stock-ticker-track { animation: low-stock-scroll linear infinite; }
 .low-stock-ticker:hover .low-stock-ticker-track, .low-stock-ticker:focus-within .low-stock-ticker-track { animation-play-state: paused; }
 @keyframes low-stock-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-.low-stock-chip { padding: 0.3rem 0.7rem; border-radius: 6px; font: inherit; font-size: 0.8rem; cursor: pointer; background: #fffbeb; border: 1px solid #fde68a; color: #d97706; flex-shrink: 0; }
-.low-stock-chip.low-stock-out { background: #fef2f2; border-color: #fecaca; color: #dc2626; }
+.low-stock-chip { padding: 0.3rem 0.7rem; border-radius: 6px; font: inherit; font-size: 0.8rem; cursor: pointer; background: var(--warning); border: 1px solid var(--warning-border); color: var(--warning-foreground); flex-shrink: 0; }
+.low-stock-chip.low-stock-out { background: var(--destructive-surface); border-color: var(--destructive-surface-border); color: var(--destructive); }
 @media (prefers-reduced-motion: reduce) {
   .is-scrolling > .low-stock-ticker-track { animation: none; }
   .low-stock-ticker-window, .low-stock-ticker-window.is-scrolling { overflow-x: auto; -webkit-mask-image: none; mask-image: none; }
@@ -585,14 +616,14 @@ body {
   .app-layout .settings-bar { top: -1rem; } /* just under the fixed mobile header; two classes to outrank the base rule below */
   .pwa-install-banner { top: 52px; }
 }
-.sidebar::-webkit-scrollbar { width: 10px; }
-.sidebar::-webkit-scrollbar-thumb {
+.sidebar-nav::-webkit-scrollbar { width: 10px; }
+.sidebar-nav::-webkit-scrollbar-thumb {
   background: rgba(255,255,255,0.22);
   border-radius: 5px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
-.sidebar::-webkit-scrollbar-thumb:hover {
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
   background: rgba(255,255,255,0.25);
 }
 
@@ -637,7 +668,16 @@ body {
   flex-direction: column;
   gap: 0.25rem;
   flex: 1;
+  /* v1.10.81 — only the menu scrolls. `min-height: 0` lets this flex child
+     shrink below its content height inside the fixed rail, so the brand and
+     the business switcher above it never move. */
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
+/* A column flex container compresses its children to fit before it scrolls.
+   Keep every row at its natural height so the menu actually scrolls. */
+.sidebar-nav > * { flex-shrink: 0; }
 
 /* Business profile switcher */
 .profile-switcher {
@@ -740,8 +780,8 @@ body {
 }
 
 .nav-btn-active {
-  background: var(--primary) !important;
-  color: white !important;
+  background: var(--primary);
+  color: white;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
 }
 
@@ -788,18 +828,9 @@ body {
    Settings) inherits the same visual identity automatically. Right-
    side action slot is preserved via the existing justify-content:
    space-between + align-items: center. */
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
-  padding: 1.1rem 1.35rem;
-  background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.12), var(--card-bg));
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  margin-bottom: 1.5rem;
-}
+/* .page-header was migrated to Tailwind in src/components/PageHeader.jsx.
+   .page-title / .page-subtitle stay until every screen that writes them
+   directly has been ported. */
 
 .page-title {
   font-size: 1.55rem;
@@ -814,15 +845,6 @@ body {
   font-size: 0.86rem;
   margin: 0;
 }
-/* Fallback for dark mode — some browsers render color-mix() with
-   `oklab` slightly differently; the fallback ensures the gradient
-   still reads correctly. */
-[data-theme="dark"] .page-header {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.14), var(--card-bg));
-}
-/* v1.10.77 (#84) - compact header (Dashboard): a plain title row. */
-.page-header.page-header-compact,
-[data-theme="dark"] .page-header.page-header-compact { padding: 0; background: none; border: 0; border-radius: 0; }
 
 .section-title {
   font-size: 0.95rem;
@@ -1430,7 +1452,7 @@ textarea.form-input { resize: vertical; min-height: 60px; }
   height: 40px;
   border-radius: 10px;
   background: linear-gradient(135deg, var(--primary), #3b82f6);
-  color: white;
+  color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1498,10 +1520,10 @@ textarea.form-input { resize: vertical; min-height: 60px; }
 
 /* Icon button green */
 .icon-btn-green {
-  color: #059669;
+  color: var(--success);
 }
 .icon-btn-green:hover {
-  background: #ecfdf5;
+  background: var(--success-surface);
 }
 
 .line-item-row {
@@ -2892,7 +2914,7 @@ kbd {
   padding: 0.45rem 1rem;
   border-radius: 20px;
   border: 1.5px solid var(--border);
-  background: white;
+  background: var(--card);
   font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
@@ -3442,8 +3464,8 @@ html:not([data-theme="dark"]) .sidebar {
   color: #0f172a;
   border-right: 1px solid var(--border);
 }
-html:not([data-theme="dark"]) .sidebar::-webkit-scrollbar-thumb { background: rgba(15, 23, 42, 0.22); background-clip: padding-box; }
-html:not([data-theme="dark"]) .sidebar::-webkit-scrollbar-thumb:hover { background: rgba(15, 23, 42, 0.38); background-clip: padding-box; }
+html:not([data-theme="dark"]) .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(15, 23, 42, 0.22); background-clip: padding-box; }
+html:not([data-theme="dark"]) .sidebar-nav::-webkit-scrollbar-thumb:hover { background: rgba(15, 23, 42, 0.38); background-clip: padding-box; }
 html:not([data-theme="dark"]) .sidebar-title { color: #0f172a; }
 html:not([data-theme="dark"]) .sidebar-subtitle { color: #64748b; }
 html:not([data-theme="dark"]) .sidebar-autohide-toggle { color: #64748b; }
@@ -3513,3 +3535,5 @@ html:not([data-theme="dark"]) .mobile-topbar-btn { background: rgba(15, 23, 42, 
   font-size: 0.85rem;
 }
 .app-lock-help { font-size: 0.8rem; color: var(--text-muted); text-align: left; line-height: 1.5; }
+
+} /* @layer legacy */

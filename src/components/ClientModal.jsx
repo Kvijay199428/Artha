@@ -125,7 +125,7 @@ export default function ClientModal({ show, onClose, onSave, client, isEditing, 
               onChange={e => { setForm(prev => ({ ...prev, gstin: e.target.value.toUpperCase() })); if (taxIdWarning) setTaxIdWarning(''); }}
               onBlur={handleTaxIdBlur}
               placeholder={cc.taxIdPlaceholder} maxLength={20} />
-            {taxIdWarning && <small style={{ color: '#d97706', fontSize: '0.7rem', display: 'block', marginTop: '0.2rem' }}>⚠ {taxIdWarning}</small>}
+            {taxIdWarning && <small style={{ color: 'var(--warning-foreground)', fontSize: '0.7rem', display: 'block', marginTop: '0.2rem' }}>⚠ {taxIdWarning}</small>}
           </div>
           <div className="form-group">
             <label className="form-label">Email</label>

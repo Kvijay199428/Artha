@@ -216,7 +216,7 @@ export default function ControlPanel() {
             </details>
           )}
           {lastResult.error && (
-            <p style={{ margin: '0.4rem 0 0', fontSize: '0.85rem', color: '#f87171' }}>
+            <p style={{ margin: '0.4rem 0 0', fontSize: '0.85rem', color: 'var(--destructive)' }}>
               {lastResult.error}
             </p>
           )}

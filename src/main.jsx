@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
 import App from './App.jsx'
 import AppLockGate from './components/AppLock.jsx'
+import CompanyGate from './components/CompanyGate.jsx'
+import { installAuthWatcher } from './services/companies'
 import { restorePrefs, startMirroring } from './utils/prefsMirror'
 import './index.css'
 
@@ -133,13 +135,33 @@ if ('serviceWorker' in navigator) {
 
 // v1.10.77 (#84) - settings the browser has lost come back from the data
 // folder before the first render (the wizard and Region read them on start).
+// Multi-company: no company is open until one is chosen on the Select Company
+// page. restorePrefs() then gets "not signed in" and returns false (nothing is
+// mirrored); after a company is opened the page reloads and it restores THAT
+// company's settings.
+installAuthWatcher()
 restorePrefs().then((restored) => {
   startMirroring(restored)
+
+  // /?styleguide — the UI-kit page. Mounted instead of the app so the
+  // primitives can be reviewed in both themes without logging in. Lazy so it
+  // costs nothing in the normal bundle.
+  if (new URLSearchParams(window.location.search).has('styleguide')) {
+    import('./dev/StyleGuide.jsx').then(({ default: StyleGuide }) => {
+      createRoot(document.getElementById('root')).render(
+        <StrictMode><StyleGuide /></StrictMode>,
+      )
+    })
+    return
+  }
+
   createRoot(document.getElementById('root')).render(
     <StrictMode>
-      <AppLockGate>
-        <App />
-      </AppLockGate>
+      <CompanyGate>
+        <AppLockGate>
+          <App />
+        </AppLockGate>
+      </CompanyGate>
     </StrictMode>,
   )
 })

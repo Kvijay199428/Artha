@@ -133,11 +133,59 @@ async function dismissFirstRun(page) {
 const APP = await startServer();
 console.log(`\nRunning smoke tests against ${APP} (Firefox)\n`);
 
+// ---- Multi-company: open a company before anything touches /api ----------
+// Every /api route now runs inside ONE company's folder (data/COMPxxxx) and
+// needs the `artha_sid` session cookie; without it the answer is 401
+// no-session. A fresh install has no company at all, so create one (which
+// also logs us in) and hand the same cookie to the browser contexts and to
+// the plain Node fetch() calls below.
+const cookiePair = (res) => {
+  const all = res.headers.getSetCookie?.() || [];
+  const raw = all[0] || res.headers.get('set-cookie') || '';
+  return raw.split(';')[0] || ''; // "artha_sid=<token>"
+};
+
+async function openCompany() {
+  const listed = await fetch(`${APP}/api/companies`)
+    .then((r) => (r.ok ? r.json() : { companies: [] }))
+    .catch(() => ({ companies: [] }));
+  const companies = listed.companies || [];
+  if (companies.length) {
+    const company = companies.find((c) => !c.locked) || companies[0];
+    const login = await fetch(`${APP}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ companyId: company.id, pin: process.env.ARTHA_SMOKE_PIN || undefined }),
+    });
+    if (login.ok) return cookiePair(login);
+    // A PIN-locked company needs the user's PIN; never guess it.
+    if (login.status === 401 && companies.every((c) => c.locked)) {
+      throw new Error(`company ${company.id} is PIN-locked — set ARTHA_SMOKE_PIN to run the suite`);
+    }
+    if (login.status !== 401) throw new Error(`could not log in to ${company.id} (${login.status})`);
+  }
+  // No company yet (fresh install): create one; the server opens it for us.
+  const created = await fetch(`${APP}/api/companies`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: 'Smoke Test Company' }),
+  });
+  if (!created.ok) throw new Error(`could not create a company (${created.status})`);
+  const pair = cookiePair(created);
+  if (!pair) throw new Error('the server did not return a session cookie');
+  return pair;
+}
+
+const sessionPair = await openCompany();
+const sessionValue = sessionPair.slice(sessionPair.indexOf('=') + 1);
+const authHeaders = { Cookie: sessionPair };
+console.log(`Logged in to a company (${sessionPair.split('=')[0]})\n`);
+
 // The suite changes the ACTIVE business profile several times, and the server
 // replaces that file wholesale on every save. Snapshot it before anything runs
 // and put it back in `finally`, so a step that times out half way can never
 // leave a real profile reduced to a bare "Smoke Alpha".
-const profileAtStart = await fetch(`${APP}/api/profile`)
+const profileAtStart = await fetch(`${APP}/api/profile`, { headers: authHeaders })
   .then((r) => (r.ok ? r.json() : null))
   .catch(() => null);
 
@@ -145,6 +193,10 @@ const browser = await firefox.launch({ headless: true });
 // 1366x768 is the resolution the preview-clipping bug needed (ERR-005).
 // It is also the most common laptop size among this app's users.
 const ctx = await browser.newContext({ viewport: { width: 1366, height: 768 }, acceptDownloads: true });
+// Multi-company: the page must start already logged in to the company opened
+// above, otherwise CompanyGate shows the Select Company page and every later
+// click times out.
+await ctx.addCookies([{ name: 'artha_sid', value: sessionValue, url: APP }]);
 // Playwright gives a page 30 s to load. On a busy machine - another dev
 // server pinning three cores was enough - a reload under the release gate ran
 // past that and aborted the whole suite, twice in a row, with code that had
@@ -163,6 +215,87 @@ try {
   await dismissFirstRun(page);
   check('first-run setup can be dismissed',
     await page.evaluate(() => !!document.querySelector('.nav-btn')));
+
+  // ---- Select Company + Setup New Company wizard (v1.10.81) --------------
+  // Two field bugs, both invisible to a build:
+  //   1. the wizard sat ON TOP of the Select Company page, but that page's
+  //      window-level shortcut was still live — pressing Enter in the company
+  //      name box logged the user straight into the company highlighted
+  //      underneath;
+  //   2. hovering the highlighted company repainted it near-white while its
+  //      cells stayed white, so the name/code/dates vanished under the cursor.
+  // A guest context (no session cookie) is the only way to SEE that page once
+  // a company is open — the suite's own context is already logged in. It runs
+  // FIRST, because a later timeout elsewhere in this file used to abort the
+  // run before these checks were ever reached.
+  {
+    const guest = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const gp = await guest.newPage();
+    try {
+      await gp.goto(APP, { waitUntil: 'networkidle' });
+      await gp.waitForSelector('.cs-page', { timeout: 20000 });
+      await sleep(1200);
+
+      // (1) the keyboard must not leak through the wizard
+      await gp.getByRole('button', { name: /Setup New Company/i }).first().click();
+      await gp.waitForSelector('[role="dialog"]', { timeout: 10000 });
+      const nameBox = gp.locator('#new-company-name');
+      await nameBox.fill('Smoke Wizard Test');
+      await gp.keyboard.press('Enter');
+      await sleep(800);
+      const afterEnter = await gp.evaluate(() => {
+        const dialog = document.querySelector('[role="dialog"]');
+        return {
+          dialog: !!dialog,
+          step: dialog ? (dialog.innerText.match(/Step\s+(\d+)\s+of\s+(\d+)/) || [])[1] || null : null,
+          app: !!document.querySelector('.sidebar'),
+          selectPage: !!document.querySelector('.cs-page'),
+          inert: !!document.querySelector('.cs-page')?.inert,
+        };
+      });
+      check('wizard: Enter in the company name advances the step instead of opening the company underneath',
+        afterEnter.dialog && afterEnter.step === '2' && !afterEnter.app && afterEnter.selectPage,
+        JSON.stringify(afterEnter));
+      check('wizard: the Select Company page behind it is inert while the wizard is open',
+        afterEnter.inert === true, `inert=${afterEnter.inert}`);
+
+      // (2) only Cancel / X may close it
+      await gp.keyboard.press('Escape');
+      await sleep(250);
+      await gp.mouse.click(4, 4); // the backdrop, outside the 640px modal
+      await sleep(250);
+      const stillOpen = await gp.evaluate(() => !!document.querySelector('[role="dialog"]'));
+      check('wizard: Escape and a backdrop click do NOT close it (only Cancel / X)', stillOpen, `open=${stillOpen}`);
+
+      await gp.getByRole('button', { name: /^Cancel$/ }).first().click();
+      await sleep(500);
+      const backToList = await gp.evaluate(() => !document.querySelector('[role="dialog"]') && !!document.querySelector('.cs-page'));
+      check('wizard: Cancel returns to the company list', backToList, `back=${backToList}`);
+
+      // (3) hovering the highlighted company keeps its text readable
+      const row = gp.locator('.cs-table tbody tr.cs-selected').first();
+      await row.hover();
+      await sleep(150);
+      const hovered = await row.evaluate((tr) => {
+        const luminance = (rgb) => {
+          const [r, g, b] = rgb.map((v) => {
+            const s = v / 255;
+            return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+          });
+          return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        };
+        const parse = (c) => (c.match(/\d+/g) || []).slice(0, 3).map(Number);
+        const bg = parse(getComputedStyle(tr).backgroundColor);
+        const fg = parse(getComputedStyle(tr.cells[0]).color);
+        const [l1, l2] = [luminance(bg), luminance(fg)].sort((a, b) => b - a);
+        return { bg: getComputedStyle(tr).backgroundColor, fg: getComputedStyle(tr.cells[0]).color, ratio: (l1 + 0.05) / (l2 + 0.05) };
+      });
+      check('select company: the highlighted company stays readable while hovered',
+        hovered.ratio >= 4.5, `contrast ${hovered.ratio.toFixed(2)}:1 (bg ${hovered.bg}, text ${hovered.fg})`);
+    } finally {
+      await guest.close();
+    }
+  }
 
   // ---- App loads without breaking its own security policy ----------------
   // ERR-004 / ERR-007: the CSP blocked the print iframe and, separately,
@@ -873,6 +1006,7 @@ try {
     desk.bar === 'none' && desk.left === 0 && desk.width > 200, JSON.stringify(desk));
 
   const phone = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  await phone.addCookies([{ name: 'artha_sid', value: sessionValue, url: APP }]);
   const mob = await phone.newPage();
   try {
     await mob.goto(APP, { waitUntil: 'networkidle' });
@@ -1815,7 +1949,7 @@ try {
   // Report enough to act on. A bare "Timeout 30000ms exceeded" says nothing
   // about WHICH element was being waited for, turning a two-minute fix into
   // a guessing game.
-  const detail = err.message.split('\n').filter((l) => l.trim()).slice(0, 4).join(' | ');
+  const detail = err.message.split('\n').filter((l) => l.trim()).slice(0, 14).join(' | ');
   check('suite ran to completion', false, detail);
   // A screenshot of the moment it stopped, when asked for: a timeout says
   // what was awaited, not what was on screen instead (a dialog in the way?).
@@ -1826,7 +1960,7 @@ try {
 } finally {
   if (profileAtStart) {
     await fetch(`${APP}/api/profile`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profileAtStart),
+      method: 'POST', headers: { ...authHeaders, 'Content-Type': 'application/json' }, body: JSON.stringify(profileAtStart),
     }).catch(() => {});
   }
   await browser.close();

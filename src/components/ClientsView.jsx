@@ -840,7 +840,7 @@ export default function ClientsView({ onEdit, onDuplicate, onNew }) {
                     </div>
                     <div className="client-stat">
                       <span className="client-stat-label">Paid</span>
-                      <span className="client-stat-value" style={{ color: '#059669' }}>{formatCurrency(stats.paid)}</span>
+                      <span className="client-stat-value" style={{ color: 'var(--success)' }}>{formatCurrency(stats.paid)}</span>
                     </div>
                     <div className="client-stat">
                       {/* v1.10.23 — surface overpayment explicitly (was
@@ -848,7 +848,7 @@ export default function ClientsView({ onEdit, onDuplicate, onNew }) {
                       <span className="client-stat-label">
                         {stats.unpaid < -0.005 ? 'Overpaid' : 'Outstanding'}
                       </span>
-                      <span className="client-stat-value" style={{ color: stats.unpaid > 0.005 ? '#dc2626' : (stats.unpaid < -0.005 ? '#0369a1' : '#059669') }}>
+                      <span className="client-stat-value" style={{ color: stats.unpaid > 0.005 ? 'var(--destructive)' : (stats.unpaid < -0.005 ? 'var(--primary)' : 'var(--success)') }}>
                         {formatCurrency(Math.abs(stats.unpaid))}
                       </span>
                     </div>
@@ -991,7 +991,7 @@ export default function ClientsView({ onEdit, onDuplicate, onNew }) {
                           <button className="btn btn-secondary" style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem' }} onClick={() => openEditClient(savedClient)}>
                             <Edit3 size={13} /> Edit Client
                           </button>
-                          <button className="btn btn-secondary" style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', color: '#dc2626', borderColor: '#fecaca' }} onClick={() => handleDeleteClient(savedClient.id)}>
+                          <button className="btn btn-secondary" style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', color: 'var(--destructive)', borderColor: 'var(--destructive-surface-border)' }} onClick={() => handleDeleteClient(savedClient.id)}>
                             <Trash2 size={13} /> Delete Client
                           </button>
                         </>
